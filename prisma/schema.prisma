@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Exercise {
+  id           String   @id @default(uuid())
+  name         String
+  muscleGroups String   // comma-separated: "chest,triceps,shoulders"
+  equipment    String   // comma-separated: "barbell,bench"
+  type         String   @default("weight_reps") // weight_reps, time, bodyweight, cardio
+  instructions String?
+  videoUrl     String?
+  links        String?  // JSON array of {title, url}
+  isCustom     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  workoutSets      WorkoutSet[]
+  templateExercises TemplateExercise[]
+}
+
+model Workout {
+  id         String    @id @default(uuid())
+  name       String
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  duration   Int?      // seconds
+  notes      String?
+  templateId String?
+
+  template   WorkoutTemplate? @relation(fields: [templateId], references: [id])
+  sets       WorkoutSet[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WorkoutSet {
+  id         String  @id @default(uuid())
+  workoutId  String
+  exerciseId String
+  setNumber  Int
+  setType    String  @default("working") // warmup, working, dropset, failure
+  reps       Int?
+  weightLbs  Float?
+  timeSecs   Int?
+  rpe        Float?
+  restSecs   Int?
+  notes      String?
+  completed  Boolean @default(false)
+  supersetGroup Int?
+
+  workout  Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([workoutId])
+  @@index([exerciseId])
+}
+
+model WorkoutTemplate {
+  id        String @id @default(uuid())
+  name      String
+  folder    String?
+  notes     String?
+
+  exercises TemplateExercise[]
+  workouts  Workout[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TemplateExercise {
+  id         String @id @default(uuid())
+  templateId String
+  exerciseId String
+  order      Int
+  sets       Int    @default(3)
+  supersetGroup Int?
+  notes      String?
+
+  template WorkoutTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  exercise Exercise        @relation(fields: [exerciseId], references: [id])
+
+  @@index([templateId])
+}
+
+model BodyMetric {
+  id          String   @id @default(uuid())
+  date        DateTime
+  weightLbs   Float?
+  bodyFatPct  Float?
+  notes       String?
+
+  createdAt DateTime @default(now())
+}
+
+model PersonalRecord {
+  id         String   @id @default(uuid())
+  exerciseId String
+  type       String   // max_weight, max_reps, max_volume, estimated_1rm
+  value      Float
+  date       DateTime
+  workoutId  String?
+
+  createdAt DateTime @default(now())
+
+  @@index([exerciseId])
+}

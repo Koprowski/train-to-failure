@@ -1,0 +1,66 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+
+type RouteParams = { params: Promise<{ id: string }> };
+
+export async function GET(request: NextRequest, { params }: RouteParams) {
+  try {
+    const { id } = await params;
+    const exercise = await prisma.exercise.findUnique({
+      where: { id },
+      include: {
+        workoutSets: {
+          include: { workout: true },
+          orderBy: { createdAt: "desc" },
+          take: 10,
+        },
+      },
+    });
+
+    if (!exercise) {
+      return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(exercise);
+  } catch (error) {
+    console.error("Failed to fetch exercise:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch exercise" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: NextRequest, { params }: RouteParams) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+
+    const exercise = await prisma.exercise.update({
+      where: { id },
+      data: body,
+    });
+
+    return NextResponse.json(exercise);
+  } catch (error) {
+    console.error("Failed to update exercise:", error);
+    return NextResponse.json(
+      { error: "Failed to update exercise" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  try {
+    const { id } = await params;
+    await prisma.exercise.delete({ where: { id } });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Failed to delete exercise:", error);
+    return NextResponse.json(
+      { error: "Failed to delete exercise" },
+      { status: 500 }
+    );
+  }
+}
