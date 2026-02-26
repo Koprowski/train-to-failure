@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     for (const set of sets) {
       const groups = set.exercise.muscleGroups
         .split(",")
-        .map((g) => g.trim().toLowerCase())
+        .map((g: string) => g.trim().toLowerCase())
         .filter(Boolean);
 
       for (const group of groups) {
