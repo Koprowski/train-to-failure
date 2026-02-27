@@ -23,6 +23,8 @@ interface SetData {
   rpe: string;
   completed: boolean;
   notes: string;
+  previousWeight?: string;
+  previousReps?: string;
 }
 
 interface ExerciseBlock {
@@ -40,6 +42,7 @@ function WorkoutContent() {
   const searchParams = useSearchParams();
   const resumeId = searchParams.get("resume");
   const templateId = searchParams.get("templateId");
+  const duplicateFrom = searchParams.get("duplicateFrom");
 
   const [workoutId, setWorkoutId] = useState<string | null>(null);
   const [workoutName, setWorkoutName] = useState("");
@@ -137,6 +140,46 @@ function WorkoutContent() {
         .catch(() => {});
     }
   }, [templateId, resumeId]);
+
+  // Duplicate from previous workout
+  useEffect(() => {
+    if (duplicateFrom && !resumeId && !templateId) {
+      fetch(`/api/workouts/${duplicateFrom}`)
+        .then((r) => r.json())
+        .then((workout) => {
+          if (workout && workout.id) {
+            setWorkoutName(workout.name);
+            const blockMap = new Map<string, ExerciseBlock>();
+            for (const s of workout.sets || []) {
+              if (!blockMap.has(s.exerciseId)) {
+                blockMap.set(s.exerciseId, {
+                  exercise: s.exercise,
+                  sets: [],
+                });
+              }
+              const prevWeight = s.weightLbs?.toString() ?? "";
+              const prevReps = s.reps?.toString() ?? "";
+              blockMap.get(s.exerciseId)!.sets.push({
+                tempId: nextTempId(),
+                exerciseId: s.exerciseId,
+                setNumber: s.setNumber,
+                setType: s.setType,
+                weightLbs: "",
+                reps: "",
+                timeSecs: "",
+                rpe: "",
+                completed: false,
+                notes: "",
+                previousWeight: prevWeight,
+                previousReps: prevReps,
+              });
+            }
+            setExerciseBlocks(Array.from(blockMap.values()));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [duplicateFrom, resumeId, templateId]);
 
   // Timer
   useEffect(() => {
@@ -255,14 +298,28 @@ function WorkoutContent() {
     const set = block.sets[setIndex];
     const newCompleted = !set.completed;
 
+    // Auto-fill from previous values when checking off an empty set
+    let effectiveWeight = set.weightLbs;
+    let effectiveReps = set.reps;
+    if (newCompleted) {
+      if (!effectiveWeight && set.previousWeight) {
+        effectiveWeight = set.previousWeight;
+        updateSet(blockIndex, setIndex, "weightLbs", effectiveWeight);
+      }
+      if (!effectiveReps && set.previousReps) {
+        effectiveReps = set.previousReps;
+        updateSet(blockIndex, setIndex, "reps", effectiveReps);
+      }
+    }
+
     updateSet(blockIndex, setIndex, "completed", newCompleted);
 
     const payload = {
       exerciseId: set.exerciseId,
       setNumber: set.setNumber,
       setType: set.setType,
-      weightLbs: set.weightLbs ? parseFloat(set.weightLbs) : null,
-      reps: set.reps ? parseInt(set.reps) : null,
+      weightLbs: effectiveWeight ? parseFloat(effectiveWeight) : null,
+      reps: effectiveReps ? parseInt(effectiveReps) : null,
       timeSecs: set.timeSecs ? parseInt(set.timeSecs) : null,
       rpe: set.rpe ? parseFloat(set.rpe) : null,
       completed: newCompleted,
@@ -464,8 +521,10 @@ function WorkoutContent() {
                         inputMode="decimal"
                         value={set.weightLbs}
                         onChange={(e) => updateSet(blockIndex, setIndex, "weightLbs", e.target.value)}
-                        placeholder="lbs"
-                        className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder-gray-600"
+                        placeholder={set.previousWeight || "lbs"}
+                        className={`w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                          set.weightLbs ? "text-white" : set.previousWeight ? "placeholder-gray-500 italic" : "placeholder-gray-600"
+                        }`}
                       />
                     </td>
                     <td className="py-1.5 px-2">
@@ -474,8 +533,10 @@ function WorkoutContent() {
                         inputMode="numeric"
                         value={set.reps}
                         onChange={(e) => updateSet(blockIndex, setIndex, "reps", e.target.value)}
-                        placeholder="reps"
-                        className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder-gray-600"
+                        placeholder={set.previousReps || "reps"}
+                        className={`w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                          set.reps ? "text-white" : set.previousReps ? "placeholder-gray-500 italic" : "placeholder-gray-600"
+                        }`}
                       />
                     </td>
                     {(block.exercise.type === "time" || block.exercise.type === "cardio") && (

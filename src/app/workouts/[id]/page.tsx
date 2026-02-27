@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface Exercise {
   id: string;
@@ -35,6 +36,7 @@ interface Workout {
 
 export default function WorkoutDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -138,8 +140,24 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
 
       {/* Summary */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-        <h1 className="text-2xl font-bold">{workout.name}</h1>
-        <p className="text-gray-400 mt-1">{formatDate(workout.startedAt)} at {formatTime(workout.startedAt)}</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">{workout.name}</h1>
+            <p className="text-gray-400 mt-1">{formatDate(workout.startedAt)} at {formatTime(workout.startedAt)}</p>
+          </div>
+          {workout.finishedAt && (
+            <button
+              onClick={() => router.push(`/workouts/new?duplicateFrom=${workout.id}`)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+              title="Duplicate workout"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              Repeat
+            </button>
+          )}
+        </div>
 
         <div className="grid grid-cols-3 gap-4 mt-5">
           <div>
