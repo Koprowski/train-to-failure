@@ -243,6 +243,15 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
             {exercise.isCustom && (
               <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">Custom</span>
             )}
+            <Link
+              href={`/activity-log?log=${exercise.id}`}
+              className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 rounded-lg transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Quick Log
+            </Link>
             <button
               onClick={openEdit}
               className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"

@@ -46,6 +46,7 @@ model User {
   sessions Session[]
 
   workouts         Workout[]
+  workoutSets      WorkoutSet[]
   workoutTemplates WorkoutTemplate[]
   bodyMetrics      BodyMetric[]
   exercises        Exercise[]        @relation("CustomExercises")
@@ -103,7 +104,8 @@ model Workout {
 
 model WorkoutSet {
   id            String  @id @default(uuid())
-  workoutId     String
+  workoutId     String?
+  userId        String?
   exerciseId    String
   setNumber     Int
   setType       String  @default("working")
@@ -116,13 +118,15 @@ model WorkoutSet {
   completed     Boolean @default(false)
   supersetGroup Int?
 
-  workout  Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
-  exercise Exercise @relation(fields: [exerciseId], references: [id])
+  workout  Workout?  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  user     User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercise Exercise  @relation(fields: [exerciseId], references: [id])
 
   createdAt DateTime @default(now())
 
   @@index([workoutId])
   @@index([exerciseId])
+  @@index([userId])
 }
 
 model WorkoutTemplate {
