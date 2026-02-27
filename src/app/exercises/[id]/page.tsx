@@ -14,6 +14,7 @@ interface Exercise {
   videoUrl: string | null;
   links: string | null;
   isCustom: boolean;
+  userId: string | null;
 }
 
 interface HistoryEntry {
@@ -67,6 +68,16 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [chartMetric, setChartMetric] = useState<"maxWeight" | "estimated1RM" | "totalVolume">("maxWeight");
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    muscleGroups: "",
+    equipment: "",
+    type: "",
+    instructions: "",
+    videoUrl: "",
+  });
 
   useEffect(() => {
     Promise.all([
@@ -78,6 +89,45 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [id]);
+
+  function openEdit() {
+    if (!exercise) return;
+    setEditForm({
+      name: exercise.name,
+      muscleGroups: exercise.muscleGroups,
+      equipment: exercise.equipment,
+      type: exercise.type,
+      instructions: exercise.instructions ?? "",
+      videoUrl: exercise.videoUrl ?? "",
+    });
+    setEditing(true);
+  }
+
+  async function saveEdit() {
+    if (!exercise) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/exercises/${exercise.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editForm.name,
+          muscleGroups: editForm.muscleGroups,
+          equipment: editForm.equipment,
+          type: editForm.type,
+          instructions: editForm.instructions || null,
+          videoUrl: editForm.videoUrl || null,
+        }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setExercise(updated);
+        setEditing(false);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -125,9 +175,22 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
         <div className="flex items-start justify-between">
           <h1 className="text-2xl font-bold">{exercise.name}</h1>
-          {exercise.isCustom && (
-            <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">Custom</span>
-          )}
+          <div className="flex items-center gap-2">
+            {exercise.isCustom && (
+              <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">Custom</span>
+            )}
+            {exercise.isCustom && (
+              <button
+                onClick={openEdit}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+                title="Edit exercise"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
         <p className="text-gray-400 text-sm mt-1 capitalize">{exercise.type.replace("_", " ")}</p>
 
@@ -278,6 +341,93 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editing && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-semibold mb-4">Edit Exercise</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Name</label>
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Muscle Groups</label>
+                <input
+                  type="text"
+                  value={editForm.muscleGroups}
+                  onChange={(e) => setEditForm({ ...editForm, muscleGroups: e.target.value })}
+                  placeholder="e.g. chest, triceps"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Equipment</label>
+                <input
+                  type="text"
+                  value={editForm.equipment}
+                  onChange={(e) => setEditForm({ ...editForm, equipment: e.target.value })}
+                  placeholder="e.g. barbell, bench"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Type</label>
+                <select
+                  value={editForm.type}
+                  onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="strength">Strength</option>
+                  <option value="cardio">Cardio</option>
+                  <option value="flexibility">Flexibility</option>
+                  <option value="bodyweight">Bodyweight</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Instructions</label>
+                <textarea
+                  value={editForm.instructions}
+                  onChange={(e) => setEditForm({ ...editForm, instructions: e.target.value })}
+                  rows={4}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">YouTube URL</label>
+                <input
+                  type="url"
+                  value={editForm.videoUrl}
+                  onChange={(e) => setEditForm({ ...editForm, videoUrl: e.target.value })}
+                  placeholder="https://youtube.com/watch?v=..."
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setEditing(false)}
+                className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveEdit}
+                disabled={saving || !editForm.name.trim()}
+                className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors disabled:opacity-50"
+              >
+                {saving ? "Saving..." : "Save"}
+              </button>
+            </div>
           </div>
         </div>
       )}
