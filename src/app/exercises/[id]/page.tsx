@@ -47,20 +47,54 @@ function getBadgeColor(group: string) {
   return BADGE_COLORS[group.toLowerCase().trim()] ?? "bg-gray-500/20 text-gray-400";
 }
 
-function getYouTubeEmbedUrl(url: string): string | null {
+function getYouTubeVideoId(url: string): string | null {
   try {
     const u = new URL(url);
-    let videoId: string | null = null;
     if (u.hostname.includes("youtube.com")) {
-      videoId = u.searchParams.get("v");
+      return u.searchParams.get("v");
     } else if (u.hostname.includes("youtu.be")) {
-      videoId = u.pathname.slice(1);
+      return u.pathname.slice(1);
     }
-    if (videoId) return `https://www.youtube.com/embed/${videoId}`;
   } catch {
     // not a valid url
   }
   return null;
+}
+
+function YouTubeLite({ videoId, title }: { videoId: string; title: string }) {
+  const [playing, setPlaying] = useState(false);
+
+  if (playing) {
+    return (
+      <iframe
+        src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
+        className="w-full h-full"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        title={title}
+      />
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setPlaying(true)}
+      className="w-full h-full relative group cursor-pointer bg-black"
+    >
+      <img
+        src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
+        alt={title}
+        className="w-full h-full object-cover"
+      />
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="w-16 h-16 bg-red-600 rounded-xl flex items-center justify-center group-hover:bg-red-500 transition-colors shadow-lg">
+          <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        </div>
+      </div>
+    </button>
+  );
 }
 
 export default function ExerciseDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -151,7 +185,7 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
 
   const muscleGroups = exercise.muscleGroups.split(",").map((g) => g.trim()).filter(Boolean);
   const equipmentList = exercise.equipment.split(",").map((e) => e.trim()).filter(Boolean);
-  const embedUrl = exercise.videoUrl ? getYouTubeEmbedUrl(exercise.videoUrl) : null;
+  const videoId = exercise.videoUrl ? getYouTubeVideoId(exercise.videoUrl) : null;
   let parsedLinks: { title: string; url: string }[] = [];
   if (exercise.links) {
     try {
@@ -229,17 +263,11 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
       </div>
 
       {/* Video */}
-      {embedUrl && (
+      {videoId && (
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
           <h2 className="text-lg font-semibold mb-4">Video</h2>
           <div className="aspect-video rounded-lg overflow-hidden">
-            <iframe
-              src={embedUrl}
-              className="w-full h-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              title={`${exercise.name} video`}
-            />
+            <YouTubeLite videoId={videoId} title={`${exercise.name} video`} />
           </div>
         </div>
       )}
