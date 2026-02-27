@@ -9,6 +9,21 @@ interface ExerciseEntry {
   muscleGroups: string;
 }
 
+const seedData: Record<string, { equipment: string; type: string }> = {
+  "Decline Sit-Up": { equipment: "bench", type: "weight_reps" },
+  "Hip Abduction": { equipment: "machine", type: "weight_reps" },
+  "Hip Adduction": { equipment: "machine", type: "weight_reps" },
+  "Dip": { equipment: "bodyweight,dip_station", type: "weight_reps" },
+  "Barbell Shrug": { equipment: "barbell", type: "weight_reps" },
+  "Cable Lateral Raise": { equipment: "cable", type: "weight_reps" },
+  "Wrist Curl": { equipment: "barbell", type: "weight_reps" },
+  "Cable Kickback": { equipment: "cable", type: "weight_reps" },
+  "Good Morning": { equipment: "barbell", type: "weight_reps" },
+  "Farmer's Walk": { equipment: "dumbbell", type: "time" },
+  "Incline Barbell Bench Press": { equipment: "barbell,bench", type: "weight_reps" },
+  "Cable Row": { equipment: "cable", type: "weight_reps" },
+};
+
 export async function POST() {
   try {
     const jsonPath = join(process.cwd(), "public", "gifs", "exercises.json");
@@ -16,9 +31,9 @@ export async function POST() {
       readFileSync(jsonPath, "utf-8")
     );
 
-    const results: { updated: string[]; notFound: string[]; skipped: string[] } = {
+    const results: { updated: string[]; created: string[]; skipped: string[] } = {
       updated: [],
-      notFound: [],
+      created: [],
       skipped: [],
     };
 
@@ -28,15 +43,31 @@ export async function POST() {
         continue;
       }
 
-      const result = await prisma.exercise.updateMany({
-        where: { name },
-        data: { imageUrl: entry.imageUrl },
-      });
+      const existing = await prisma.exercise.findFirst({ where: { name } });
 
-      if (result.count > 0) {
+      if (existing) {
+        await prisma.exercise.updateMany({
+          where: { name },
+          data: { imageUrl: entry.imageUrl },
+        });
         results.updated.push(name);
       } else {
-        results.notFound.push(name);
+        const seed = seedData[name];
+        if (seed) {
+          await prisma.exercise.create({
+            data: {
+              name,
+              muscleGroups: entry.muscleGroups,
+              equipment: seed.equipment,
+              type: seed.type,
+              imageUrl: entry.imageUrl,
+              isCustom: false,
+            },
+          });
+          results.created.push(name);
+        } else {
+          results.skipped.push(`${name} (no seed data)`);
+        }
       }
     }
 
