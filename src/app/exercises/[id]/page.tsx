@@ -11,6 +11,7 @@ interface Exercise {
   equipment: string;
   type: string;
   instructions: string | null;
+  imageUrl: string | null;
   videoUrl: string | null;
   links: string | null;
   isCustom: boolean;
@@ -172,7 +173,17 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
       </div>
 
       {/* Header */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        {exercise.imageUrl && (
+          <div className="h-56 sm:h-72 bg-gray-800 overflow-hidden">
+            <img
+              src={exercise.imageUrl}
+              alt={exercise.name}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+        <div className="p-6">
         <div className="flex items-start justify-between">
           <h1 className="text-2xl font-bold">{exercise.name}</h1>
           <div className="flex items-center gap-2">
@@ -214,6 +225,7 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
             <p className="text-gray-400 text-sm whitespace-pre-wrap">{exercise.instructions}</p>
           </div>
         )}
+        </div>
       </div>
 
       {/* Video */}

@@ -10,6 +10,7 @@ interface Exercise {
   equipment: string;
   type: string;
   instructions: string | null;
+  imageUrl: string | null;
   videoUrl: string | null;
   isCustom: boolean;
 }
@@ -170,31 +171,42 @@ export default function ExercisesPage() {
             <Link
               key={ex.id}
               href={`/exercises/${ex.id}`}
-              className="bg-gray-900 border border-gray-800 rounded-xl p-4 hover:border-gray-700 transition-colors group"
+              className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden hover:border-gray-700 transition-colors group"
             >
-              <div className="flex items-start justify-between">
-                <h3 className="font-semibold text-white group-hover:text-emerald-500 transition-colors">
-                  {ex.name}
-                </h3>
-                {ex.isCustom && (
-                  <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">Custom</span>
-                )}
+              {ex.imageUrl && (
+                <div className="h-40 bg-gray-800 overflow-hidden">
+                  <img
+                    src={ex.imageUrl}
+                    alt={ex.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
+              )}
+              <div className="p-4">
+                <div className="flex items-start justify-between">
+                  <h3 className="font-semibold text-white group-hover:text-emerald-500 transition-colors">
+                    {ex.name}
+                  </h3>
+                  {ex.isCustom && (
+                    <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">Custom</span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1.5 mt-3">
+                  {ex.muscleGroups.split(",").map((mg) => mg.trim()).filter(Boolean).map((mg) => (
+                    <span key={mg} className={`text-xs px-2 py-0.5 rounded-full ${getBadgeColor(mg)}`}>
+                      {mg}
+                    </span>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {ex.equipment.split(",").map((eq) => eq.trim()).filter(Boolean).map((eq) => (
+                    <span key={eq} className="text-xs px-2 py-0.5 rounded-full bg-gray-700/50 text-gray-400">
+                      {eq}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-3 capitalize">{ex.type.replace("_", " ")}</p>
               </div>
-              <div className="flex flex-wrap gap-1.5 mt-3">
-                {ex.muscleGroups.split(",").map((mg) => mg.trim()).filter(Boolean).map((mg) => (
-                  <span key={mg} className={`text-xs px-2 py-0.5 rounded-full ${getBadgeColor(mg)}`}>
-                    {mg}
-                  </span>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {ex.equipment.split(",").map((eq) => eq.trim()).filter(Boolean).map((eq) => (
-                  <span key={eq} className="text-xs px-2 py-0.5 rounded-full bg-gray-700/50 text-gray-400">
-                    {eq}
-                  </span>
-                ))}
-              </div>
-              <p className="text-xs text-gray-500 mt-3 capitalize">{ex.type.replace("_", " ")}</p>
             </Link>
           ))}
         </div>

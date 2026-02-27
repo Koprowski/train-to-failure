@@ -66,6 +66,7 @@ model Exercise {
   equipment    String
   type         String   @default("weight_reps")
   instructions String?
+  imageUrl     String?
   videoUrl     String?
   links        String?
   isCustom     Boolean  @default(true)
