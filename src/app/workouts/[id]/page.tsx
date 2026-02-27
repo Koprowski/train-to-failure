@@ -39,6 +39,8 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
   const router = useRouter();
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [loading, setLoading] = useState(true);
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [templateSaved, setTemplateSaved] = useState(false);
 
   useEffect(() => {
     fetch(`/api/workouts/${id}`)
@@ -103,6 +105,29 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
   }
   exerciseGroups.push(...groupMap.values());
 
+  const saveAsTemplate = async () => {
+    if (!workout || savingTemplate) return;
+    setSavingTemplate(true);
+    try {
+      const exercises = exerciseGroups.map((g, i) => ({
+        exerciseId: g.exercise.id,
+        order: i + 1,
+        sets: g.sets.length,
+      }));
+
+      const res = await fetch("/api/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: workout.name, exercises }),
+      });
+      if (res.ok) setTemplateSaved(true);
+    } catch (err) {
+      console.error("Failed to save template:", err);
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
   const totalVolume = workout.sets.reduce((sum, s) => {
     if (s.weightLbs && s.reps && s.completed) return sum + s.weightLbs * s.reps;
     return sum;
@@ -146,16 +171,29 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
             <p className="text-gray-400 mt-1">{formatDate(workout.startedAt)} at {formatTime(workout.startedAt)}</p>
           </div>
           {workout.finishedAt && (
-            <button
-              onClick={() => router.push(`/workouts/new?duplicateFrom=${workout.id}`)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
-              title="Duplicate workout"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-              Repeat
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={saveAsTemplate}
+                disabled={savingTemplate || templateSaved}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+                title="Save as template"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                </svg>
+                {templateSaved ? "Saved!" : savingTemplate ? "Saving..." : "Save Template"}
+              </button>
+              <button
+                onClick={() => router.push(`/workouts/new?duplicateFrom=${workout.id}`)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+                title="Duplicate workout"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                Repeat
+              </button>
+            </div>
           )}
         </div>
 

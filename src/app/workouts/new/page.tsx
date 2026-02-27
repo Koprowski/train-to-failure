@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 interface Exercise {
   id: string;
@@ -10,6 +11,22 @@ interface Exercise {
   equipment: string;
   type: string;
   imageUrl: string | null;
+}
+
+interface RecentWorkout {
+  id: string;
+  name: string;
+  startedAt: string;
+  finishedAt: string | null;
+  duration: number | null;
+  sets: { exerciseId: string; exercise: { name: string } }[];
+}
+
+interface TemplateData {
+  id: string;
+  name: string;
+  folder: string | null;
+  exercises: { exercise: { name: string }; sets: number }[];
 }
 
 interface SetData {
@@ -65,6 +82,29 @@ function WorkoutContent() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const exerciseTimerRefs = useRef<Map<number, { startedAt: Date; accumulated: number }>>(new Map());
   const quickExerciseLoaded = useRef(false);
+  const [recentWorkouts, setRecentWorkouts] = useState<RecentWorkout[]>([]);
+  const [templates, setTemplates] = useState<TemplateData[]>([]);
+  const [launcherLoading, setLauncherLoading] = useState(true);
+
+  // Load launcher data (recent workouts + templates) when no query params
+  useEffect(() => {
+    if (resumeId || templateId || duplicateFrom || quickExerciseId) {
+      setLauncherLoading(false);
+      return;
+    }
+
+    Promise.all([
+      fetch("/api/workouts").then((r) => r.json()),
+      fetch("/api/templates").then((r) => r.json()),
+    ]).then(([workouts, tmpl]) => {
+      const finished = (Array.isArray(workouts) ? workouts : [])
+        .filter((w: RecentWorkout) => w.finishedAt)
+        .slice(0, 10);
+      setRecentWorkouts(finished);
+      setTemplates(Array.isArray(tmpl) ? tmpl : []);
+      setLauncherLoading(false);
+    }).catch(() => setLauncherLoading(false));
+  }, [resumeId, templateId, duplicateFrom, quickExerciseId]);
 
   // Load exercises for picker
   useEffect(() => {
@@ -620,11 +660,37 @@ function WorkoutContent() {
     ex.name.toLowerCase().includes(exerciseSearch.toLowerCase())
   );
 
+  const formatLauncherDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Yesterday";
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+
+  const getUniqueExercises = (sets: RecentWorkout["sets"]) => {
+    const seen = new Set<string>();
+    const names: string[] = [];
+    for (const s of sets) {
+      if (!seen.has(s.exerciseId)) {
+        seen.add(s.exerciseId);
+        names.push(s.exercise.name);
+      }
+    }
+    return names;
+  };
+
   // Pre-start state (skip if quick exercise -- already started)
   if (!started && !quickExerciseId) {
+    const showLauncher = !resumeId && !templateId && !duplicateFrom;
+
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">New Workout</h1>
+
+        {/* Start blank */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 max-w-md">
           <label className="block text-sm font-medium text-gray-300 mb-2">Workout Name</label>
           <input
@@ -643,6 +709,80 @@ function WorkoutContent() {
             Start Workout
           </button>
         </div>
+
+        {showLauncher && !launcherLoading && (
+          <>
+            {/* Recent workouts */}
+            {recentWorkouts.length > 0 && (
+              <div>
+                <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-3">Recent Workouts</h2>
+                <div className="space-y-2">
+                  {recentWorkouts.map((w) => {
+                    const exercises = getUniqueExercises(w.sets);
+                    return (
+                      <button
+                        key={w.id}
+                        onClick={() => router.push(`/workouts/new?duplicateFrom=${w.id}`)}
+                        className="w-full text-left bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 hover:border-gray-700 transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-white">{w.name}</span>
+                          <span className="text-xs text-gray-500">{formatLauncherDate(w.startedAt)}</span>
+                        </div>
+                        {exercises.length > 0 && (
+                          <p className="text-xs text-gray-500 mt-1 truncate">
+                            {exercises.join(", ")}
+                          </p>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Saved templates */}
+            {templates.length > 0 && (
+              <div>
+                <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-3">Saved Templates</h2>
+                <div className="space-y-2">
+                  {templates.map((t) => {
+                    const totalSets = t.exercises.reduce((sum, e) => sum + e.sets, 0);
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => router.push(`/workouts/new?templateId=${t.id}`)}
+                        className="w-full text-left bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 hover:border-gray-700 transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-white">{t.name}</span>
+                          <span className="text-xs text-gray-500">
+                            {t.exercises.length} exercise{t.exercises.length !== 1 ? "s" : ""} &middot; {totalSets} sets
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1 truncate">
+                          {t.exercises.map((e) => e.exercise.name).join(", ")}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+                <Link
+                  href="/templates"
+                  className="inline-block text-sm text-emerald-500 hover:text-emerald-400 mt-3 transition-colors"
+                >
+                  Manage Templates &rarr;
+                </Link>
+              </div>
+            )}
+          </>
+        )}
+
+        {showLauncher && launcherLoading && (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500" />
+          </div>
+        )}
       </div>
     );
   }
