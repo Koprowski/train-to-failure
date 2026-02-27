@@ -1,14 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/session";
 
 export async function GET(request: NextRequest) {
   try {
+    const { error: authError, userId } = await requireAuth();
+    if (authError) return authError;
+
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search");
     const muscleGroup = searchParams.get("muscleGroup");
     const equipment = searchParams.get("equipment");
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = {
+      OR: [
+        { isCustom: false },
+        { userId },
+      ],
+    };
 
     if (search) {
       where.name = { contains: search, mode: "insensitive" };
@@ -37,6 +46,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const { error: authError, userId } = await requireAuth();
+    if (authError) return authError;
+
     const body = await request.json();
     const { name, muscleGroups, equipment, type, instructions, videoUrl, links, isCustom } = body;
 
@@ -57,6 +69,7 @@ export async function POST(request: NextRequest) {
         videoUrl: videoUrl ?? null,
         links: links ?? null,
         isCustom: isCustom ?? true,
+        userId,
       },
     });
 

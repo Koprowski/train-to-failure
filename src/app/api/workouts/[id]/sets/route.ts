@@ -1,11 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/session";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    const { error: authError, userId } = await requireAuth();
+    if (authError) return authError;
+
     const { id } = await params;
+
+    // Verify workout belongs to user
+    const workout = await prisma.workout.findFirst({ where: { id, userId } });
+    if (!workout) {
+      return NextResponse.json({ error: "Workout not found" }, { status: 404 });
+    }
+
     const sets = await prisma.workoutSet.findMany({
       where: { workoutId: id },
       include: { exercise: true },
@@ -24,7 +35,17 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
+    const { error: authError, userId } = await requireAuth();
+    if (authError) return authError;
+
     const { id } = await params;
+
+    // Verify workout belongs to user
+    const workout = await prisma.workout.findFirst({ where: { id, userId } });
+    if (!workout) {
+      return NextResponse.json({ error: "Workout not found" }, { status: 404 });
+    }
+
     const body = await request.json();
     const { exerciseId, setNumber, setType, reps, weightLbs, timeSecs, rpe, restSecs, notes, completed, supersetGroup } = body;
 

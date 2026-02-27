@@ -7,52 +7,112 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+
+  accounts Account[]
+  sessions Session[]
+
+  workouts         Workout[]
+  workoutTemplates WorkoutTemplate[]
+  bodyMetrics      BodyMetric[]
+  exercises        Exercise[]        @relation("CustomExercises")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
 model Exercise {
   id           String   @id @default(uuid())
   name         String
-  muscleGroups String   // comma-separated: "chest,triceps,shoulders"
-  equipment    String   // comma-separated: "barbell,bench"
-  type         String   @default("weight_reps") // weight_reps, time, bodyweight, cardio
+  muscleGroups String
+  equipment    String
+  type         String   @default("weight_reps")
   instructions String?
   videoUrl     String?
-  links        String?  // JSON array of {title, url}
+  links        String?
   isCustom     Boolean  @default(true)
+  userId       String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  workoutSets      WorkoutSet[]
+  user              User?              @relation("CustomExercises", fields: [userId], references: [id])
+  workoutSets       WorkoutSet[]
   templateExercises TemplateExercise[]
+
+  @@index([userId])
 }
 
 model Workout {
   id         String    @id @default(uuid())
+  userId     String
   name       String
   startedAt  DateTime  @default(now())
   finishedAt DateTime?
-  duration   Int?      // seconds
+  duration   Int?
   notes      String?
   templateId String?
 
-  template   WorkoutTemplate? @relation(fields: [templateId], references: [id])
-  sets       WorkoutSet[]
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template WorkoutTemplate?  @relation(fields: [templateId], references: [id])
+  sets     WorkoutSet[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model WorkoutSet {
-  id         String  @id @default(uuid())
-  workoutId  String
-  exerciseId String
-  setNumber  Int
-  setType    String  @default("working") // warmup, working, dropset, failure
-  reps       Int?
-  weightLbs  Float?
-  timeSecs   Int?
-  rpe        Float?
-  restSecs   Int?
-  notes      String?
-  completed  Boolean @default(false)
+  id            String  @id @default(uuid())
+  workoutId     String
+  exerciseId    String
+  setNumber     Int
+  setType       String  @default("working")
+  reps          Int?
+  weightLbs     Float?
+  timeSecs      Int?
+  rpe           Float?
+  restSecs      Int?
+  notes         String?
+  completed     Boolean @default(false)
   supersetGroup Int?
 
   workout  Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
@@ -65,26 +125,30 @@ model WorkoutSet {
 }
 
 model WorkoutTemplate {
-  id        String @id @default(uuid())
-  name      String
-  folder    String?
-  notes     String?
+  id     String  @id @default(uuid())
+  userId String
+  name   String
+  folder String?
+  notes  String?
 
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   exercises TemplateExercise[]
   workouts  Workout[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model TemplateExercise {
-  id         String @id @default(uuid())
-  templateId String
-  exerciseId String
-  order      Int
-  sets       Int    @default(3)
+  id            String  @id @default(uuid())
+  templateId    String
+  exerciseId    String
+  order         Int
+  sets          Int     @default(3)
   supersetGroup Int?
-  notes      String?
+  notes         String?
 
   template WorkoutTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
   exercise Exercise        @relation(fields: [exerciseId], references: [id])
@@ -93,19 +157,24 @@ model TemplateExercise {
 }
 
 model BodyMetric {
-  id          String   @id @default(uuid())
-  date        DateTime
-  weightLbs   Float?
-  bodyFatPct  Float?
-  notes       String?
+  id         String   @id @default(uuid())
+  userId     String
+  date       DateTime
+  weightLbs  Float?
+  bodyFatPct Float?
+  notes      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model PersonalRecord {
   id         String   @id @default(uuid())
   exerciseId String
-  type       String   // max_weight, max_reps, max_volume, estimated_1rm
+  type       String
   value      Float
   date       DateTime
   workoutId  String?

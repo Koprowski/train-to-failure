@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/session";
 
 export async function GET() {
   try {
+    const { error: authError, userId } = await requireAuth();
+    if (authError) return authError;
+
     const metrics = await prisma.bodyMetric.findMany({
+      where: { userId },
       orderBy: { date: "desc" },
     });
 
@@ -19,6 +24,9 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const { error: authError, userId } = await requireAuth();
+    if (authError) return authError;
+
     const body = await request.json();
     const { date, weightLbs, bodyFatPct, notes } = body;
 
@@ -35,6 +43,7 @@ export async function POST(request: NextRequest) {
         weightLbs: weightLbs ?? null,
         bodyFatPct: bodyFatPct ?? null,
         notes: notes ?? null,
+        userId,
       },
     });
 

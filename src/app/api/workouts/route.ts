@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/session";
 
 export async function GET() {
   try {
+    const { error: authError, userId } = await requireAuth();
+    if (authError) return authError;
+
     const workouts = await prisma.workout.findMany({
+      where: { userId },
       orderBy: { startedAt: "desc" },
       include: {
         sets: {
@@ -26,6 +31,9 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const { error: authError, userId } = await requireAuth();
+    if (authError) return authError;
+
     const body = await request.json();
     const { name, templateId, notes } = body;
 
@@ -41,6 +49,7 @@ export async function POST(request: NextRequest) {
         name,
         templateId: templateId ?? null,
         notes: notes ?? null,
+        userId,
       },
       include: {
         sets: { include: { exercise: true } },

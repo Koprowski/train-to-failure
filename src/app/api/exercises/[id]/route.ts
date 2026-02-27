@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/session";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    const { error: authError } = await requireAuth();
+    if (authError) return authError;
+
     const { id } = await params;
     const exercise = await prisma.exercise.findUnique({
       where: { id },
@@ -33,7 +37,20 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
+    const { error: authError, userId } = await requireAuth();
+    if (authError) return authError;
+
     const { id } = await params;
+
+    // Verify ownership: only allow editing exercises the user owns
+    const existing = await prisma.exercise.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
+    }
+    if (existing.userId !== userId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const body = await request.json();
 
     const exercise = await prisma.exercise.update({
@@ -53,7 +70,20 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
+    const { error: authError, userId } = await requireAuth();
+    if (authError) return authError;
+
     const { id } = await params;
+
+    // Verify ownership: only allow deleting exercises the user owns
+    const existing = await prisma.exercise.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
+    }
+    if (existing.userId !== userId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     await prisma.exercise.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/session";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    const { error: authError, userId } = await requireAuth();
+    if (authError) return authError;
+
     const { id } = await params;
-    const workout = await prisma.workout.findUnique({
-      where: { id },
+    const workout = await prisma.workout.findFirst({
+      where: { id, userId },
       include: {
         sets: {
           include: { exercise: true },
@@ -33,17 +37,23 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
+    const { error: authError, userId } = await requireAuth();
+    if (authError) return authError;
+
     const { id } = await params;
     const body = await request.json();
 
+    // Verify ownership
+    const existing = await prisma.workout.findFirst({ where: { id, userId } });
+    if (!existing) {
+      return NextResponse.json({ error: "Workout not found" }, { status: 404 });
+    }
+
     // If finishing the workout, calculate duration from startedAt
     if (body.finishedAt && !body.duration) {
-      const existing = await prisma.workout.findUnique({ where: { id } });
-      if (existing) {
-        const finishedAt = new Date(body.finishedAt);
-        const startedAt = new Date(existing.startedAt);
-        body.duration = Math.round((finishedAt.getTime() - startedAt.getTime()) / 1000);
-      }
+      const finishedAt = new Date(body.finishedAt);
+      const startedAt = new Date(existing.startedAt);
+      body.duration = Math.round((finishedAt.getTime() - startedAt.getTime()) / 1000);
     }
 
     const workout = await prisma.workout.update({
@@ -70,7 +80,17 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
+    const { error: authError, userId } = await requireAuth();
+    if (authError) return authError;
+
     const { id } = await params;
+
+    // Verify ownership
+    const existing = await prisma.workout.findFirst({ where: { id, userId } });
+    if (!existing) {
+      return NextResponse.json({ error: "Workout not found" }, { status: 404 });
+    }
+
     await prisma.workout.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error) {

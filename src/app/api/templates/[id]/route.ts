@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/session";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    const { error: authError, userId } = await requireAuth();
+    if (authError) return authError;
+
     const { id } = await params;
-    const template = await prisma.workoutTemplate.findUnique({
-      where: { id },
+    const template = await prisma.workoutTemplate.findFirst({
+      where: { id, userId },
       include: {
         exercises: {
           include: { exercise: true },
@@ -32,9 +36,18 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
+    const { error: authError, userId } = await requireAuth();
+    if (authError) return authError;
+
     const { id } = await params;
     const body = await request.json();
     const { name, folder, notes, exercises } = body;
+
+    // Verify ownership
+    const existing = await prisma.workoutTemplate.findFirst({ where: { id, userId } });
+    if (!existing) {
+      return NextResponse.json({ error: "Template not found" }, { status: 404 });
+    }
 
     // If exercises are provided, replace them all
     if (exercises) {
@@ -81,7 +94,17 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
+    const { error: authError, userId } = await requireAuth();
+    if (authError) return authError;
+
     const { id } = await params;
+
+    // Verify ownership
+    const existing = await prisma.workoutTemplate.findFirst({ where: { id, userId } });
+    if (!existing) {
+      return NextResponse.json({ error: "Template not found" }, { status: 404 });
+    }
+
     await prisma.workoutTemplate.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error) {

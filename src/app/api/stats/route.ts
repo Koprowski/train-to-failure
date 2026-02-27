@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/session";
 
 export async function GET(request: NextRequest) {
   try {
+    const { error: authError, userId } = await requireAuth();
+    if (authError) return authError;
+
     const { searchParams } = new URL(request.url);
     const exerciseId = searchParams.get("exerciseId");
 
@@ -13,13 +17,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get all completed sets for this exercise, grouped by workout date
+    // Get all completed sets for this exercise, filtered by user's workouts
     const sets = await prisma.workoutSet.findMany({
       where: {
         exerciseId,
         completed: true,
         weightLbs: { not: null },
         reps: { not: null },
+        workout: { userId },
       },
       include: {
         workout: { select: { startedAt: true, name: true } },
@@ -65,9 +70,9 @@ export async function GET(request: NextRequest) {
       estimated1RM: Math.round(rest.estimated1RM * 10) / 10,
     }));
 
-    // Get personal records for this exercise
+    // Get personal records for this exercise scoped to user
     const personalRecords = await prisma.personalRecord.findMany({
-      where: { exerciseId },
+      where: { exerciseId, userId },
       orderBy: { date: "desc" },
     });
 

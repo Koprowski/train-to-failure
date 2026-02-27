@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/session";
 
 export async function GET(request: NextRequest) {
   try {
+    const { error: authError, userId } = await requireAuth();
+    if (authError) return authError;
+
     const { searchParams } = new URL(request.url);
     const days = parseInt(searchParams.get("days") ?? "30", 10);
 
@@ -12,11 +16,11 @@ export async function GET(request: NextRequest) {
     const since = new Date();
     since.setDate(since.getDate() - validDays);
 
-    // Get all completed sets within the time range with their exercise info
+    // Get all completed sets within the time range with their exercise info, filtered by user
     const sets = await prisma.workoutSet.findMany({
       where: {
         completed: true,
-        workout: { startedAt: { gte: since } },
+        workout: { startedAt: { gte: since }, userId },
       },
       include: {
         exercise: { select: { muscleGroups: true } },

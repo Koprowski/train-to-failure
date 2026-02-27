@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/session";
 
 type RouteParams = { params: Promise<{ id: string; setId: string }> };
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
+    const { error: authError, userId } = await requireAuth();
+    if (authError) return authError;
+
     const { id, setId } = await params;
-    const body = await request.json();
+
+    // Verify workout belongs to user
+    const workout = await prisma.workout.findFirst({ where: { id, userId } });
+    if (!workout) {
+      return NextResponse.json({ error: "Workout not found" }, { status: 404 });
+    }
 
     // Verify the set belongs to this workout
     const existing = await prisma.workoutSet.findFirst({
@@ -16,6 +25,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (!existing) {
       return NextResponse.json({ error: "Set not found" }, { status: 404 });
     }
+
+    const body = await request.json();
 
     const set = await prisma.workoutSet.update({
       where: { id: setId },
@@ -35,7 +46,16 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
+    const { error: authError, userId } = await requireAuth();
+    if (authError) return authError;
+
     const { id, setId } = await params;
+
+    // Verify workout belongs to user
+    const workout = await prisma.workout.findFirst({ where: { id, userId } });
+    if (!workout) {
+      return NextResponse.json({ error: "Workout not found" }, { status: 404 });
+    }
 
     // Verify the set belongs to this workout
     const existing = await prisma.workoutSet.findFirst({

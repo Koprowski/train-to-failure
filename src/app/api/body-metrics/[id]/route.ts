@@ -1,11 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/session";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
+    const { error: authError, userId } = await requireAuth();
+    if (authError) return authError;
+
     const { id } = await params;
+
+    // Verify ownership
+    const existing = await prisma.bodyMetric.findFirst({ where: { id, userId } });
+    if (!existing) {
+      return NextResponse.json({ error: "Body metric not found" }, { status: 404 });
+    }
+
     const body = await request.json();
 
     const data: Record<string, unknown> = {};
@@ -31,7 +42,17 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
+    const { error: authError, userId } = await requireAuth();
+    if (authError) return authError;
+
     const { id } = await params;
+
+    // Verify ownership
+    const existing = await prisma.bodyMetric.findFirst({ where: { id, userId } });
+    if (!existing) {
+      return NextResponse.json({ error: "Body metric not found" }, { status: 404 });
+    }
+
     await prisma.bodyMetric.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error) {
