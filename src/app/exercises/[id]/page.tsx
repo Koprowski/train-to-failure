@@ -47,27 +47,46 @@ function getBadgeColor(group: string) {
   return BADGE_COLORS[group.toLowerCase().trim()] ?? "bg-gray-500/20 text-gray-400";
 }
 
-function getYouTubeVideoId(url: string): string | null {
+function parseYouTubeUrl(url: string): { videoId: string; startSeconds: number } | null {
   try {
     const u = new URL(url);
+    let videoId: string | null = null;
+    let startSeconds = 0;
+
     if (u.hostname.includes("youtube.com")) {
-      return u.searchParams.get("v");
+      videoId = u.searchParams.get("v");
+      const t = u.searchParams.get("t");
+      if (t) {
+        // Handle "104s" or "104" or "1m44s" formats
+        const match = t.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?$/);
+        if (match) {
+          startSeconds = (parseInt(match[1] || "0") * 3600) + (parseInt(match[2] || "0") * 60) + parseInt(match[3] || "0");
+        }
+      }
     } else if (u.hostname.includes("youtu.be")) {
-      return u.pathname.slice(1);
+      videoId = u.pathname.slice(1);
+      const t = u.searchParams.get("t");
+      if (t) {
+        startSeconds = parseInt(t) || 0;
+      }
     }
+
+    if (videoId) return { videoId, startSeconds };
   } catch {
     // not a valid url
   }
   return null;
 }
 
-function YouTubeLite({ videoId, title }: { videoId: string; title: string }) {
+function YouTubeLite({ videoId, startSeconds, title }: { videoId: string; startSeconds: number; title: string }) {
   const [playing, setPlaying] = useState(false);
+
+  const embedParams = [`autoplay=1`, startSeconds > 0 ? `start=${startSeconds}` : ""].filter(Boolean).join("&");
 
   if (playing) {
     return (
       <iframe
-        src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
+        src={`https://www.youtube.com/embed/${videoId}?${embedParams}`}
         className="w-full h-full"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowFullScreen
@@ -185,7 +204,7 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
 
   const muscleGroups = exercise.muscleGroups.split(",").map((g) => g.trim()).filter(Boolean);
   const equipmentList = exercise.equipment.split(",").map((e) => e.trim()).filter(Boolean);
-  const videoId = exercise.videoUrl ? getYouTubeVideoId(exercise.videoUrl) : null;
+  const ytData = exercise.videoUrl ? parseYouTubeUrl(exercise.videoUrl) : null;
   let parsedLinks: { title: string; url: string }[] = [];
   if (exercise.links) {
     try {
@@ -263,11 +282,11 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
       </div>
 
       {/* Video */}
-      {videoId && (
+      {ytData && (
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
           <h2 className="text-lg font-semibold mb-4">Video</h2>
           <div className="aspect-video rounded-lg overflow-hidden">
-            <YouTubeLite videoId={videoId} title={`${exercise.name} video`} />
+            <YouTubeLite videoId={ytData.videoId} startSeconds={ytData.startSeconds} title={`${exercise.name} video`} />
           </div>
         </div>
       )}
