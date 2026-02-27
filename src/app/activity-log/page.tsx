@@ -217,7 +217,14 @@ function ActivityLogContent() {
                         {set.weightLbs != null && <span>{set.weightLbs} lbs</span>}
                         {set.reps != null && <span>{set.reps} reps</span>}
                         {set.timeSecs != null && <span>{set.timeSecs}s</span>}
-                        {set.rpe != null && <span>RPE {set.rpe}</span>}
+                        {set.rpe != null && (
+                          <span className="group relative cursor-help">
+                            RPE {set.rpe}
+                            <span className="invisible group-hover:visible absolute bottom-full left-0 mb-2 w-48 px-3 py-2 text-xs font-normal text-gray-300 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10">
+                              Rate of Perceived Exertion (1-10). How hard the set felt, where 10 is max effort.
+                            </span>
+                          </span>
+                        )}
                         {set.workout ? (
                           <Link href={`/workouts/${set.workout.id}`} className="text-xs text-emerald-500/70 hover:text-emerald-500">
                             {set.workout.name}
@@ -342,7 +349,18 @@ function ActivityLogContent() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm text-gray-400 mb-1">RPE</label>
+                      <label className="block text-sm text-gray-400 mb-1">
+                        <span className="group relative inline-flex items-center gap-1 cursor-help">
+                          RPE
+                          <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          <span className="invisible group-hover:visible absolute bottom-full left-0 mb-2 w-48 px-3 py-2 text-xs font-normal text-gray-300 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10">
+                            Rate of Perceived Exertion (1-10). How hard the set felt, where 10 is max effort.
+                          </span>
+                        </span>
+                      </label>
                       <input
                         type="number"
                         inputMode="decimal"
