@@ -3,7 +3,16 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/session";
 
 // One-time migration endpoint. Remove after running.
+// Support both GET and POST so you can just visit the URL in a browser.
+export async function GET() {
+  return runMigration();
+}
+
 export async function POST() {
+  return runMigration();
+}
+
+async function runMigration() {
   try {
     const { error } = await requireAuth();
     if (error) return error;
