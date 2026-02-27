@@ -1,0 +1,292 @@
+{
+  "Barbell Bench Press": {
+    "gifFile": "as_barbell-bench-press.gif",
+    "imageUrl": "/gifs/as_barbell-bench-press.gif",
+    "muscleGroups": "chest,triceps,shoulders"
+  },
+  "Incline Dumbbell Press": {
+    "gifFile": "as_dumbbell-palms-in-incline-bench-press.gif",
+    "imageUrl": "/gifs/as_dumbbell-palms-in-incline-bench-press.gif",
+    "muscleGroups": "chest,shoulders,triceps"
+  },
+  "Cable Fly": {
+    "gifFile": "as_cable-standing-fly.gif",
+    "imageUrl": "/gifs/as_cable-standing-fly.gif",
+    "muscleGroups": "chest"
+  },
+  "Push Up": {
+    "gifFile": "as_push-up.gif",
+    "imageUrl": "/gifs/as_push-up.gif",
+    "muscleGroups": "chest,triceps,shoulders"
+  },
+  "Dumbbell Fly": {
+    "gifFile": "as_dumbbell-fly-on-exercise-ball.gif",
+    "imageUrl": "/gifs/as_dumbbell-fly-on-exercise-ball.gif",
+    "muscleGroups": "chest"
+  },
+  "Machine Chest Press": {
+    "gifFile": "as_cable-seated-chest-press.gif",
+    "imageUrl": "/gifs/as_cable-seated-chest-press.gif",
+    "muscleGroups": "chest,triceps,shoulders"
+  },
+  "Barbell Deadlift": {
+    "gifFile": "as_barbell-deadlift.gif",
+    "imageUrl": "/gifs/as_barbell-deadlift.gif",
+    "muscleGroups": "back,glutes,hamstrings"
+  },
+  "Pull Up": {
+    "gifFile": "as_pull-up.gif",
+    "imageUrl": "/gifs/as_pull-up.gif",
+    "muscleGroups": "back,biceps"
+  },
+  "Barbell Row": {
+    "gifFile": "as_barbell-bent-over-row.gif",
+    "imageUrl": "/gifs/as_barbell-bent-over-row.gif",
+    "muscleGroups": "back,biceps"
+  },
+  "Lat Pulldown": {
+    "gifFile": "as_cable-lat-pulldown-full-range-of-motion.gif",
+    "imageUrl": "/gifs/as_cable-lat-pulldown-full-range-of-motion.gif",
+    "muscleGroups": "back,biceps"
+  },
+  "Seated Cable Row": {
+    "gifFile": "as_cable-seated-row.gif",
+    "imageUrl": "/gifs/as_cable-seated-row.gif",
+    "muscleGroups": "back,biceps"
+  },
+  "Dumbbell Row": {
+    "gifFile": "as_dumbbell-bent-over-row.gif",
+    "imageUrl": "/gifs/as_dumbbell-bent-over-row.gif",
+    "muscleGroups": "back,biceps"
+  },
+  "T-Bar Row": {
+    "gifFile": "as_lever-t-bar-row.gif",
+    "imageUrl": "/gifs/as_lever-t-bar-row.gif",
+    "muscleGroups": "back,biceps"
+  },
+  "Overhead Press": {
+    "gifFile": "as_dumbbell-standing-overhead-press.gif",
+    "imageUrl": "/gifs/as_dumbbell-standing-overhead-press.gif",
+    "muscleGroups": "shoulders,triceps"
+  },
+  "Dumbbell Lateral Raise": {
+    "gifFile": "as_dumbbell-lateral-raise.gif",
+    "imageUrl": "/gifs/as_dumbbell-lateral-raise.gif",
+    "muscleGroups": "shoulders"
+  },
+  "Face Pull": {
+    "gifFile": "as_cable-rear-delt-row-with-rope.gif",
+    "imageUrl": "/gifs/as_cable-rear-delt-row-with-rope.gif",
+    "muscleGroups": "shoulders,back"
+  },
+  "Arnold Press": {
+    "gifFile": "as_dumbbell-arnold-press.gif",
+    "imageUrl": "/gifs/as_dumbbell-arnold-press.gif",
+    "muscleGroups": "shoulders,triceps"
+  },
+  "Front Raise": {
+    "gifFile": "as_weighted-front-raise.gif",
+    "imageUrl": "/gifs/as_weighted-front-raise.gif",
+    "muscleGroups": "shoulders"
+  },
+  "Reverse Fly": {
+    "gifFile": "as_dumbbell-reverse-fly.gif",
+    "imageUrl": "/gifs/as_dumbbell-reverse-fly.gif",
+    "muscleGroups": "shoulders,back"
+  },
+  "Barbell Curl": {
+    "gifFile": "as_ez-barbell-curl.gif",
+    "imageUrl": "/gifs/as_ez-barbell-curl.gif",
+    "muscleGroups": "biceps"
+  },
+  "Dumbbell Curl": {
+    "gifFile": "as_dumbbell-biceps-curl.gif",
+    "imageUrl": "/gifs/as_dumbbell-biceps-curl.gif",
+    "muscleGroups": "biceps"
+  },
+  "Hammer Curl": {
+    "gifFile": "as_dumbbell-hammer-curl.gif",
+    "imageUrl": "/gifs/as_dumbbell-hammer-curl.gif",
+    "muscleGroups": "biceps,forearms"
+  },
+  "Tricep Pushdown": {
+    "gifFile": "as_cable-triceps-pushdown-v-bar.gif",
+    "imageUrl": "/gifs/as_cable-triceps-pushdown-v-bar.gif",
+    "muscleGroups": "triceps"
+  },
+  "Skull Crusher": {
+    "gifFile": "as_barbell-lying-triceps-extension.gif",
+    "imageUrl": "/gifs/as_barbell-lying-triceps-extension.gif",
+    "muscleGroups": "triceps"
+  },
+  "Overhead Tricep Extension": {
+    "gifFile": "as_cable-overhead-triceps-extension-rope-attachment.gif",
+    "imageUrl": "/gifs/as_cable-overhead-triceps-extension-rope-attachment.gif",
+    "muscleGroups": "triceps"
+  },
+  "Preacher Curl": {
+    "gifFile": "as_barbell-preacher-curl.gif",
+    "imageUrl": "/gifs/as_barbell-preacher-curl.gif",
+    "muscleGroups": "biceps"
+  },
+  "Barbell Squat": {
+    "gifFile": "as_barbell-low-bar-squat.gif",
+    "imageUrl": "/gifs/as_barbell-low-bar-squat.gif",
+    "muscleGroups": "quadriceps,glutes,hamstrings"
+  },
+  "Leg Press": {
+    "gifFile": "as_smith-leg-press.gif",
+    "imageUrl": "/gifs/as_smith-leg-press.gif",
+    "muscleGroups": "quadriceps,glutes"
+  },
+  "Romanian Deadlift": {
+    "gifFile": "as_barbell-romanian-deadlift.gif",
+    "imageUrl": "/gifs/as_barbell-romanian-deadlift.gif",
+    "muscleGroups": "hamstrings,glutes,back"
+  },
+  "Leg Extension": {
+    "gifFile": "as_lever-leg-extension.gif",
+    "imageUrl": "/gifs/as_lever-leg-extension.gif",
+    "muscleGroups": "quadriceps"
+  },
+  "Leg Curl": {
+    "gifFile": "as_lever-seated-leg-curl.gif",
+    "imageUrl": "/gifs/as_lever-seated-leg-curl.gif",
+    "muscleGroups": "hamstrings"
+  },
+  "Bulgarian Split Squat": {
+    "gifFile": "as_split-squats.gif",
+    "imageUrl": "/gifs/as_split-squats.gif",
+    "muscleGroups": "quadriceps,glutes"
+  },
+  "Calf Raise": {
+    "gifFile": "as_lever-standing-calf-raise.gif",
+    "imageUrl": "/gifs/as_lever-standing-calf-raise.gif",
+    "muscleGroups": "calves"
+  },
+  "Goblet Squat": {
+    "gifFile": "as_dumbbell-goblet-squat.gif",
+    "imageUrl": "/gifs/as_dumbbell-goblet-squat.gif",
+    "muscleGroups": "quadriceps,glutes"
+  },
+  "Hip Thrust": {
+    "gifFile": "as_barbell-glute-bridge.gif",
+    "imageUrl": "/gifs/as_barbell-glute-bridge.gif",
+    "muscleGroups": "glutes,hamstrings"
+  },
+  "Walking Lunge": {
+    "gifFile": "as_walking-lunge.gif",
+    "imageUrl": "/gifs/as_walking-lunge.gif",
+    "muscleGroups": "quadriceps,glutes"
+  },
+  "Plank": {
+    "gifFile": "as_weighted-front-plank.gif",
+    "imageUrl": "/gifs/as_weighted-front-plank.gif",
+    "muscleGroups": "abs,core"
+  },
+  "Hanging Leg Raise": {
+    "gifFile": "as_hanging-leg-raise.gif",
+    "imageUrl": "/gifs/as_hanging-leg-raise.gif",
+    "muscleGroups": "abs"
+  },
+  "Ab Wheel Rollout": {
+    "gifFile": "as_wheel-rollerout.gif",
+    "imageUrl": "/gifs/as_wheel-rollerout.gif",
+    "muscleGroups": "abs,core"
+  },
+  "Russian Twist": {
+    "gifFile": "as_weighted-russian-twist.gif",
+    "imageUrl": "/gifs/as_weighted-russian-twist.gif",
+    "muscleGroups": "abs,obliques"
+  },
+  "Dead Bug": {
+    "gifFile": "as_dead-bug.gif",
+    "imageUrl": "/gifs/as_dead-bug.gif",
+    "muscleGroups": "abs,core"
+  },
+  "Side Plank": {
+    "gifFile": "as_push-up-to-side-plank.gif",
+    "imageUrl": "/gifs/as_push-up-to-side-plank.gif",
+    "muscleGroups": "obliques,core"
+  },
+  "Decline Sit-Up": {
+    "gifFile": "as_decline-sit-up.gif",
+    "imageUrl": "/gifs/as_decline-sit-up.gif",
+    "muscleGroups": "abs,core"
+  },
+  "Treadmill Run": {
+    "gifFile": "by_walking-on-incline-treadmill.gif",
+    "imageUrl": "/gifs/by_walking-on-incline-treadmill.gif",
+    "muscleGroups": "cardio"
+  },
+  "Cable Row": {
+    "gifFile": "as_cable-straight-back-seated-row.gif",
+    "imageUrl": "/gifs/as_cable-straight-back-seated-row.gif",
+    "muscleGroups": "back,biceps"
+  },
+  "Cycling": {
+    "gifFile": "as_air-bike.gif",
+    "imageUrl": "/gifs/as_air-bike.gif",
+    "muscleGroups": "cardio,quadriceps"
+  },
+  "Jump Rope": {
+    "gifFile": "as_jump-rope.gif",
+    "imageUrl": "/gifs/as_jump-rope.gif",
+    "muscleGroups": "cardio,calves"
+  },
+  "Battle Ropes": {
+    "gifFile": "as_battling-ropes.gif",
+    "imageUrl": "/gifs/as_battling-ropes.gif",
+    "muscleGroups": "cardio,shoulders,arms"
+  },
+  "Hip Abduction": {
+    "gifFile": "as_resistance-band-seated-hip-abduction.gif",
+    "imageUrl": "/gifs/as_resistance-band-seated-hip-abduction.gif",
+    "muscleGroups": "glutes,abductors"
+  },
+  "Hip Adduction": {
+    "gifFile": "as_side-plank-hip-adduction.gif",
+    "imageUrl": "/gifs/as_side-plank-hip-adduction.gif",
+    "muscleGroups": "adductors"
+  },
+  "Dip": {
+    "gifFile": "as_chest-dip-on-dip-pull-up-cage.gif",
+    "imageUrl": "/gifs/as_chest-dip-on-dip-pull-up-cage.gif",
+    "muscleGroups": "chest,triceps,shoulders"
+  },
+  "Barbell Shrug": {
+    "gifFile": "as_barbell-shrug.gif",
+    "imageUrl": "/gifs/as_barbell-shrug.gif",
+    "muscleGroups": "traps"
+  },
+  "Cable Lateral Raise": {
+    "gifFile": "as_cable-lateral-raise.gif",
+    "imageUrl": "/gifs/as_cable-lateral-raise.gif",
+    "muscleGroups": "shoulders"
+  },
+  "Wrist Curl": {
+    "gifFile": "as_barbell-wrist-curl.gif",
+    "imageUrl": "/gifs/as_barbell-wrist-curl.gif",
+    "muscleGroups": "forearms"
+  },
+  "Cable Kickback": {
+    "gifFile": "as_cable-kickback.gif",
+    "imageUrl": "/gifs/as_cable-kickback.gif",
+    "muscleGroups": "glutes"
+  },
+  "Good Morning": {
+    "gifFile": "as_barbell-good-morning.gif",
+    "imageUrl": "/gifs/as_barbell-good-morning.gif",
+    "muscleGroups": "hamstrings,back,glutes"
+  },
+  "Farmer's Walk": {
+    "gifFile": "as_farmers-walk.gif",
+    "imageUrl": "/gifs/as_farmers-walk.gif",
+    "muscleGroups": "traps,forearms,core"
+  },
+  "Incline Barbell Bench Press": {
+    "gifFile": "as_barbell-incline-bench-press.gif",
+    "imageUrl": "/gifs/as_barbell-incline-bench-press.gif",
+    "muscleGroups": "chest,shoulders,triceps"
+  }
+}
