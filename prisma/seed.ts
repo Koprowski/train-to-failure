@@ -36,6 +36,7 @@ const exercises = [
   { name: "Leg Curl", muscleGroups: "hamstrings", equipment: "machine", type: "weight_reps" },
   { name: "Bulgarian Split Squat", muscleGroups: "quads,glutes", equipment: "dumbbell", type: "weight_reps" },
   { name: "Calf Raise", muscleGroups: "calves", equipment: "machine", type: "weight_reps" },
+  { name: "Calf Raise - Seated", muscleGroups: "calves", equipment: "machine", type: "weight_reps" },
   { name: "Goblet Squat", muscleGroups: "quads,glutes", equipment: "dumbbell,kettlebell", type: "weight_reps" },
   { name: "Hip Thrust", muscleGroups: "glutes,hamstrings", equipment: "barbell,bench", type: "weight_reps" },
   { name: "Walking Lunge", muscleGroups: "quads,glutes", equipment: "dumbbell", type: "weight_reps" },
