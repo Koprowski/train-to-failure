@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 interface Exercise {
@@ -118,12 +119,15 @@ function YouTubeLite({ videoId, startSeconds, title }: { videoId: string; startS
 
 export default function ExerciseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const [exercise, setExercise] = useState<Exercise | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [chartMetric, setChartMetric] = useState<"maxWeight" | "estimated1RM" | "totalVolume">("maxWeight");
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [editForm, setEditForm] = useState({
     name: "",
     muscleGroups: "",
@@ -182,6 +186,24 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
       setSaving(false);
     }
   }
+
+  const deleteExercise = async () => {
+    if (!exercise) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/exercises/${exercise.id}`, { method: "DELETE" });
+      if (res.ok) {
+        router.push("/exercises");
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to delete exercise");
+        setDeleting(false);
+      }
+    } catch (err) {
+      console.error("Failed to delete exercise:", err);
+      setDeleting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -259,6 +281,15 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-gray-800 transition-colors"
+              title="Delete exercise"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
             </button>
           </div>
@@ -407,6 +438,30 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-sm">
+            <h2 className="text-lg font-semibold mb-2">Delete Exercise</h2>
+            <p className="text-gray-400 text-sm mb-6">
+              Are you sure you want to delete &ldquo;{exercise.name}&rdquo;? This cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setShowDeleteConfirm(false)} className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">
+                Cancel
+              </button>
+              <button
+                onClick={deleteExercise}
+                disabled={deleting}
+                className="px-4 py-2 text-sm bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors disabled:opacity-50"
+              >
+                {deleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
           </div>
         </div>
       )}

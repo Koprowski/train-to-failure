@@ -24,6 +24,8 @@ interface Workout {
 export default function WorkoutsPage() {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetch("/api/workouts")
@@ -57,6 +59,24 @@ export default function WorkoutsPage() {
     const d = new Date(dateStr);
     return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   };
+
+  const deleteWorkout = async () => {
+    if (!deleteId) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/workouts/${deleteId}`, { method: "DELETE" });
+      if (res.ok) {
+        setWorkouts((prev) => prev.filter((w) => w.id !== deleteId));
+        setDeleteId(null);
+      }
+    } catch (err) {
+      console.error("Failed to delete workout:", err);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const workoutToDelete = deleteId ? workouts.find((w) => w.id === deleteId) : null;
 
   if (loading) {
     return (
@@ -119,9 +139,20 @@ export default function WorkoutsPage() {
                       {formatDate(w.startedAt)} at {formatTime(w.startedAt)}
                     </p>
                   </div>
-                  <div className="text-right shrink-0 ml-4">
-                    <p className="text-white font-medium">{formatDuration(w.duration)}</p>
-                    <p className="text-gray-400 text-sm">{w.sets.length} sets</p>
+                  <div className="flex items-start gap-3 shrink-0 ml-4">
+                    <div className="text-right">
+                      <p className="text-white font-medium">{formatDuration(w.duration)}</p>
+                      <p className="text-gray-400 text-sm">{w.sets.length} sets</p>
+                    </div>
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteId(w.id); }}
+                      className="p-1 rounded text-gray-600 hover:text-red-400 transition-colors"
+                      title="Delete workout"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -144,6 +175,30 @@ export default function WorkoutsPage() {
               </Link>
             );
           })}
+        </div>
+      )}
+
+      {/* Delete Confirmation */}
+      {deleteId && workoutToDelete && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-sm">
+            <h2 className="text-lg font-semibold mb-2">Delete Workout</h2>
+            <p className="text-gray-400 text-sm mb-6">
+              Are you sure you want to delete &ldquo;{workoutToDelete.name}&rdquo;? This cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setDeleteId(null)} className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">
+                Cancel
+              </button>
+              <button
+                onClick={deleteWorkout}
+                disabled={deleting}
+                className="px-4 py-2 text-sm bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors disabled:opacity-50"
+              >
+                {deleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
