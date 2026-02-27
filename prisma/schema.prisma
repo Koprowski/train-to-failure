@@ -77,6 +77,7 @@ model Exercise {
 
   user              User?              @relation("CustomExercises", fields: [userId], references: [id])
   workoutSets       WorkoutSet[]
+  workoutExercises  WorkoutExercise[]
   templateExercises TemplateExercise[]
 
   @@index([userId])
@@ -92,9 +93,12 @@ model Workout {
   notes      String?
   templateId String?
 
-  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  template WorkoutTemplate?  @relation(fields: [templateId], references: [id])
-  sets     WorkoutSet[]
+  isQuickLog Boolean   @default(false)
+
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template          WorkoutTemplate?  @relation(fields: [templateId], references: [id])
+  sets              WorkoutSet[]
+  workoutExercises  WorkoutExercise[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -118,15 +122,40 @@ model WorkoutSet {
   completed     Boolean @default(false)
   supersetGroup Int?
 
-  workout  Workout?  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
-  user     User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  exercise Exercise  @relation(fields: [exerciseId], references: [id])
+  workoutExerciseId String?
+  completedAt       DateTime?
+
+  workout         Workout?         @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  user            User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercise        Exercise         @relation(fields: [exerciseId], references: [id])
+  workoutExercise WorkoutExercise? @relation(fields: [workoutExerciseId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
   @@index([workoutId])
   @@index([exerciseId])
   @@index([userId])
+  @@index([workoutExerciseId])
+}
+
+model WorkoutExercise {
+  id         String    @id @default(uuid())
+  workoutId  String
+  exerciseId String
+  order      Int
+  startedAt  DateTime?
+  finishedAt DateTime?
+  duration   Int?
+  notes      String?
+
+  workout  Workout    @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exercise Exercise   @relation(fields: [exerciseId], references: [id])
+  sets     WorkoutSet[]
+
+  createdAt DateTime @default(now())
+
+  @@index([workoutId])
+  @@index([exerciseId])
 }
 
 model WorkoutTemplate {

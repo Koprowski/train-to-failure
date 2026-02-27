@@ -26,11 +26,17 @@ interface SetData {
   notes: string;
   previousWeight?: string;
   previousReps?: string;
+  workoutExerciseId?: string;
 }
 
 interface ExerciseBlock {
   exercise: Exercise;
   sets: SetData[];
+  workoutExerciseId?: string;
+  startedAt?: Date;
+  elapsed: number;
+  paused: boolean;
+  finished: boolean;
 }
 
 let tempIdCounter = 0;
@@ -44,18 +50,21 @@ function WorkoutContent() {
   const resumeId = searchParams.get("resume");
   const templateId = searchParams.get("templateId");
   const duplicateFrom = searchParams.get("duplicateFrom");
+  const quickExerciseId = searchParams.get("quickExercise");
 
   const [workoutId, setWorkoutId] = useState<string | null>(null);
   const [workoutName, setWorkoutName] = useState("");
   const [exerciseBlocks, setExerciseBlocks] = useState<ExerciseBlock[]>([]);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [allExercises, setAllExercises] = useState<Exercise[]>([]);
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [started, setStarted] = useState(false);
+  const [activeExerciseIndex, setActiveExerciseIndex] = useState<number | null>(null);
   const startTimeRef = useRef<Date | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const exerciseTimerRefs = useRef<Map<number, { startedAt: Date; accumulated: number }>>(new Map());
+  const quickExerciseLoaded = useRef(false);
 
   // Load exercises for picker
   useEffect(() => {
@@ -77,35 +86,119 @@ function WorkoutContent() {
             startTimeRef.current = new Date(workout.startedAt);
             setStarted(true);
 
-            // Rebuild exercise blocks from sets
-            const blockMap = new Map<string, ExerciseBlock>();
-            for (const s of workout.sets || []) {
-              if (!blockMap.has(s.exerciseId)) {
-                blockMap.set(s.exerciseId, {
-                  exercise: s.exercise,
-                  sets: [],
+            // Rebuild exercise blocks from sets (if any exist already)
+            if (workout.sets && workout.sets.length > 0) {
+              const blockMap = new Map<string, ExerciseBlock>();
+              for (const s of workout.sets) {
+                if (!blockMap.has(s.exerciseId)) {
+                  blockMap.set(s.exerciseId, {
+                    exercise: s.exercise,
+                    sets: [],
+                    elapsed: 0,
+                    paused: true,
+                    finished: false,
+                  });
+                }
+                blockMap.get(s.exerciseId)!.sets.push({
+                  tempId: nextTempId(),
+                  dbId: s.id,
+                  exerciseId: s.exerciseId,
+                  setNumber: s.setNumber,
+                  setType: s.setType,
+                  weightLbs: s.weightLbs?.toString() ?? "",
+                  reps: s.reps?.toString() ?? "",
+                  timeSecs: s.timeSecs?.toString() ?? "",
+                  rpe: s.rpe?.toString() ?? "",
+                  completed: s.completed,
+                  notes: s.notes ?? "",
+                  workoutExerciseId: s.workoutExerciseId ?? undefined,
                 });
               }
-              blockMap.get(s.exerciseId)!.sets.push({
-                tempId: nextTempId(),
-                dbId: s.id,
-                exerciseId: s.exerciseId,
-                setNumber: s.setNumber,
-                setType: s.setType,
-                weightLbs: s.weightLbs?.toString() ?? "",
-                reps: s.reps?.toString() ?? "",
-                timeSecs: s.timeSecs?.toString() ?? "",
-                rpe: s.rpe?.toString() ?? "",
-                completed: s.completed,
-                notes: s.notes ?? "",
-              });
+              setExerciseBlocks(Array.from(blockMap.values()));
             }
-            setExerciseBlocks(Array.from(blockMap.values()));
           }
         })
         .catch(() => {});
     }
   }, [resumeId]);
+
+  // Quick exercise: load previous sets and auto-add exercise block
+  useEffect(() => {
+    if (!quickExerciseId || !workoutId || quickExerciseLoaded.current) return;
+    if (exerciseBlocks.length > 0) return; // already has blocks from resume
+
+    quickExerciseLoaded.current = true;
+
+    // Fetch recent sets for this exercise and the exercise details
+    Promise.all([
+      fetch(`/api/exercises/recent?days=30`).then((r) => r.json()),
+      fetch(`/api/exercises`).then((r) => r.json()),
+    ]).then(async ([recentData, allEx]) => {
+      const exercises = Array.isArray(allEx) ? allEx : [];
+      const exercise = exercises.find((e: Exercise) => e.id === quickExerciseId);
+      if (!exercise) return;
+
+      // Create WorkoutExercise record
+      const weRes = await fetch(`/api/workouts/${workoutId}/exercises`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ exerciseId: quickExerciseId }),
+      });
+      const workoutExercise = await weRes.json();
+
+      // Find previous sets for this exercise
+      const recent = Array.isArray(recentData)
+        ? recentData.find((r: { exercise: Exercise }) => r.exercise.id === quickExerciseId)
+        : null;
+
+      let sets: SetData[];
+      if (recent && recent.lastSets && recent.lastSets.length > 0) {
+        sets = recent.lastSets.map((s: { setNumber: number; setType: string; weightLbs: number | null; reps: number | null; timeSecs: number | null; rpe: number | null }) => ({
+          tempId: nextTempId(),
+          exerciseId: quickExerciseId,
+          setNumber: s.setNumber,
+          setType: s.setType as SetData["setType"],
+          weightLbs: "",
+          reps: "",
+          timeSecs: "",
+          rpe: "",
+          completed: false,
+          notes: "",
+          previousWeight: s.weightLbs?.toString() ?? "",
+          previousReps: s.reps?.toString() ?? "",
+          workoutExerciseId: workoutExercise.id,
+        }));
+      } else {
+        sets = [{
+          tempId: nextTempId(),
+          exerciseId: quickExerciseId,
+          setNumber: 1,
+          setType: "working",
+          weightLbs: "",
+          reps: "",
+          timeSecs: "",
+          rpe: "",
+          completed: false,
+          notes: "",
+          workoutExerciseId: workoutExercise.id,
+        }];
+      }
+
+      const block: ExerciseBlock = {
+        exercise,
+        sets,
+        workoutExerciseId: workoutExercise.id,
+        startedAt: new Date(),
+        elapsed: 0,
+        paused: false,
+        finished: false,
+      };
+
+      setExerciseBlocks([block]);
+      setActiveExerciseIndex(0);
+      exerciseTimerRefs.current.set(0, { startedAt: new Date(), accumulated: 0 });
+    }).catch((err) => console.error("Failed to load quick exercise:", err));
+  }, [quickExerciseId, workoutId, exerciseBlocks.length]);
 
   // Load template exercises
   useEffect(() => {
@@ -132,7 +225,7 @@ function WorkoutContent() {
                     notes: "",
                   });
                 }
-                return { exercise: te.exercise, sets };
+                return { exercise: te.exercise, sets, elapsed: 0, paused: true, finished: false };
               }
             );
             setExerciseBlocks(blocks);
@@ -156,6 +249,9 @@ function WorkoutContent() {
                 blockMap.set(s.exerciseId, {
                   exercise: s.exercise,
                   sets: [],
+                  elapsed: 0,
+                  paused: true,
+                  finished: false,
                 });
               }
               const prevWeight = s.weightLbs?.toString() ?? "";
@@ -182,21 +278,35 @@ function WorkoutContent() {
     }
   }, [duplicateFrom, resumeId, templateId]);
 
-  // Timer
+  // Exercise timers - tick every second
   useEffect(() => {
-    if (started && startTimeRef.current) {
-      const updateTimer = () => {
-        if (startTimeRef.current) {
-          setElapsedSeconds(Math.floor((Date.now() - startTimeRef.current.getTime()) / 1000));
-        }
-      };
-      updateTimer();
-      timerRef.current = setInterval(updateTimer, 1000);
-      return () => {
-        if (timerRef.current) clearInterval(timerRef.current);
-      };
-    }
-  }, [started]);
+    if (!started) return;
+
+    const interval = setInterval(() => {
+      setExerciseBlocks((prev) => {
+        let changed = false;
+        const updated = prev.map((block, idx) => {
+          if (idx === activeExerciseIndex && !block.paused && !block.finished) {
+            const ref = exerciseTimerRefs.current.get(idx);
+            if (ref) {
+              const newElapsed = ref.accumulated + Math.floor((Date.now() - ref.startedAt.getTime()) / 1000);
+              if (newElapsed !== block.elapsed) {
+                changed = true;
+                return { ...block, elapsed: newElapsed };
+              }
+            }
+          }
+          return block;
+        });
+        return changed ? updated : prev;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [started, activeExerciseIndex]);
+
+  // Compute total workout elapsed from all exercise blocks
+  const totalElapsed = exerciseBlocks.reduce((sum, b) => sum + b.elapsed, 0);
 
   const formatTimer = (secs: number) => {
     const h = Math.floor(secs / 3600);
@@ -225,7 +335,87 @@ function WorkoutContent() {
     }
   };
 
-  const addExercise = (exercise: Exercise) => {
+  const startExerciseTimer = (blockIndex: number) => {
+    // Pause current active exercise if different
+    if (activeExerciseIndex !== null && activeExerciseIndex !== blockIndex) {
+      pauseExerciseTimer(activeExerciseIndex);
+    }
+
+    setActiveExerciseIndex(blockIndex);
+    const ref = exerciseTimerRefs.current.get(blockIndex);
+    const accumulated = ref ? ref.accumulated : exerciseBlocks[blockIndex].elapsed;
+    exerciseTimerRefs.current.set(blockIndex, { startedAt: new Date(), accumulated });
+
+    setExerciseBlocks((prev) => {
+      const updated = [...prev];
+      updated[blockIndex] = { ...updated[blockIndex], paused: false, startedAt: new Date() };
+      return updated;
+    });
+  };
+
+  const pauseExerciseTimer = (blockIndex: number) => {
+    const ref = exerciseTimerRefs.current.get(blockIndex);
+    if (ref) {
+      const elapsed = ref.accumulated + Math.floor((Date.now() - ref.startedAt.getTime()) / 1000);
+      exerciseTimerRefs.current.set(blockIndex, { startedAt: new Date(), accumulated: elapsed });
+
+      setExerciseBlocks((prev) => {
+        const updated = [...prev];
+        updated[blockIndex] = { ...updated[blockIndex], paused: true, elapsed };
+        return updated;
+      });
+    }
+
+    if (activeExerciseIndex === blockIndex) {
+      setActiveExerciseIndex(null);
+    }
+  };
+
+  const finishExerciseTimer = async (blockIndex: number) => {
+    pauseExerciseTimer(blockIndex);
+    const block = exerciseBlocks[blockIndex];
+
+    setExerciseBlocks((prev) => {
+      const updated = [...prev];
+      updated[blockIndex] = { ...updated[blockIndex], finished: true, paused: true };
+      return updated;
+    });
+
+    // Update WorkoutExercise on server
+    if (workoutId && block.workoutExerciseId) {
+      try {
+        await fetch(`/api/workouts/${workoutId}/exercises/${block.workoutExerciseId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            finishedAt: new Date().toISOString(),
+            duration: block.elapsed,
+          }),
+        });
+      } catch (err) {
+        console.error("Failed to finish exercise:", err);
+      }
+    }
+  };
+
+  const addExercise = async (exercise: Exercise) => {
+    let workoutExerciseId: string | undefined;
+
+    // Create WorkoutExercise record if workout exists
+    if (workoutId) {
+      try {
+        const res = await fetch(`/api/workouts/${workoutId}/exercises`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ exerciseId: exercise.id }),
+        });
+        const we = await res.json();
+        workoutExerciseId = we.id;
+      } catch (err) {
+        console.error("Failed to create workout exercise:", err);
+      }
+    }
+
     const defaultSets: SetData[] = [
       {
         tempId: nextTempId(),
@@ -238,11 +428,25 @@ function WorkoutContent() {
         rpe: "",
         completed: false,
         notes: "",
+        workoutExerciseId,
       },
     ];
-    setExerciseBlocks((prev) => [...prev, { exercise, sets: defaultSets }]);
+    const newBlock: ExerciseBlock = {
+      exercise,
+      sets: defaultSets,
+      workoutExerciseId,
+      elapsed: 0,
+      paused: true,
+      finished: false,
+    };
+
+    setExerciseBlocks((prev) => [...prev, newBlock]);
     setShowExercisePicker(false);
     setExerciseSearch("");
+
+    // Auto-start timer for the new exercise
+    const newIndex = exerciseBlocks.length;
+    setTimeout(() => startExerciseTimer(newIndex), 0);
   };
 
   const addSet = (blockIndex: number) => {
@@ -261,6 +465,7 @@ function WorkoutContent() {
         rpe: "",
         completed: false,
         notes: "",
+        workoutExerciseId: block.workoutExerciseId,
       });
       updated[blockIndex] = block;
       return updated;
@@ -272,7 +477,6 @@ function WorkoutContent() {
       const updated = [...prev];
       const block = { ...updated[blockIndex], sets: [...updated[blockIndex].sets] };
       block.sets.splice(setIndex, 1);
-      // Re-number
       block.sets.forEach((s, i) => (s.setNumber = i + 1));
       if (block.sets.length === 0) {
         updated.splice(blockIndex, 1);
@@ -299,7 +503,6 @@ function WorkoutContent() {
     const set = block.sets[setIndex];
     const newCompleted = !set.completed;
 
-    // Auto-fill from previous values when checking off an empty set
     let effectiveWeight = set.weightLbs;
     let effectiveReps = set.reps;
     if (newCompleted) {
@@ -315,7 +518,7 @@ function WorkoutContent() {
 
     updateSet(blockIndex, setIndex, "completed", newCompleted);
 
-    const payload = {
+    const payload: Record<string, unknown> = {
       exerciseId: set.exerciseId,
       setNumber: set.setNumber,
       setType: set.setType,
@@ -325,6 +528,7 @@ function WorkoutContent() {
       rpe: set.rpe ? parseFloat(set.rpe) : null,
       completed: newCompleted,
       notes: set.notes || null,
+      workoutExerciseId: set.workoutExerciseId || block.workoutExerciseId || null,
     };
 
     try {
@@ -361,11 +565,18 @@ function WorkoutContent() {
     setSaving(true);
 
     try {
+      // Finish any active exercise timers
+      for (let i = 0; i < exerciseBlocks.length; i++) {
+        if (!exerciseBlocks[i].finished) {
+          await finishExerciseTimer(i);
+        }
+      }
+
       // Save any unsaved sets
       for (const block of exerciseBlocks) {
         for (const set of block.sets) {
           if (!set.dbId && (set.weightLbs || set.reps || set.timeSecs)) {
-            const payload = {
+            const payload: Record<string, unknown> = {
               exerciseId: set.exerciseId,
               setNumber: set.setNumber,
               setType: set.setType,
@@ -375,6 +586,7 @@ function WorkoutContent() {
               rpe: set.rpe ? parseFloat(set.rpe) : null,
               completed: set.completed,
               notes: set.notes || null,
+              workoutExerciseId: set.workoutExerciseId || block.workoutExerciseId || null,
             };
             await fetch(`/api/workouts/${workoutId}/sets`, {
               method: "POST",
@@ -385,12 +597,14 @@ function WorkoutContent() {
         }
       }
 
-      // Finish the workout
+      // Finish the workout with total duration
+      const totalDuration = exerciseBlocks.reduce((sum, b) => sum + b.elapsed, 0);
       await fetch(`/api/workouts/${workoutId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           finishedAt: new Date().toISOString(),
+          duration: totalDuration,
           name: workoutName,
         }),
       });
@@ -406,8 +620,8 @@ function WorkoutContent() {
     ex.name.toLowerCase().includes(exerciseSearch.toLowerCase())
   );
 
-  // Pre-start state
-  if (!started) {
+  // Pre-start state (skip if quick exercise -- already started)
+  if (!started && !quickExerciseId) {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">New Workout</h1>
@@ -433,6 +647,15 @@ function WorkoutContent() {
     );
   }
 
+  // Loading state for quick exercise
+  if (quickExerciseId && exerciseBlocks.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 pb-24">
       {/* Header with timer */}
@@ -447,7 +670,7 @@ function WorkoutContent() {
         </div>
         <div className="flex items-center gap-4">
           <div className="text-2xl font-mono text-emerald-500 tabular-nums">
-            {formatTimer(elapsedSeconds)}
+            {formatTimer(totalElapsed)}
           </div>
           <button
             onClick={finishWorkout}
@@ -460,154 +683,211 @@ function WorkoutContent() {
       </div>
 
       {/* Exercise blocks */}
-      {exerciseBlocks.map((block, blockIndex) => (
-        <div key={`${block.exercise.id}-${blockIndex}`} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 bg-gray-800/50 flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-white">{block.exercise.name}</h3>
-              <p className="text-xs text-gray-400 capitalize">{block.exercise.muscleGroups}</p>
-            </div>
-            <button
-              onClick={() => {
-                setExerciseBlocks((prev) => prev.filter((_, i) => i !== blockIndex));
-              }}
-              className="text-gray-500 hover:text-red-400 transition-colors p-1"
-              title="Remove exercise"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </button>
-          </div>
+      {exerciseBlocks.map((block, blockIndex) => {
+        const isActive = activeExerciseIndex === blockIndex && !block.paused && !block.finished;
 
-          {/* Set table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-gray-400 text-xs border-b border-gray-800">
-                  <th className="py-2 px-3 text-left w-10">Set</th>
-                  <th className="py-2 px-2 text-left w-24">Type</th>
-                  <th className="py-2 px-2 text-right w-20">Weight</th>
-                  <th className="py-2 px-2 text-right w-16">Reps</th>
-                  {(block.exercise.type === "time" || block.exercise.type === "cardio") && (
-                    <th className="py-2 px-2 text-right w-16">Time</th>
-                  )}
-                  <th className="py-2 px-2 text-right w-14">RPE</th>
-                  <th className="py-2 px-2 text-center w-10"></th>
-                  <th className="py-2 px-2 text-center w-8"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {block.sets.map((set, setIndex) => (
-                  <tr
-                    key={set.tempId}
-                    className={`border-b border-gray-800/50 ${set.completed ? "bg-emerald-500/5" : ""}`}
-                  >
-                    <td className="py-1.5 px-3 text-gray-400 font-medium">{set.setNumber}</td>
-                    <td className="py-1.5 px-2">
-                      <select
-                        value={set.setType}
-                        onChange={(e) => updateSet(blockIndex, setIndex, "setType", e.target.value)}
-                        className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-white w-full focus:outline-none focus:ring-1 focus:ring-emerald-500"
+        return (
+          <div
+            key={`${block.exercise.id}-${blockIndex}`}
+            className={`bg-gray-900 border rounded-xl overflow-hidden ${
+              isActive ? "border-emerald-500/50" : "border-gray-800"
+            }`}
+          >
+            <div className="px-4 py-3 bg-gray-800/50 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div>
+                  <h3 className="font-semibold text-white">{block.exercise.name}</h3>
+                  <p className="text-xs text-gray-400 capitalize">{block.exercise.muscleGroups}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* Exercise timer */}
+                <span className={`text-sm font-mono tabular-nums ${isActive ? "text-emerald-400" : "text-gray-500"}`}>
+                  {formatTimer(block.elapsed)}
+                </span>
+
+                {/* Timer controls */}
+                {!block.finished ? (
+                  <>
+                    {block.paused ? (
+                      <button
+                        onClick={() => startExerciseTimer(blockIndex)}
+                        className="p-1.5 rounded-lg hover:bg-gray-700 transition-colors text-emerald-500"
+                        title="Start exercise"
                       >
-                        <option value="warmup">Warmup</option>
-                        <option value="working">Working</option>
-                        <option value="dropset">Dropset</option>
-                        <option value="failure">Failure</option>
-                      </select>
-                    </td>
-                    <td className="py-1.5 px-2">
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        value={set.weightLbs}
-                        onChange={(e) => updateSet(blockIndex, setIndex, "weightLbs", e.target.value)}
-                        placeholder={set.previousWeight || "lbs"}
-                        className={`w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                          set.weightLbs ? "text-white" : set.previousWeight ? "placeholder-gray-500 italic" : "placeholder-gray-600"
-                        }`}
-                      />
-                    </td>
-                    <td className="py-1.5 px-2">
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        value={set.reps}
-                        onChange={(e) => updateSet(blockIndex, setIndex, "reps", e.target.value)}
-                        placeholder={set.previousReps || "reps"}
-                        className={`w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                          set.reps ? "text-white" : set.previousReps ? "placeholder-gray-500 italic" : "placeholder-gray-600"
-                        }`}
-                      />
-                    </td>
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => pauseExerciseTimer(blockIndex)}
+                        className="p-1.5 rounded-lg hover:bg-gray-700 transition-colors text-yellow-500"
+                        title="Pause exercise"
+                      >
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                        </svg>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => finishExerciseTimer(blockIndex)}
+                      className="p-1.5 rounded-lg hover:bg-gray-700 transition-colors text-gray-400 hover:text-white"
+                      title="Finish exercise"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                      </svg>
+                    </button>
+                  </>
+                ) : (
+                  <span className="text-xs text-gray-500 px-2 py-1 bg-gray-800 rounded">Done</span>
+                )}
+
+                <button
+                  onClick={() => {
+                    setExerciseBlocks((prev) => prev.filter((_, i) => i !== blockIndex));
+                  }}
+                  className="text-gray-500 hover:text-red-400 transition-colors p-1"
+                  title="Remove exercise"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Set table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-gray-400 text-xs border-b border-gray-800">
+                    <th className="py-2 px-3 text-left w-10">Set</th>
+                    <th className="py-2 px-2 text-left w-24">Type</th>
+                    <th className="py-2 px-2 text-right w-20">Weight</th>
+                    <th className="py-2 px-2 text-right w-16">Reps</th>
                     {(block.exercise.type === "time" || block.exercise.type === "cardio") && (
+                      <th className="py-2 px-2 text-right w-16">Time</th>
+                    )}
+                    <th className="py-2 px-2 text-right w-14">RPE</th>
+                    <th className="py-2 px-2 text-center w-10"></th>
+                    <th className="py-2 px-2 text-center w-8"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {block.sets.map((set, setIndex) => (
+                    <tr
+                      key={set.tempId}
+                      className={`border-b border-gray-800/50 ${set.completed ? "bg-emerald-500/5" : ""}`}
+                    >
+                      <td className="py-1.5 px-3 text-gray-400 font-medium">{set.setNumber}</td>
+                      <td className="py-1.5 px-2">
+                        <select
+                          value={set.setType}
+                          onChange={(e) => updateSet(blockIndex, setIndex, "setType", e.target.value)}
+                          className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-white w-full focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        >
+                          <option value="warmup">Warmup</option>
+                          <option value="working">Working</option>
+                          <option value="dropset">Dropset</option>
+                          <option value="failure">Failure</option>
+                        </select>
+                      </td>
+                      <td className="py-1.5 px-2">
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          value={set.weightLbs}
+                          onChange={(e) => updateSet(blockIndex, setIndex, "weightLbs", e.target.value)}
+                          placeholder={set.previousWeight || "lbs"}
+                          className={`w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                            set.weightLbs ? "text-white" : set.previousWeight ? "placeholder-gray-500 italic" : "placeholder-gray-600"
+                          }`}
+                        />
+                      </td>
                       <td className="py-1.5 px-2">
                         <input
                           type="number"
                           inputMode="numeric"
-                          value={set.timeSecs}
-                          onChange={(e) => updateSet(blockIndex, setIndex, "timeSecs", e.target.value)}
-                          placeholder="sec"
+                          value={set.reps}
+                          onChange={(e) => updateSet(blockIndex, setIndex, "reps", e.target.value)}
+                          placeholder={set.previousReps || "reps"}
+                          className={`w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                            set.reps ? "text-white" : set.previousReps ? "placeholder-gray-500 italic" : "placeholder-gray-600"
+                          }`}
+                        />
+                      </td>
+                      {(block.exercise.type === "time" || block.exercise.type === "cardio") && (
+                        <td className="py-1.5 px-2">
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            value={set.timeSecs}
+                            onChange={(e) => updateSet(blockIndex, setIndex, "timeSecs", e.target.value)}
+                            placeholder="sec"
+                            className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder-gray-600"
+                          />
+                        </td>
+                      )}
+                      <td className="py-1.5 px-2">
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          step="0.5"
+                          min="1"
+                          max="10"
+                          value={set.rpe}
+                          onChange={(e) => updateSet(blockIndex, setIndex, "rpe", e.target.value)}
+                          placeholder="RPE"
                           className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder-gray-600"
                         />
                       </td>
-                    )}
-                    <td className="py-1.5 px-2">
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        step="0.5"
-                        min="1"
-                        max="10"
-                        value={set.rpe}
-                        onChange={(e) => updateSet(blockIndex, setIndex, "rpe", e.target.value)}
-                        placeholder="RPE"
-                        className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder-gray-600"
-                      />
-                    </td>
-                    <td className="py-1.5 px-2 text-center">
-                      <button
-                        onClick={() => completeSet(blockIndex, setIndex)}
-                        className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-colors ${
-                          set.completed
-                            ? "bg-emerald-500 border-emerald-500 text-white"
-                            : "border-gray-600 text-transparent hover:border-gray-500"
-                        }`}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </button>
-                    </td>
-                    <td className="py-1.5 px-2 text-center">
-                      <button
-                        onClick={() => removeSet(blockIndex, setIndex)}
-                        className="text-gray-600 hover:text-red-400 transition-colors"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      <td className="py-1.5 px-2 text-center">
+                        <button
+                          onClick={() => completeSet(blockIndex, setIndex)}
+                          className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-colors ${
+                            set.completed
+                              ? "bg-emerald-500 border-emerald-500 text-white"
+                              : "border-gray-600 text-transparent hover:border-gray-500"
+                          }`}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </button>
+                      </td>
+                      <td className="py-1.5 px-2 text-center">
+                        <button
+                          onClick={() => removeSet(blockIndex, setIndex)}
+                          className="text-gray-600 hover:text-red-400 transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-          <div className="px-4 py-2">
-            <button
-              onClick={() => addSet(blockIndex)}
-              className="text-sm text-emerald-500 hover:text-emerald-400 transition-colors flex items-center gap-1"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Add Set
-            </button>
+            <div className="px-4 py-2">
+              <button
+                onClick={() => addSet(blockIndex)}
+                className="text-sm text-emerald-500 hover:text-emerald-400 transition-colors flex items-center gap-1"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add Set
+              </button>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       {/* Add Exercise button */}
       <button

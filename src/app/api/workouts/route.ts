@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     if (authError) return authError;
 
     const body = await request.json();
-    const { name, templateId, notes } = body;
+    const { name, templateId, notes, isQuickLog } = body;
 
     if (!name) {
       return NextResponse.json(
@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
         name,
         templateId: templateId ?? null,
         notes: notes ?? null,
+        isQuickLog: isQuickLog ?? false,
         userId,
       },
       include: {

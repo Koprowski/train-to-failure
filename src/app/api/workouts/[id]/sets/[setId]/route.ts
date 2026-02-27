@@ -28,6 +28,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const body = await request.json();
 
+    // Auto-set completedAt when toggling completed
+    if (body.completed === true && !body.completedAt) {
+      body.completedAt = new Date();
+    } else if (body.completed === false) {
+      body.completedAt = null;
+    }
+
     const set = await prisma.workoutSet.update({
       where: { id: setId },
       data: body,
