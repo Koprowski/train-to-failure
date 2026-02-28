@@ -32,6 +32,41 @@ const COLORS = [
   "#ec4899", "#14b8a6", "#f97316", "#6366f1", "#84cc16",
 ];
 
+const RADIAN = Math.PI / 180;
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function renderInnerLabel(props: any) {
+  const { cx, cy, midAngle, innerRadius, outerRadius, value } = props;
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  return (
+    <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central" fontSize={12} fontWeight={600}>
+      {value}
+    </text>
+  );
+}
+
+function renderOuterLabel(props: any) {
+  const { cx, cy, midAngle, outerRadius, name, fill } = props;
+  const sin = Math.sin(-midAngle * RADIAN);
+  const cos = Math.cos(-midAngle * RADIAN);
+  const ex = cx + (outerRadius + 12) * cos;
+  const ey = cy + (outerRadius + 12) * sin;
+  const tx = cx + (outerRadius + 28) * cos;
+  const ty = cy + (outerRadius + 28) * sin;
+  const textAnchor = cos >= 0 ? "start" : "end";
+  return (
+    <g>
+      <path d={`M${cx + outerRadius * cos},${cy + outerRadius * sin}L${ex},${ey}L${tx},${ty}`} stroke={fill} fill="none" strokeWidth={1} />
+      <text x={tx + (cos >= 0 ? 4 : -4)} y={ty} textAnchor={textAnchor} fill="#d1d5db" fontSize={11} dominantBaseline="central" className="capitalize">
+        {name}
+      </text>
+    </g>
+  );
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
 export default function DashboardPage() {
   const router = useRouter();
   const [workouts, setWorkouts] = useState<Workout[]>([]);
@@ -249,7 +284,7 @@ export default function DashboardPage() {
           </p>
         ) : (
           <div className="flex flex-col items-center">
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
                   data={muscleData}
@@ -260,9 +295,28 @@ export default function DashboardPage() {
                   paddingAngle={2}
                   dataKey="setCount"
                   nameKey="muscleGroup"
+                  label={renderOuterLabel}
+                  labelLine={false}
                 >
                   {muscleData.map((_, index) => (
                     <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Pie
+                  data={muscleData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={50}
+                  outerRadius={90}
+                  paddingAngle={2}
+                  dataKey="setCount"
+                  nameKey="muscleGroup"
+                  label={renderInnerLabel}
+                  labelLine={false}
+                  isAnimationActive={false}
+                >
+                  {muscleData.map((_, index) => (
+                    <Cell key={index} fill="transparent" stroke="none" />
                   ))}
                 </Pie>
                 {/* Total sets in center */}
@@ -280,17 +334,6 @@ export default function DashboardPage() {
                 />
               </PieChart>
             </ResponsiveContainer>
-            <div className="flex flex-wrap gap-3 mt-3 justify-center">
-              {muscleData.slice(0, 8).map((d, i) => (
-                <div key={d.muscleGroup} className="flex items-center gap-1.5 text-xs text-gray-300">
-                  <div
-                    className="w-2.5 h-2.5 rounded-full"
-                    style={{ backgroundColor: COLORS[i % COLORS.length] }}
-                  />
-                  <span className="capitalize">{d.muscleGroup} ({d.setCount})</span>
-                </div>
-              ))}
-            </div>
           </div>
         )}
       </div>
