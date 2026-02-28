@@ -315,25 +315,6 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
             )}
           </div>
           <div className="flex items-center gap-1 shrink-0 ml-4">
-            {workout.finishedAt && (
-              <button
-                onClick={saveAsTemplate}
-                disabled={savingTemplate || templateSaved}
-                className={`group relative p-1.5 rounded-lg transition-colors ${templateSaved ? "text-emerald-500" : "text-gray-400 hover:text-white hover:bg-gray-800"} disabled:opacity-50`}
-                title="Save as template"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {savingTemplate ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2zm7 14v-6m-3 3h6" />
-                  )}
-                </svg>
-                <span className="invisible group-hover:visible absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-gray-300 bg-gray-800 border border-gray-700 rounded whitespace-nowrap z-10">
-                  {templateSaved ? "Saved!" : savingTemplate ? "Saving..." : "Save as template"}
-                </span>
-              </button>
-            )}
             {/* Save button -- only visible when changes exist */}
             {hasChanges && (
               <button
@@ -342,11 +323,10 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
                 className="group relative p-1.5 rounded-lg text-emerald-400 hover:text-emerald-300 hover:bg-gray-800 transition-colors disabled:opacity-50"
                 title="Save changes"
               >
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" strokeWidth={2} />
-                  <rect x="7" y="3" width="10" height="5" rx="0.5" stroke="currentColor" strokeWidth={1.5} />
-                  <rect x="12" y="3.5" width="3.5" height="4" rx="0.5" fill="currentColor" opacity={0.4} />
-                  <rect x="6" y="13" width="12" height="8" rx="1.5" stroke="currentColor" strokeWidth={1.5} />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V7l-4-4z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 3v4h8V3" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 14h10v7H7z" />
                 </svg>
                 <span className="invisible group-hover:visible absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-gray-300 bg-gray-800 border border-gray-700 rounded whitespace-nowrap z-10">
                   {saving ? "Saving..." : "Save changes"}
@@ -502,6 +482,19 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
       {exerciseGroups.length === 0 && (
         <div className="text-center py-8 text-gray-500">
           <p>No exercises logged in this workout</p>
+        </div>
+      )}
+
+      {/* Save As Template */}
+      {workout.finishedAt && (
+        <div className="flex justify-center pt-4 pb-2">
+          <button
+            onClick={saveAsTemplate}
+            disabled={savingTemplate || templateSaved}
+            className={`text-sm transition-colors ${templateSaved ? "text-emerald-500" : "text-gray-500 hover:text-white"} disabled:opacity-50`}
+          >
+            {templateSaved ? "Template Saved!" : savingTemplate ? "Saving..." : "Save As Template"}
+          </button>
         </div>
       )}
 
