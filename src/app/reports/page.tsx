@@ -92,12 +92,19 @@ export default function ReportsPage() {
     0
   );
 
+  // Store set breakdowns for tooltip access
+  const setDetails = new Map<string, Map<string, { weight: number; reps: number }>>();
+
   const chartData = sessions.map((s) => {
     const row: Record<string, string | number> = { date: s.date };
+    const dateDetails = new Map<string, { weight: number; reps: number }>();
     for (const set of s.sets) {
-      row[`Set ${set.setNumber}`] = set.weightLbs;
+      const key = `Set ${set.setNumber}`;
+      row[key] = set.weightLbs * set.reps;
+      dateDetails.set(key, { weight: set.weightLbs, reps: set.reps });
     }
     row["Volume"] = s.totalVolume;
+    setDetails.set(s.date, dateDetails);
     return row;
   });
 
@@ -258,7 +265,7 @@ export default function ReportsPage() {
               <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="text-lg font-semibold">
-                    {selectedExerciseName} - Weight Over Time
+                    {selectedExerciseName} - Volume Per Set Over Time
                   </h2>
                 </div>
                 <div className="flex flex-wrap gap-3 mb-4">
@@ -312,7 +319,7 @@ export default function ReportsPage() {
                       stroke="#9ca3af"
                       tick={{ fontSize: 12 }}
                       yAxisId="weight"
-                      label={{ value: "lbs", angle: -90, position: "insideLeft", style: { fill: "#9ca3af" } }}
+                      label={{ value: "lbs (vol)", angle: -90, position: "insideLeft", style: { fill: "#9ca3af" } }}
                     />
                     {showVolume && (
                       <YAxis
@@ -331,10 +338,17 @@ export default function ReportsPage() {
                         const date = new Date(String(d) + "T00:00:00");
                         return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
                       }}
-                      formatter={(value: number | undefined, name: string | undefined) => {
+                      formatter={(value: number | undefined, name: string | undefined, props: { payload?: Record<string, string | number> }) => {
                         const v = value ?? 0;
                         if (name === "Volume") return [`${v.toLocaleString()} lbs`, "Total Volume"];
-                        return [`${v} lbs`, name ?? ""];
+                        const date = props.payload?.date as string | undefined;
+                        if (date && name) {
+                          const details = setDetails.get(date)?.get(name);
+                          if (details) {
+                            return [`${v.toLocaleString()} lbs (${details.reps} x ${details.weight} lbs)`, name];
+                          }
+                        }
+                        return [`${v.toLocaleString()} lbs`, name ?? ""];
                       }}
                     />
                     <Legend />
