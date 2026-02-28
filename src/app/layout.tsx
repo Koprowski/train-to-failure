@@ -3,8 +3,8 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import Providers from "./providers";
 
@@ -31,12 +31,19 @@ const navItems = [
 
 function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { data: session, status } = useSession();
 
+  // Redirect to login only when definitively unauthenticated
+  useEffect(() => {
+    if (status === "unauthenticated" && pathname !== "/login") {
+      router.replace("/login");
+    }
+  }, [status, pathname, router]);
+
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
-    // Exact match for sub-paths to avoid /workouts matching /workouts/quick
     if (href === "/workouts") return pathname === "/workouts" || (pathname.startsWith("/workouts/") && !pathname.startsWith("/workouts/quick"));
     return pathname.startsWith(href);
   };
@@ -46,21 +53,13 @@ function AppShell({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  // Show loading while checking auth
-  if (status === "loading") {
+  // Show loading while checking auth or not yet authenticated
+  if (status === "loading" || !session) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-950">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-emerald-500" />
       </div>
     );
-  }
-
-  // Redirect to login if not authenticated
-  if (!session) {
-    if (typeof window !== "undefined") {
-      window.location.href = "/login";
-    }
-    return null;
   }
 
   return (
