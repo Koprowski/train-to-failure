@@ -205,33 +205,135 @@ export default function ExercisesPage() {
   });
   const [saving, setSaving] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
-  // Flip: use a key to trigger CSS keyframe animation
-  const [flipKey, setFlipKey] = useState(0);
-  const flipPending = useRef(false);
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
-
-  const flipBody = useCallback(() => {
-    if (flipPending.current) return;
-    flipPending.current = true;
-    // Swap side immediately, trigger animation via key change
-    setBodySide((prev) => (prev === "front" ? "back" : "front"));
-    setFlipKey((k) => k + 1);
-    setTimeout(() => { flipPending.current = false; }, 400);
+  // Interactive page-turn flip via touch overlay
+  const flipContainerRef = useRef<HTMLDivElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const dragState = useRef<{
+    startX: number;
+    startY: number;
+    locked: boolean; // true = horizontal drag confirmed
+    dismissed: boolean; // true = vertical scroll, ignore
+    containerWidth: number;
+  } | null>(null);
+  const flipBody = useCallback((animated = false) => {
+    if (animated && flipContainerRef.current) {
+      const el = flipContainerRef.current;
+      el.style.transition = "transform 0.15s ease-in";
+      el.style.transform = "rotateY(90deg)";
+      setTimeout(() => {
+        setBodySide((prev) => (prev === "front" ? "back" : "front"));
+        requestAnimationFrame(() => {
+          el.style.transition = "transform 0.15s ease-out";
+          el.style.transform = "rotateY(0deg)";
+        });
+      }, 150);
+    } else {
+      setBodySide((prev) => (prev === "front" ? "back" : "front"));
+    }
   }, []);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (!touchStartRef.current) return;
-    const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
-    const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
-    touchStartRef.current = null;
-    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-      flipBody();
+  // Apply rotation directly to DOM for smooth tracking
+  const setRotation = useCallback((deg: number) => {
+    if (flipContainerRef.current) {
+      flipContainerRef.current.style.transform = `rotateY(${deg}deg)`;
     }
-  };
+  }, []);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const el = flipContainerRef.current;
+    if (!el) return;
+    dragState.current = {
+      startX: e.touches[0].clientX,
+      startY: e.touches[0].clientY,
+      locked: false,
+      dismissed: false,
+      containerWidth: el.offsetWidth,
+    };
+    el.style.transition = "none";
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    const ds = dragState.current;
+    if (!ds || ds.dismissed) return;
+    const dx = e.touches[0].clientX - ds.startX;
+    const dy = e.touches[0].clientY - ds.startY;
+
+    // Lock direction after 10px of movement
+    if (!ds.locked) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) {
+        ds.dismissed = true; // vertical scroll, bail
+        setRotation(0);
+        return;
+      }
+      if (Math.abs(dx) > 10) {
+        ds.locked = true;
+        // Show overlay to capture all touch events (prevents Body from stealing them)
+        if (overlayRef.current) overlayRef.current.style.display = "block";
+      } else {
+        return; // not enough movement yet
+      }
+    }
+
+    e.preventDefault(); // prevent scroll during horizontal drag
+
+    // Map drag distance to rotation: full container width = 180 degrees
+    const maxDeg = 180;
+    const rotation = (dx / ds.containerWidth) * maxDeg;
+    // Clamp to [-180, 180]
+    const clamped = Math.max(-maxDeg, Math.min(maxDeg, rotation));
+    setRotation(clamped);
+
+    // Content swap happens on release, not during drag
+  }, [setRotation]);
+
+  const handleTouchEnd = useCallback(() => {
+    const ds = dragState.current;
+    dragState.current = null;
+    // Hide overlay
+    if (overlayRef.current) overlayRef.current.style.display = "none";
+
+    if (!ds || ds.dismissed || !ds.locked) {
+      // No horizontal drag -- snap back
+      if (flipContainerRef.current) {
+        flipContainerRef.current.style.transition = "transform 0.25s ease-out";
+        setRotation(0);
+      }
+      return;
+    }
+
+    const el = flipContainerRef.current;
+    if (!el) return;
+
+    // Get current rotation from the transform
+    const currentTransform = el.style.transform;
+    const match = currentTransform.match(/rotateY\(([^)]+)deg\)/);
+    const currentDeg = match ? parseFloat(match[1]) : 0;
+    const absDeg = Math.abs(currentDeg);
+
+    if (absDeg > 60) {
+      // Commit the flip: animate to 90, swap side, animate out from 90 to 0
+      const direction = currentDeg > 0 ? 1 : -1;
+      const remainingTo90 = 90 - absDeg;
+      const timeToEdge = Math.max(50, (remainingTo90 / 90) * 200);
+      el.style.transition = `transform ${timeToEdge}ms ease-in`;
+      setRotation(direction * 90);
+
+      setTimeout(() => {
+        flipBody();
+        // Keep at edge while React renders new content
+        setRotation(direction * 90);
+        requestAnimationFrame(() => {
+          el.style.transition = "transform 0.2s ease-out";
+          setRotation(0);
+        });
+      }, timeToEdge);
+    } else {
+      // Snap back to original position
+      const snapTime = Math.max(100, (absDeg / 60) * 250);
+      el.style.transition = `transform ${snapTime}ms ease-out`;
+      setRotation(0);
+    }
+  }, [flipBody, setRotation]);
 
   const fetchExercises = useCallback(() => {
     const params = new URLSearchParams();
@@ -336,13 +438,13 @@ export default function ExercisesPage() {
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex flex-col items-center shrink-0">
           <div className="flex items-center gap-2 mb-3">
             <button
-              onClick={() => { if (bodySide !== "front") flipBody(); }}
+              onClick={() => { if (bodySide !== "front") flipBody(true); }}
               className={`px-3 py-1 text-xs rounded-lg transition-colors ${bodySide === "front" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
             >
               Front
             </button>
             <button
-              onClick={() => { if (bodySide !== "back") flipBody(); }}
+              onClick={() => { if (bodySide !== "back") flipBody(true); }}
               className={`px-3 py-1 text-xs rounded-lg transition-colors ${bodySide === "back" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
             >
               Back
@@ -359,15 +461,21 @@ export default function ExercisesPage() {
             </button>
           </div>
           <div
-            className="cursor-pointer"
+            className="cursor-pointer relative"
             onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
+            style={{ perspective: "800px" }}
           >
+            {/* Invisible overlay to capture touch events during drag (prevents Body from stealing them) */}
             <div
-              key={flipKey}
-              style={{
-                animation: flipKey > 0 ? "bodyFlipIn 0.35s ease-out" : "none",
-              }}
+              ref={overlayRef}
+              style={{ display: "none", position: "absolute", inset: 0, zIndex: 10 }}
+            />
+            <div
+              ref={flipContainerRef}
+              style={{ transformStyle: "preserve-3d", backfaceVisibility: "hidden" }}
             >
             <Body
               side={bodySide}
