@@ -1,12 +1,19 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 interface Exercise {
   id: string;
   name: string;
   muscleGroups: string;
+  imageUrl: string | null;
+}
+
+interface RecentExercise {
+  exercise: Exercise;
+  lastPerformed: string;
+  summary: string;
 }
 
 interface SessionSet {
@@ -25,33 +32,26 @@ interface Session {
 const SET_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
 const VOLUME_COLOR = "#6366f1";
 
-const MUSCLE_FILTERS = [
-  { label: "All", filter: null },
-  { label: "Chest", filter: ["chest"] },
-  { label: "Back", filter: ["back", "lats", "traps"] },
-  { label: "Shoulders", filter: ["shoulders"] },
-  { label: "Arms", filter: ["biceps", "triceps", "forearms"] },
-  { label: "Legs", filter: ["quads", "hamstrings", "glutes", "calves"] },
-  { label: "Core", filter: ["abs", "core"] },
-];
-
 export default function ReportsPage() {
-  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [recentExercises, setRecentExercises] = useState<RecentExercise[]>([]);
   const [selectedExercise, setSelectedExercise] = useState<string>("");
-  const [muscleFilter, setMuscleFilter] = useState("All");
   const [days, setDays] = useState(90);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(false);
   const [exercisesLoading, setExercisesLoading] = useState(true);
   const [visibleSets, setVisibleSets] = useState<Set<number>>(new Set());
   const [showVolume, setShowVolume] = useState(false);
-  const [exerciseSearch, setExerciseSearch] = useState("");
+  const carouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch("/api/exercises")
+    fetch("/api/exercises/recent?days=90")
       .then((r) => r.json())
       .then((data) => {
-        setExercises(Array.isArray(data) ? data : []);
+        const recent: RecentExercise[] = Array.isArray(data) ? data : [];
+        setRecentExercises(recent);
+        if (recent.length > 0) {
+          setSelectedExercise(recent[0].exercise.id);
+        }
         setExercisesLoading(false);
       })
       .catch(() => setExercisesLoading(false));
@@ -66,7 +66,6 @@ export default function ReportsPage() {
       const s: Session[] = data.sessions ?? [];
       setSessions(s);
 
-      // Auto-detect set numbers and show all by default
       const setNums = new Set<number>();
       for (const session of s) {
         for (const set of session.sets) {
@@ -87,22 +86,7 @@ export default function ReportsPage() {
     }
   }, [selectedExercise, days, fetchProgress]);
 
-  // Filter exercises by muscle group
-  const mf = MUSCLE_FILTERS.find((f) => f.label === muscleFilter);
-  const filteredExercises = mf?.filter
-    ? exercises.filter((ex) =>
-        mf.filter!.some((mg) => ex.muscleGroups.toLowerCase().includes(mg))
-      )
-    : exercises;
-
-  // Further filter by search text
-  const displayExercises = exerciseSearch.trim()
-    ? filteredExercises.filter((ex) =>
-        ex.name.toLowerCase().includes(exerciseSearch.toLowerCase())
-      )
-    : filteredExercises;
-
-  // Build chart data: each row = { date, "Set 1": weight, "Set 2": weight, ..., volume }
+  // Chart data
   const maxSetNumber = sessions.reduce(
     (max, s) => Math.max(max, ...s.sets.map((set) => set.setNumber)),
     0
@@ -127,7 +111,6 @@ export default function ReportsPage() {
     ? Math.round(sessions.reduce((sum, s) => sum + s.totalVolume, 0) / totalSessions)
     : 0;
 
-  // Trend: compare first half avg volume to second half
   const getTrend = () => {
     if (totalSessions < 4) return "neutral";
     const mid = Math.floor(totalSessions / 2);
@@ -149,7 +132,24 @@ export default function ReportsPage() {
     });
   };
 
-  const selectedExerciseName = exercises.find((e) => e.id === selectedExercise)?.name;
+  const selectedExerciseName = recentExercises.find((r) => r.exercise.id === selectedExercise)?.exercise.name;
+
+  const scrollCarousel = (direction: "left" | "right") => {
+    if (!carouselRef.current) return;
+    const scrollAmount = 200;
+    carouselRef.current.scrollBy({
+      left: direction === "left" ? -scrollAmount : scrollAmount,
+      behavior: "smooth",
+    });
+  };
+
+  if (exercisesLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -159,69 +159,91 @@ export default function ReportsPage() {
         <p className="text-gray-400 text-sm mt-1">Track your progress over time</p>
       </div>
 
-      {/* Controls */}
-      <div className="bg-gray-900 rounded-xl border border-gray-800 p-5 space-y-4">
-        {/* Muscle group filter tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {MUSCLE_FILTERS.map((f) => (
-            <button
-              key={f.label}
-              onClick={() => { setMuscleFilter(f.label); setSelectedExercise(""); setExerciseSearch(""); }}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                muscleFilter === f.label
-                  ? "bg-emerald-500 text-white"
-                  : "bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
+      {/* Exercise carousel */}
+      {recentExercises.length === 0 ? (
+        <div className="bg-gray-900 rounded-xl border border-gray-800 p-12 text-center">
+          <svg className="w-12 h-12 mx-auto text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+          <p className="text-gray-400">Complete some workouts to see your progress reports.</p>
         </div>
-
-        {/* Exercise search + select */}
-        <div className="space-y-2">
-          <input
-            type="text"
-            placeholder="Search exercises..."
-            value={exerciseSearch}
-            onChange={(e) => setExerciseSearch(e.target.value)}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-          />
-          <select
-            value={selectedExercise}
-            onChange={(e) => setSelectedExercise(e.target.value)}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-          >
-            <option value="">Select an exercise...</option>
-            {displayExercises.map((ex) => (
-              <option key={ex.id} value={ex.id}>
-                {ex.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Time range */}
-        <div className="flex gap-2">
-          {[30, 60, 90, 0].map((d) => (
-            <button
-              key={d}
-              onClick={() => setDays(d)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                days === d
-                  ? "bg-blue-500 text-white"
-                  : "bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700"
-              }`}
-            >
-              {d === 0 ? "All" : `${d}d`}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Chart */}
-      {selectedExercise && (
+      ) : (
         <>
+          {/* Carousel */}
+          <div className="relative">
+            {recentExercises.length > 3 && (
+              <>
+                <button
+                  onClick={() => scrollCarousel("left")}
+                  className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-gray-900/90 border border-gray-700 rounded-full p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => scrollCarousel("right")}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-gray-900/90 border border-gray-700 rounded-full p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </>
+            )}
+            <div
+              ref={carouselRef}
+              className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide px-1"
+            >
+              {recentExercises.map((recent) => (
+                <button
+                  key={recent.exercise.id}
+                  onClick={() => setSelectedExercise(recent.exercise.id)}
+                  className={`flex-shrink-0 w-40 rounded-xl p-3 text-left transition-all ${
+                    selectedExercise === recent.exercise.id
+                      ? "bg-emerald-500/20 border-2 border-emerald-500 ring-1 ring-emerald-500/50"
+                      : "bg-gray-900 border border-gray-800 hover:border-gray-600"
+                  }`}
+                >
+                  {recent.exercise.imageUrl ? (
+                    <img
+                      src={recent.exercise.imageUrl}
+                      alt=""
+                      className="w-full h-20 rounded-lg object-cover mb-2"
+                    />
+                  ) : (
+                    <div className="w-full h-20 rounded-lg bg-gray-800 mb-2 flex items-center justify-center text-gray-600">
+                      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                  )}
+                  <p className="font-medium text-sm truncate">{recent.exercise.name}</p>
+                  <p className="text-xs text-gray-400 capitalize truncate">{recent.exercise.muscleGroups}</p>
+                  <p className="text-xs text-emerald-500 mt-1">{recent.summary}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Time range */}
+          <div className="flex gap-2">
+            {[30, 60, 90, 0].map((d) => (
+              <button
+                key={d}
+                onClick={() => setDays(d)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  days === d
+                    ? "bg-blue-500 text-white"
+                    : "bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700"
+                }`}
+              >
+                {d === 0 ? "All" : `${d}d`}
+              </button>
+            ))}
+          </div>
+
+          {/* Chart */}
           {loading ? (
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
@@ -232,7 +254,7 @@ export default function ReportsPage() {
             </div>
           ) : (
             <>
-              {/* Set toggles */}
+              {/* Set toggles + chart */}
               <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="text-lg font-semibold">
@@ -248,9 +270,7 @@ export default function ReportsPage() {
                         onChange={() => toggleSet(setNum)}
                         className="rounded border-gray-600 bg-gray-800 text-emerald-500 focus:ring-emerald-500"
                       />
-                      <span
-                        className="flex items-center gap-1.5"
-                      >
+                      <span className="flex items-center gap-1.5">
                         <span
                           className="w-3 h-0.5 rounded"
                           style={{ backgroundColor: SET_COLORS[(setNum - 1) % SET_COLORS.length] }}
@@ -410,15 +430,6 @@ export default function ReportsPage() {
             </>
           )}
         </>
-      )}
-
-      {!selectedExercise && !exercisesLoading && (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-12 text-center">
-          <svg className="w-12 h-12 mx-auto text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
-          <p className="text-gray-400">Select an exercise above to view your progress.</p>
-        </div>
       )}
     </div>
   );
