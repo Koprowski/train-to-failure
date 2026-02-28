@@ -16,15 +16,15 @@ interface Exercise {
 }
 
 const MUSCLE_GROUPS = [
-  "chest", "back", "shoulders", "biceps", "triceps", "forearms",
-  "quads", "hamstrings", "glutes", "calves", "abs", "core",
-  "traps", "lats", "hip flexors", "adductors", "abductors",
+  "abs", "abductors", "adductors", "back", "biceps", "calves",
+  "chest", "core", "forearms", "glutes", "hamstrings", "hip flexors",
+  "lats", "quads", "shoulders", "traps", "triceps",
 ];
 
 const EQUIPMENT = [
-  "barbell", "dumbbell", "cable", "machine", "bodyweight",
-  "kettlebell", "resistance band", "smith machine", "ez bar",
-  "pull-up bar", "bench", "trap bar",
+  "barbell", "bench", "bodyweight", "cable", "dumbbell",
+  "ez bar", "kettlebell", "machine", "pull-up bar",
+  "resistance band", "smith machine", "trap bar",
 ];
 
 const BADGE_COLORS: Record<string, string> = {

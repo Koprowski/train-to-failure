@@ -10,7 +10,9 @@ interface ExerciseEntry {
 }
 
 const seedData: Record<string, { equipment: string; type: string }> = {
-  "Decline Sit-Up": { equipment: "bench", type: "weight_reps" },
+  "Situps - Decline": { equipment: "bench", type: "weight_reps" },
+  "Situps": { equipment: "bodyweight", type: "weight_reps" },
+  "Situps - Decline Weighted": { equipment: "bench", type: "weight_reps" },
   "Hip Abduction": { equipment: "machine", type: "weight_reps" },
   "Hip Adduction": { equipment: "machine", type: "weight_reps" },
   "Dip": { equipment: "bodyweight,dip_station", type: "weight_reps" },
@@ -30,6 +32,17 @@ export async function POST() {
     const exercises: Record<string, ExerciseEntry> = JSON.parse(
       readFileSync(jsonPath, "utf-8")
     );
+
+    // Rename legacy exercise names
+    const renames: Record<string, string> = {
+      "Decline Sit-Up": "Situps - Decline",
+    };
+    for (const [oldName, newName] of Object.entries(renames)) {
+      await prisma.exercise.updateMany({
+        where: { name: oldName },
+        data: { name: newName },
+      });
+    }
 
     const results: { updated: string[]; created: string[]; skipped: string[] } = {
       updated: [],

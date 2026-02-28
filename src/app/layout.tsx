@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1" },
-  { href: "/exercises", label: "Exercises", icon: "M4 6h16M4 10h16M4 14h16M4 18h16" },
+  { href: "/exercises", label: "Exercise Library", icon: "M4 6h16M4 10h16M4 14h16M4 18h16" },
   { href: "/workouts", label: "Workouts", icon: "M13 10V3L4 14h7v7l9-11h-7z" },
   { href: "/workouts/quick", label: "Quick Log", icon: "M13 10V3L4 14h7v7l9-11h-7z" },
   { href: "/activity-log", label: "Activity Log", icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" },

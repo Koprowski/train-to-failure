@@ -9577,7 +9577,7 @@
   },
   {
     "name": "Decline Sit-Up",
-    "ttfName": "Decline Sit-Up",
+    "ttfName": "Situps - Decline",
     "group": "Hips",
     "muscle": "Hip Flexors",
     "gifFile": "as_decline-sit-up.gif",
@@ -9604,12 +9604,12 @@
   },
   {
     "name": "Sit-Up With Arms On Chest",
-    "ttfName": null,
+    "ttfName": "Situps",
     "group": "Hips",
     "muscle": "Hip Flexors",
     "gifFile": "as_sit-up-with-arms-on-chest.gif",
-    "imageUrl": null,
-    "active": false
+    "imageUrl": "/gifs/as_sit-up-with-arms-on-chest.gif",
+    "active": true
   },
   {
     "name": "Twisted Leg Raise",
@@ -10918,12 +10918,12 @@
   },
   {
     "name": "Weighted Decline Sit-Up",
-    "ttfName": null,
+    "ttfName": "Situps - Decline Weighted",
     "group": "Core",
     "muscle": "Abs",
     "gifFile": "as_weighted-decline-sit-up.gif",
-    "imageUrl": null,
-    "active": false
+    "imageUrl": "/gifs/as_weighted-decline-sit-up.gif",
+    "active": true
   },
   {
     "name": "Weighted Overhead Crunch (On Stability Ball)",

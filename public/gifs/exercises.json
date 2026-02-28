@@ -209,9 +209,19 @@
     "imageUrl": "/gifs/as_push-up-to-side-plank.gif",
     "muscleGroups": "obliques,core"
   },
-  "Decline Sit-Up": {
+  "Situps - Decline": {
     "gifFile": "as_decline-sit-up.gif",
     "imageUrl": "/gifs/as_decline-sit-up.gif",
+    "muscleGroups": "abs,core"
+  },
+  "Situps": {
+    "gifFile": "as_sit-up-with-arms-on-chest.gif",
+    "imageUrl": "/gifs/as_sit-up-with-arms-on-chest.gif",
+    "muscleGroups": "abs,core,hip flexors"
+  },
+  "Situps - Decline Weighted": {
+    "gifFile": "as_weighted-decline-sit-up.gif",
+    "imageUrl": "/gifs/as_weighted-decline-sit-up.gif",
     "muscleGroups": "abs,core"
   },
   "Treadmill Run": {
