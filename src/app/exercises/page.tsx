@@ -2,6 +2,12 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+
+const Body = dynamic(
+  () => import("react-muscle-highlighter"),
+  { ssr: false }
+);
 
 interface Exercise {
   id: string;
@@ -23,9 +29,37 @@ const MUSCLE_GROUPS = [
 
 const EQUIPMENT = [
   "barbell", "bench", "bodyweight", "cable", "dumbbell",
-  "ez bar", "kettlebell", "machine", "pull-up bar",
+  "ez bar", "kettlebell", "machine", "none", "pull-up bar",
   "resistance band", "smith machine", "trap bar",
 ];
+
+// Map react-muscle-highlighter slugs to app muscle group names
+const SLUG_TO_MUSCLE: Record<string, string[]> = {
+  abs: ["abs", "core"],
+  adductors: ["adductors"],
+  biceps: ["biceps"],
+  calves: ["calves"],
+  chest: ["chest"],
+  deltoids: ["shoulders"],
+  forearm: ["forearms"],
+  gluteal: ["glutes"],
+  hamstring: ["hamstrings"],
+  obliques: ["core"],
+  quadriceps: ["quads"],
+  trapezius: ["traps"],
+  triceps: ["triceps"],
+  "upper-back": ["back", "lats"],
+  "lower-back": ["back"],
+};
+
+// Reverse map: app muscle group -> highlight slugs
+const MUSCLE_TO_SLUGS: Record<string, string[]> = {};
+for (const [slug, muscles] of Object.entries(SLUG_TO_MUSCLE)) {
+  for (const m of muscles) {
+    if (!MUSCLE_TO_SLUGS[m]) MUSCLE_TO_SLUGS[m] = [];
+    if (!MUSCLE_TO_SLUGS[m].includes(slug)) MUSCLE_TO_SLUGS[m].push(slug);
+  }
+}
 
 const BADGE_COLORS: Record<string, string> = {
   chest: "bg-red-500/20 text-red-400",
@@ -54,6 +88,7 @@ export default function ExercisesPage() {
   const [search, setSearch] = useState("");
   const [muscleFilter, setMuscleFilter] = useState("");
   const [equipmentFilter, setEquipmentFilter] = useState("");
+  const [bodySide, setBodySide] = useState<"front" | "back">("front");
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -123,8 +158,61 @@ export default function ExercisesPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex-1">
+      <div className="flex flex-col lg:flex-row gap-4">
+        {/* Body Map */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex flex-col items-center shrink-0">
+          <div className="flex items-center gap-2 mb-3">
+            <button
+              onClick={() => setBodySide("front")}
+              className={`px-3 py-1 text-xs rounded-lg transition-colors ${bodySide === "front" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+            >
+              Front
+            </button>
+            <button
+              onClick={() => setBodySide("back")}
+              className={`px-3 py-1 text-xs rounded-lg transition-colors ${bodySide === "back" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+            >
+              Back
+            </button>
+          </div>
+          <div className="cursor-pointer">
+            <Body
+              side={bodySide}
+              gender="male"
+              scale={0.6}
+              border="#4b5563"
+              defaultFill="#1f2937"
+              colors={["#10b981", "#34d399"]}
+              data={
+                muscleFilter && MUSCLE_TO_SLUGS[muscleFilter]
+                  ? MUSCLE_TO_SLUGS[muscleFilter].map((slug) => ({ slug: slug as never, intensity: 2 }))
+                  : []
+              }
+              onBodyPartPress={(part: { slug?: string }) => {
+                if (!part.slug) return;
+                const muscles = SLUG_TO_MUSCLE[part.slug];
+                if (!muscles) return;
+                // If clicking the already-selected muscle, clear it
+                if (muscleFilter && muscles.includes(muscleFilter)) {
+                  setMuscleFilter("");
+                } else {
+                  setMuscleFilter(muscles[0]);
+                }
+              }}
+            />
+          </div>
+          {muscleFilter && (
+            <button
+              onClick={() => setMuscleFilter("")}
+              className="mt-2 text-xs text-gray-400 hover:text-white transition-colors"
+            >
+              Clear: {muscleFilter}
+            </button>
+          )}
+        </div>
+
+        {/* Search + Dropdowns */}
+        <div className="flex-1 space-y-3">
           <input
             type="text"
             placeholder="Search exercises..."
@@ -132,86 +220,88 @@ export default function ExercisesPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
           />
-        </div>
-        <select
-          value={muscleFilter}
-          onChange={(e) => setMuscleFilter(e.target.value)}
-          className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-        >
-          <option value="">All Muscle Groups</option>
-          {MUSCLE_GROUPS.map((mg) => (
-            <option key={mg} value={mg}>{mg.charAt(0).toUpperCase() + mg.slice(1)}</option>
-          ))}
-        </select>
-        <select
-          value={equipmentFilter}
-          onChange={(e) => setEquipmentFilter(e.target.value)}
-          className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-        >
-          <option value="">All Equipment</option>
-          {EQUIPMENT.map((eq) => (
-            <option key={eq} value={eq}>{eq.charAt(0).toUpperCase() + eq.slice(1)}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Exercise Grid */}
-      {loading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
-        </div>
-      ) : exercises.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
-          <p className="text-lg">No exercises found</p>
-          <p className="text-sm mt-1">Try adjusting your filters or add a new exercise</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {exercises.map((ex) => (
-            <Link
-              key={ex.id}
-              href={`/exercises/${ex.id}`}
-              className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden hover:border-gray-700 transition-colors group"
+          <div className="flex flex-col sm:flex-row gap-3">
+            <select
+              value={muscleFilter}
+              onChange={(e) => setMuscleFilter(e.target.value)}
+              className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
-              {ex.imageUrl && (
-                <div className="bg-white flex items-center justify-center">
-                  <img
-                    src={ex.imageUrl}
-                    alt={ex.name}
-                    loading="lazy"
-                    className="max-w-full max-h-[17.5rem] object-contain group-hover:scale-105 transition-transform duration-300"
-                  />
-                </div>
-              )}
-              <div className="p-4">
-                <div className="flex items-start justify-between">
-                  <h3 className="font-semibold text-white group-hover:text-emerald-500 transition-colors">
-                    {ex.name}
-                  </h3>
-                  {ex.isCustom && (
-                    <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">Custom</span>
+              <option value="">All Muscle Groups</option>
+              {MUSCLE_GROUPS.map((mg) => (
+                <option key={mg} value={mg}>{mg.charAt(0).toUpperCase() + mg.slice(1)}</option>
+              ))}
+            </select>
+            <select
+              value={equipmentFilter}
+              onChange={(e) => setEquipmentFilter(e.target.value)}
+              className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              <option value="">All Equipment</option>
+              {EQUIPMENT.map((eq) => (
+                <option key={eq} value={eq}>{eq.charAt(0).toUpperCase() + eq.slice(1)}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Exercise Grid */}
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
+            </div>
+          ) : exercises.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              <p className="text-lg">No exercises found</p>
+              <p className="text-sm mt-1">Try adjusting your filters or add a new exercise</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {exercises.map((ex) => (
+                <Link
+                  key={ex.id}
+                  href={`/exercises/${ex.id}`}
+                  className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden hover:border-gray-700 transition-colors group"
+                >
+                  {ex.imageUrl && (
+                    <div className="bg-white flex items-center justify-center">
+                      <img
+                        src={ex.imageUrl}
+                        alt={ex.name}
+                        loading="lazy"
+                        className="max-w-full max-h-[17.5rem] object-contain group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
                   )}
-                </div>
-                <div className="flex flex-wrap gap-1.5 mt-3">
-                  {ex.muscleGroups.split(",").map((mg) => mg.trim()).filter(Boolean).map((mg) => (
-                    <span key={mg} className={`text-xs px-2 py-0.5 rounded-full ${getBadgeColor(mg)}`}>
-                      {mg}
-                    </span>
-                  ))}
-                </div>
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {ex.equipment.split(",").map((eq) => eq.trim()).filter(Boolean).map((eq) => (
-                    <span key={eq} className="text-xs px-2 py-0.5 rounded-full bg-gray-700/50 text-gray-400">
-                      {eq}
-                    </span>
-                  ))}
-                </div>
-                <p className="text-xs text-gray-500 mt-3 capitalize">{ex.type.replace("_", " ")}</p>
-              </div>
-            </Link>
-          ))}
+                  <div className="p-4">
+                    <div className="flex items-start justify-between">
+                      <h3 className="font-semibold text-white group-hover:text-emerald-500 transition-colors">
+                        {ex.name}
+                      </h3>
+                      {ex.isCustom && (
+                        <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">Custom</span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {ex.muscleGroups.split(",").map((mg) => mg.trim()).filter(Boolean).map((mg) => (
+                        <span key={mg} className={`text-xs px-2 py-0.5 rounded-full ${getBadgeColor(mg)}`}>
+                          {mg}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {ex.equipment.split(",").map((eq) => eq.trim()).filter(Boolean).map((eq) => (
+                        <span key={eq} className="text-xs px-2 py-0.5 rounded-full bg-gray-700/50 text-gray-400">
+                          {eq}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-3 capitalize">{ex.type.replace("_", " ")}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Add Exercise Modal */}
       {showModal && (
