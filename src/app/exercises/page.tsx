@@ -205,79 +205,34 @@ export default function ExercisesPage() {
   });
   const [saving, setSaving] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
-  // Swipe-to-flip state
-  const [dragRotation, setDragRotation] = useState(0); // 0-180 degrees
-  const [isSnapping, setIsSnapping] = useState(false); // true during snap-back animation
-  const touchStart = useRef<{ x: number; y: number } | null>(null);
-  const swipeLocked = useRef<"horizontal" | "vertical" | null>(null);
-  const SWIPE_WIDTH = 150; // pixels for a full 180-degree rotation
+  // Flip animation state
+  const [flipAnim, setFlipAnim] = useState(false);
+  const flipAnimRef = useRef(false);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const flipBody = useCallback(() => {
-    // Animated flip for button taps
-    setIsSnapping(true);
-    setDragRotation(180);
+    if (flipAnimRef.current) return;
+    flipAnimRef.current = true;
+    setFlipAnim(true);
     setTimeout(() => {
       setBodySide((prev) => (prev === "front" ? "back" : "front"));
-      setDragRotation(0);
-      setIsSnapping(false);
+      setFlipAnim(false);
+      flipAnimRef.current = false;
     }, 300);
   }, []);
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (isSnapping) return;
-    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    swipeLocked.current = null;
+    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!touchStart.current || isSnapping) return;
-    const dx = e.touches[0].clientX - touchStart.current.x;
-    const dy = e.touches[0].clientY - touchStart.current.y;
-
-    // Lock direction on first significant movement
-    if (swipeLocked.current === null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
-      swipeLocked.current = Math.abs(dx) > Math.abs(dy) ? "horizontal" : "vertical";
-    }
-
-    if (swipeLocked.current !== "horizontal") return;
-
-    // Prevent vertical scroll while swiping horizontally
-    e.preventDefault();
-
-    // Map pixel distance to 0-180 degree rotation
-    const rotation = Math.min(180, Math.max(0, (Math.abs(dx) / SWIPE_WIDTH) * 180));
-    setDragRotation(rotation);
-  };
-
-  const handleTouchEnd = () => {
-    const wasHorizontal = swipeLocked.current === "horizontal";
-    touchStart.current = null;
-    swipeLocked.current = null;
-
-    // Always snap back to flat if not a horizontal swipe or no rotation
-    if (!wasHorizontal || dragRotation === 0) {
-      if (dragRotation !== 0) {
-        setIsSnapping(true);
-        setDragRotation(0);
-        setTimeout(() => setIsSnapping(false), 200);
-      }
-      return;
-    }
-
-    if (dragRotation >= 90) {
-      // Past halfway -- complete the flip
-      setIsSnapping(true);
-      setDragRotation(180);
-      setTimeout(() => {
-        setBodySide((prev) => (prev === "front" ? "back" : "front"));
-        setDragRotation(0);
-        setIsSnapping(false);
-      }, 200);
-    } else {
-      // Snap back
-      setIsSnapping(true);
-      setDragRotation(0);
-      setTimeout(() => setIsSnapping(false), 200);
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+    const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
+    const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
+    touchStartRef.current = null;
+    // Only flip on deliberate horizontal swipe (more horizontal than vertical, > 60px)
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      flipBody();
     }
   };
 
@@ -410,18 +365,17 @@ export default function ExercisesPage() {
             className="cursor-pointer"
             style={{ perspective: "800px" }}
             onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
             <div
               style={{
-                transition: isSnapping ? "transform 0.2s ease-out" : "none",
-                transform: `rotateY(${dragRotation <= 90 ? dragRotation : 180 - dragRotation}deg)`,
+                transition: flipAnim ? "transform 0.3s ease-in-out" : "none",
+                transform: flipAnim ? "rotateY(90deg)" : "rotateY(0deg)",
                 transformStyle: "preserve-3d",
               }}
             >
             <Body
-              side={dragRotation >= 90 ? (bodySide === "front" ? "back" : "front") : bodySide}
+              side={bodySide}
               gender="male"
               scale={1.2}
               border="#4b5563"
