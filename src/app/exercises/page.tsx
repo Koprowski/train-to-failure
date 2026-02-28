@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 
@@ -102,6 +102,19 @@ export default function ExercisesPage() {
   });
   const [saving, setSaving] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const touchStartX = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(dx) > 50) {
+      setBodySide((prev) => (prev === "front" ? "back" : "front"));
+    }
+  };
 
   const fetchExercises = useCallback(() => {
     const params = new URLSearchParams();
@@ -217,7 +230,7 @@ export default function ExercisesPage() {
               </svg>
             </button>
           </div>
-          <div className="cursor-pointer">
+          <div className="cursor-pointer" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
             <Body
               side={bodySide}
               gender="male"
