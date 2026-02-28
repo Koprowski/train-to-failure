@@ -174,11 +174,11 @@ export default function ExercisesPage() {
               className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden hover:border-gray-700 transition-colors group"
             >
               {ex.imageUrl && (
-                <div className="bg-gray-800 flex items-center justify-center">
+                <div className="bg-white flex items-center justify-center">
                   <img
                     src={ex.imageUrl}
                     alt={ex.name}
-                    className="max-w-full max-h-56 object-contain group-hover:scale-105 transition-transform duration-300"
+                    className="max-w-full max-h-[17.5rem] object-contain group-hover:scale-105 transition-transform duration-300"
                   />
                 </div>
               )}

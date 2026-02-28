@@ -250,11 +250,11 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
       {/* Header */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         {exercise.imageUrl && (
-          <div className="bg-gray-800 flex items-center justify-center">
+          <div className="bg-white flex items-center justify-center">
             <img
               src={exercise.imageUrl}
               alt={exercise.name}
-              className="max-w-full max-h-96 object-contain"
+              className="max-w-full max-h-[30rem] object-contain"
             />
           </div>
         )}
