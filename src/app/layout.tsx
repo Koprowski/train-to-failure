@@ -33,6 +33,9 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ updated: string[]; created: string[]; skipped: string[] } | null>(null);
   const { data: session, status } = useSession();
 
   // Redirect to login only when definitively unauthenticated
@@ -126,8 +129,20 @@ function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
 
-        {/* User section at bottom */}
+        {/* Settings + User section at bottom */}
         <div className="p-4 border-t border-gray-800">
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+          >
+            <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Settings
+          </button>
+        </div>
+        <div className="px-4 pb-4">
           <div className="flex items-center gap-3 px-3 py-2">
             {session.user?.image ? (
               <img
@@ -168,6 +183,55 @@ function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </div>
       </main>
+
+      {/* Settings Modal */}
+      {settingsOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4" onClick={() => setSettingsOpen(false)}>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold">Settings</h2>
+              <button onClick={() => setSettingsOpen(false)} className="p-1 text-gray-400 hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-gray-800 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-white mb-1">Sync Exercise Library</h3>
+                <p className="text-xs text-gray-400 mb-3">Update exercise images and create new exercises from the GIF library.</p>
+                <button
+                  onClick={async () => {
+                    setSyncing(true);
+                    setSyncResult(null);
+                    try {
+                      const res = await fetch("/api/exercises/sync-images", { method: "POST" });
+                      const data = await res.json();
+                      setSyncResult(data);
+                    } catch {
+                      setSyncResult(null);
+                    } finally {
+                      setSyncing(false);
+                    }
+                  }}
+                  disabled={syncing}
+                  className="px-3 py-1.5 text-sm bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {syncing ? "Syncing..." : "Sync Now"}
+                </button>
+                {syncResult && (
+                  <div className="mt-3 text-xs text-gray-400 space-y-0.5">
+                    {syncResult.created.length > 0 && <p className="text-emerald-400">Created: {syncResult.created.join(", ")}</p>}
+                    {syncResult.updated.length > 0 && <p>Updated: {syncResult.updated.length} exercises</p>}
+                    {syncResult.created.length === 0 && syncResult.updated.length === 0 && <p>Everything up to date.</p>}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
