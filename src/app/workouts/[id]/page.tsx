@@ -57,12 +57,14 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
   const [editName, setEditName] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [editDate, setEditDate] = useState("");
+  const [editDurationH, setEditDurationH] = useState("");
+  const [editDurationM, setEditDurationM] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [setEdits, setSetEdits] = useState<Record<string, SetEdits>>({});
   const dateInputRef = useRef<HTMLInputElement>(null);
 
   // Track the "clean" state to detect changes
-  const [cleanState, setCleanState] = useState<{ name: string; notes: string; date: string } | null>(null);
+  const [cleanState, setCleanState] = useState<{ name: string; notes: string; date: string; durationH: string; durationM: string } | null>(null);
 
   const initEditState = useCallback((w: Workout) => {
     setEditName(w.name);
@@ -71,7 +73,11 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
     const pad = (n: number) => String(n).padStart(2, "0");
     const dateVal = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     setEditDate(dateVal);
-    setCleanState({ name: w.name, notes: w.notes ?? "", date: dateVal });
+    const durH = w.duration ? String(Math.floor(w.duration / 3600)) : "0";
+    const durM = w.duration ? String(Math.floor((w.duration % 3600) / 60)) : "0";
+    setEditDurationH(durH);
+    setEditDurationM(durM);
+    setCleanState({ name: w.name, notes: w.notes ?? "", date: dateVal, durationH: durH, durationM: durM });
     setSetEdits({});
   }, []);
 
@@ -110,7 +116,9 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
   const hasWorkoutChanges = cleanState && (
     editName !== cleanState.name ||
     editNotes !== cleanState.notes ||
-    editDate !== cleanState.date
+    editDate !== cleanState.date ||
+    editDurationH !== cleanState.durationH ||
+    editDurationM !== cleanState.durationM
   );
   const hasSetChanges = Object.keys(setEdits).length > 0;
   const hasChanges = hasWorkoutChanges || hasSetChanges;
@@ -136,15 +144,13 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
       // Save workout-level changes
       if (hasWorkoutChanges) {
         const newStartedAt = new Date(editDate).toISOString();
+        const newDuration = (parseInt(editDurationH) || 0) * 3600 + (parseInt(editDurationM) || 0) * 60;
         const updateData: Record<string, unknown> = {
           name: editName,
           notes: editNotes || null,
           startedAt: newStartedAt,
+          duration: newDuration > 0 ? newDuration : null,
         };
-        if (workout.finishedAt) {
-          const dur = Math.round((new Date(workout.finishedAt).getTime() - new Date(newStartedAt).getTime()) / 1000);
-          if (dur > 0) updateData.duration = dur;
-        }
         await fetch(`/api/workouts/${workout.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -385,7 +391,27 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
         <div className="grid grid-cols-3 gap-4 mt-5">
           <div>
             <p className="text-gray-500 text-xs uppercase tracking-wide">Duration</p>
-            <p className="text-xl font-semibold mt-0.5">{formatDuration(workout.duration)}</p>
+            <div className="flex items-baseline gap-0.5 mt-0.5">
+              <input
+                type="number"
+                inputMode="numeric"
+                min="0"
+                value={editDurationH}
+                onChange={(e) => setEditDurationH(e.target.value)}
+                className="w-8 bg-transparent text-xl font-semibold text-white outline-none text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none border-b border-transparent focus:border-emerald-500"
+              />
+              <span className="text-sm text-gray-400">h</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min="0"
+                max="59"
+                value={editDurationM}
+                onChange={(e) => setEditDurationM(e.target.value)}
+                className="w-8 bg-transparent text-xl font-semibold text-white outline-none text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none border-b border-transparent focus:border-emerald-500"
+              />
+              <span className="text-sm text-gray-400">m</span>
+            </div>
           </div>
           <div>
             <p className="text-gray-500 text-xs uppercase tracking-wide">Volume</p>
@@ -523,7 +549,7 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
             disabled={savingTemplate || templateSaved}
             className={`text-sm transition-colors ${templateSaved ? "text-emerald-500" : "text-gray-500 hover:text-white"} disabled:opacity-50`}
           >
-            {templateSaved ? "Template Saved!" : savingTemplate ? "Saving..." : "Save As Template"}
+            {templateSaved ? "Template Saved!" : savingTemplate ? "Saving..." : "Save Workout As Template"}
           </button>
         </div>
       )}
