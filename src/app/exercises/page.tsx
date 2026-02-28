@@ -178,6 +178,7 @@ export default function ExercisesPage() {
                   <img
                     src={ex.imageUrl}
                     alt={ex.name}
+                    loading="lazy"
                     className="max-w-full max-h-[17.5rem] object-contain group-hover:scale-105 transition-transform duration-300"
                   />
                 </div>
