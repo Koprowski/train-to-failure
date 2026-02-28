@@ -600,6 +600,20 @@ function WorkoutContent() {
     }
   }, [workoutId, exerciseBlocks]);
 
+  const discardWorkout = async () => {
+    if (!workoutId) {
+      router.push("/");
+      return;
+    }
+    if (!confirm("Discard this workout? All logged sets will be deleted.")) return;
+    try {
+      await fetch(`/api/workouts/${workoutId}`, { method: "DELETE" });
+    } catch {
+      // Best effort
+    }
+    router.push("/");
+  };
+
   const finishWorkout = async () => {
     if (!workoutId) return;
     setSaving(true);
@@ -808,10 +822,20 @@ function WorkoutContent() {
             className="text-2xl font-bold bg-transparent border-none outline-none w-full text-white"
           />
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <div className="text-2xl font-mono text-emerald-500 tabular-nums">
             {formatTimer(totalElapsed)}
           </div>
+          <button
+            onClick={discardWorkout}
+            disabled={saving}
+            className="text-gray-400 hover:text-red-400 transition-colors p-2"
+            title="Discard workout"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
           <button
             onClick={finishWorkout}
             disabled={saving}
@@ -1109,9 +1133,19 @@ function WorkoutContent() {
 
       {/* Fixed bottom bar on mobile */}
       <div className="fixed bottom-0 left-0 right-0 lg:left-64 bg-gray-900 border-t border-gray-800 p-3 flex items-center justify-between">
-        <div className="text-sm text-gray-400">
-          {exerciseBlocks.length} exercise{exerciseBlocks.length !== 1 ? "s" : ""} &middot;{" "}
-          {exerciseBlocks.reduce((sum, b) => sum + b.sets.filter((s) => s.completed).length, 0)} sets done
+        <div className="flex items-center gap-3">
+          <button
+            onClick={discardWorkout}
+            disabled={saving}
+            className="text-gray-400 hover:text-red-400 transition-colors text-sm"
+          >
+            Discard
+          </button>
+          <span className="text-sm text-gray-600">|</span>
+          <span className="text-sm text-gray-400">
+            {exerciseBlocks.length} exercise{exerciseBlocks.length !== 1 ? "s" : ""} &middot;{" "}
+            {exerciseBlocks.reduce((sum, b) => sum + b.sets.filter((s) => s.completed).length, 0)} sets done
+          </span>
         </div>
         <button
           onClick={finishWorkout}
