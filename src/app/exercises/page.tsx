@@ -87,7 +87,9 @@ export default function ExercisesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [muscleFilter, setMuscleFilter] = useState("");
-  const [equipmentFilter, setEquipmentFilter] = useState("");
+  const [equipmentFilter, setEquipmentFilter] = useState<string[]>([]);
+  const [showEquipmentPicker, setShowEquipmentPicker] = useState(false);
+  const [equipmentDraft, setEquipmentDraft] = useState<string[]>([]);
   const [bodySide, setBodySide] = useState<"front" | "back">("front");
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -105,12 +107,18 @@ export default function ExercisesPage() {
     const params = new URLSearchParams();
     if (search) params.set("search", search);
     if (muscleFilter) params.set("muscleGroup", muscleFilter);
-    if (equipmentFilter) params.set("equipment", equipmentFilter);
 
     fetch(`/api/exercises?${params}`)
       .then((r) => r.json())
       .then((data) => {
-        setExercises(Array.isArray(data) ? data : []);
+        let list = Array.isArray(data) ? data : [];
+        if (equipmentFilter.length > 0) {
+          list = list.filter((ex: Exercise) => {
+            const exEquip = ex.equipment.split(",").map((e) => e.trim().toLowerCase());
+            return equipmentFilter.some((f) => exEquip.includes(f.toLowerCase()));
+          });
+        }
+        setExercises(list);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -171,16 +179,14 @@ export default function ExercisesPage() {
             <option key={mg} value={mg}>{mg.charAt(0).toUpperCase() + mg.slice(1)}</option>
           ))}
         </select>
-        <select
-          value={equipmentFilter}
-          onChange={(e) => setEquipmentFilter(e.target.value)}
-          className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        <button
+          onClick={() => { setEquipmentDraft([...equipmentFilter]); setShowEquipmentPicker(true); }}
+          className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-left text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 truncate"
         >
-          <option value="">All Equipment</option>
-          {EQUIPMENT.map((eq) => (
-            <option key={eq} value={eq}>{eq.charAt(0).toUpperCase() + eq.slice(1)}</option>
-          ))}
-        </select>
+          {equipmentFilter.length === 0
+            ? "All Equipment"
+            : equipmentFilter.map((e) => e.charAt(0).toUpperCase() + e.slice(1)).join(", ")}
+        </button>
       </div>
 
       {/* Body Map + Grid */}
@@ -307,6 +313,51 @@ export default function ExercisesPage() {
           )}
         </div>
       </div>
+
+      {/* Equipment Picker Modal */}
+      {showEquipmentPicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowEquipmentPicker(false)}>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-white mb-4">Equipment</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {EQUIPMENT.map((eq) => {
+                const selected = equipmentDraft.includes(eq);
+                return (
+                  <button
+                    key={eq}
+                    onClick={() =>
+                      setEquipmentDraft((prev) =>
+                        selected ? prev.filter((e) => e !== eq) : [...prev, eq]
+                      )
+                    }
+                    className={`px-3 py-2 rounded-lg text-sm text-left transition-colors ${
+                      selected
+                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500"
+                        : "bg-gray-800 text-gray-300 border border-gray-700 hover:border-gray-600"
+                    }`}
+                  >
+                    {eq.charAt(0).toUpperCase() + eq.slice(1)}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button
+                onClick={() => { setEquipmentDraft([]); }}
+                className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+              >
+                Clear
+              </button>
+              <button
+                onClick={() => { setEquipmentFilter(equipmentDraft); setShowEquipmentPicker(false); }}
+                className="flex-1 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-semibold transition-colors"
+              >
+                Apply{equipmentDraft.length > 0 ? ` (${equipmentDraft.length})` : ""}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Search Modal */}
       {showSearch && (
