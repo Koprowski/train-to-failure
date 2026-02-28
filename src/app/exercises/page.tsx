@@ -105,6 +105,17 @@ export default function ExercisesPage() {
   const [saving, setSaving] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const touchStartX = useRef<number | null>(null);
+  const [flipping, setFlipping] = useState(false);
+
+  const flipBody = useCallback(() => {
+    if (flipping) return;
+    setFlipping(true);
+    // Switch side at midpoint of animation (250ms into 500ms)
+    setTimeout(() => {
+      setBodySide((prev) => (prev === "front" ? "back" : "front"));
+    }, 250);
+    setTimeout(() => setFlipping(false), 500);
+  }, [flipping]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -114,7 +125,7 @@ export default function ExercisesPage() {
     const dx = e.changedTouches[0].clientX - touchStartX.current;
     touchStartX.current = null;
     if (Math.abs(dx) > 50) {
-      setBodySide((prev) => (prev === "front" ? "back" : "front"));
+      flipBody();
     }
   };
 
@@ -213,13 +224,13 @@ export default function ExercisesPage() {
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex flex-col items-center shrink-0">
           <div className="flex items-center gap-2 mb-3">
             <button
-              onClick={() => setBodySide("front")}
+              onClick={() => { if (bodySide !== "front") flipBody(); }}
               className={`px-3 py-1 text-xs rounded-lg transition-colors ${bodySide === "front" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
             >
               Front
             </button>
             <button
-              onClick={() => setBodySide("back")}
+              onClick={() => { if (bodySide !== "back") flipBody(); }}
               className={`px-3 py-1 text-xs rounded-lg transition-colors ${bodySide === "back" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
             >
               Back
@@ -235,7 +246,19 @@ export default function ExercisesPage() {
               </svg>
             </button>
           </div>
-          <div className="cursor-pointer" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+          <div
+            className="cursor-pointer"
+            style={{ perspective: "800px" }}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
+            <div
+              style={{
+                transition: flipping ? "transform 0.5s ease-in-out" : "none",
+                transform: flipping ? "rotateY(180deg)" : "rotateY(0deg)",
+                transformStyle: "preserve-3d",
+              }}
+            >
             <Body
               side={bodySide}
               gender="male"
@@ -258,6 +281,7 @@ export default function ExercisesPage() {
                 );
               }}
             />
+            </div>
           </div>
           {muscleFilter.length > 0 && (
             <button
