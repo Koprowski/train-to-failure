@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, useRef, useCallback, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -34,6 +34,13 @@ interface Workout {
   sets: WorkoutSet[];
 }
 
+// Track edits to sets
+interface SetEdits {
+  weightLbs?: string;
+  reps?: string;
+  rpe?: string;
+}
+
 export default function WorkoutDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -41,23 +48,42 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
   const [loading, setLoading] = useState(true);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [templateSaved, setTemplateSaved] = useState(false);
-  const [editing, setEditing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Inline edit state
   const [editName, setEditName] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [editDate, setEditDate] = useState("");
-  const [savingEdit, setSavingEdit] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [setEdits, setSetEdits] = useState<Record<string, SetEdits>>({});
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
+  // Track the "clean" state to detect changes
+  const [cleanState, setCleanState] = useState<{ name: string; notes: string; date: string } | null>(null);
+
+  const initEditState = useCallback((w: Workout) => {
+    setEditName(w.name);
+    setEditNotes(w.notes ?? "");
+    const d = new Date(w.startedAt);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const dateVal = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    setEditDate(dateVal);
+    setCleanState({ name: w.name, notes: w.notes ?? "", date: dateVal });
+    setSetEdits({});
+  }, []);
 
   useEffect(() => {
     fetch(`/api/workouts/${id}`)
       .then((r) => r.json())
       .then((data) => {
         setWorkout(data);
+        initEditState(data);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [id]);
+  }, [id, initEditState]);
 
   const formatDuration = (seconds: number | null) => {
     if (!seconds) return "--";
@@ -77,6 +103,78 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
     const min = String(d.getMinutes()).padStart(2, "0");
     const ampm = d.getHours() >= 12 ? "PM" : "AM";
     return `${weekday} ${mm}/${dd}/${yyyy} - ${hour}:${min}${ampm}`;
+  };
+
+  // Detect if anything has changed
+  const hasWorkoutChanges = cleanState && (
+    editName !== cleanState.name ||
+    editNotes !== cleanState.notes ||
+    editDate !== cleanState.date
+  );
+  const hasSetChanges = Object.keys(setEdits).length > 0;
+  const hasChanges = hasWorkoutChanges || hasSetChanges;
+
+  const updateSetEdit = (setId: string, field: keyof SetEdits, value: string) => {
+    setSetEdits((prev) => {
+      const existing = prev[setId] ?? {};
+      return { ...prev, [setId]: { ...existing, [field]: value } };
+    });
+  };
+
+  const getSetValue = (set: WorkoutSet, field: "weightLbs" | "reps" | "rpe"): string => {
+    const edits = setEdits[set.id];
+    if (edits && edits[field] !== undefined) return edits[field]!;
+    const val = set[field];
+    return val != null ? String(val) : "";
+  };
+
+  const saveAll = async () => {
+    if (!workout || saving) return;
+    setSaving(true);
+    try {
+      // Save workout-level changes
+      if (hasWorkoutChanges) {
+        const newStartedAt = new Date(editDate).toISOString();
+        const updateData: Record<string, unknown> = {
+          name: editName,
+          notes: editNotes || null,
+          startedAt: newStartedAt,
+        };
+        if (workout.finishedAt) {
+          const dur = Math.round((new Date(workout.finishedAt).getTime() - new Date(newStartedAt).getTime()) / 1000);
+          if (dur > 0) updateData.duration = dur;
+        }
+        await fetch(`/api/workouts/${workout.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updateData),
+        });
+      }
+
+      // Save set-level changes
+      const setPromises = Object.entries(setEdits).map(([setId, edits]) => {
+        const data: Record<string, number | null> = {};
+        if (edits.weightLbs !== undefined) data.weightLbs = edits.weightLbs ? Number(edits.weightLbs) : null;
+        if (edits.reps !== undefined) data.reps = edits.reps ? Number(edits.reps) : null;
+        if (edits.rpe !== undefined) data.rpe = edits.rpe ? Number(edits.rpe) : null;
+        return fetch(`/api/workouts/${workout.id}/sets/${setId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+      });
+      await Promise.all(setPromises);
+
+      // Reload workout
+      const res = await fetch(`/api/workouts/${workout.id}`);
+      const updated = await res.json();
+      setWorkout(updated);
+      initEditState(updated);
+    } catch (err) {
+      console.error("Failed to save:", err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
@@ -138,47 +236,6 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
     }
   };
 
-  const openEdit = () => {
-    setEditName(workout.name);
-    setEditNotes(workout.notes ?? "");
-    // Format startedAt for datetime-local input (YYYY-MM-DDTHH:mm)
-    const d = new Date(workout.startedAt);
-    const pad = (n: number) => String(n).padStart(2, "0");
-    setEditDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
-    setEditing(true);
-  };
-
-  const saveEdit = async () => {
-    setSavingEdit(true);
-    try {
-      const newStartedAt = new Date(editDate).toISOString();
-      const updateData: Record<string, unknown> = {
-        name: editName,
-        notes: editNotes || null,
-        startedAt: newStartedAt,
-      };
-      // Recalculate duration if workout is finished
-      if (workout.finishedAt) {
-        const dur = Math.round((new Date(workout.finishedAt).getTime() - new Date(newStartedAt).getTime()) / 1000);
-        if (dur > 0) updateData.duration = dur;
-      }
-      const res = await fetch(`/api/workouts/${workout.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updateData),
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        setWorkout(updated);
-        setEditing(false);
-      }
-    } catch (err) {
-      console.error("Failed to update workout:", err);
-    } finally {
-      setSavingEdit(false);
-    }
-  };
-
   const deleteWorkout = async () => {
     setDeleting(true);
     try {
@@ -229,8 +286,33 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 overflow-hidden">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold truncate">{workout.name}</h1>
-            <p className="text-gray-400 mt-1 whitespace-nowrap">{formatDateTime(workout.startedAt)}</p>
+            <input
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              className="text-2xl font-bold bg-transparent border-none outline-none text-white w-full truncate focus:ring-0 p-0"
+              placeholder="Workout name"
+            />
+            <button
+              onClick={() => {
+                setShowDatePicker(true);
+                setTimeout(() => dateInputRef.current?.showPicker?.(), 50);
+              }}
+              className="text-gray-400 mt-1 whitespace-nowrap hover:text-emerald-400 transition-colors text-left"
+            >
+              {formatDateTime(editDate || workout.startedAt)}
+            </button>
+            {showDatePicker && (
+              <input
+                ref={dateInputRef}
+                type="datetime-local"
+                value={editDate}
+                onChange={(e) => { setEditDate(e.target.value); setShowDatePicker(false); }}
+                onBlur={() => setShowDatePicker(false)}
+                className="block mt-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-emerald-500 [color-scheme:dark]"
+                autoFocus
+              />
+            )}
           </div>
           <div className="flex items-center gap-1 shrink-0 ml-4">
             {workout.finishedAt && (
@@ -252,15 +334,24 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
                 </span>
               </button>
             )}
-            <button
-              onClick={openEdit}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
-              title="Edit workout"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
-            </button>
+            {/* Save button -- only visible when changes exist */}
+            {hasChanges && (
+              <button
+                onClick={saveAll}
+                disabled={saving}
+                className="group relative p-1.5 rounded-lg text-emerald-400 hover:text-emerald-300 hover:bg-gray-800 transition-colors disabled:opacity-50"
+                title="Save changes"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V7l-4-4z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 3v4h8V3" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 14h10v7H7z" />
+                </svg>
+                <span className="invisible group-hover:visible absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-gray-300 bg-gray-800 border border-gray-700 rounded whitespace-nowrap z-10">
+                  {saving ? "Saving..." : "Save changes"}
+                </span>
+              </button>
+            )}
             <button
               onClick={() => setShowDeleteConfirm(true)}
               className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-gray-800 transition-colors"
@@ -302,11 +393,15 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
 
-        {workout.notes && (
-          <div className="mt-4 pt-4 border-t border-gray-800">
-            <p className="text-sm text-gray-400">{workout.notes}</p>
-          </div>
-        )}
+        <div className="mt-4 pt-4 border-t border-gray-800">
+          <textarea
+            value={editNotes}
+            onChange={(e) => setEditNotes(e.target.value)}
+            rows={2}
+            placeholder="Add notes..."
+            className="w-full bg-transparent border-none outline-none text-sm text-gray-400 focus:text-white resize-none p-0 placeholder-gray-600"
+          />
+        </div>
       </div>
 
       {/* Exercise details */}
@@ -351,14 +446,38 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
                         </span>
                       )}
                     </td>
-                    <td className="py-2 px-3 text-right text-white">
-                      {set.weightLbs != null ? `${set.weightLbs} lbs` : "--"}
+                    <td className="py-1 px-1 text-right">
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        value={getSetValue(set, "weightLbs")}
+                        onChange={(e) => updateSetEdit(set.id, "weightLbs", e.target.value)}
+                        placeholder="--"
+                        className="w-16 bg-transparent border-b border-transparent focus:border-emerald-500 text-right text-white outline-none py-1 px-1 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
                     </td>
-                    <td className="py-2 px-3 text-right text-white">
-                      {set.reps ?? (set.timeSecs ? `${set.timeSecs}s` : "--")}
+                    <td className="py-1 px-1 text-right">
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        value={getSetValue(set, "reps")}
+                        onChange={(e) => updateSetEdit(set.id, "reps", e.target.value)}
+                        placeholder="--"
+                        className="w-12 bg-transparent border-b border-transparent focus:border-emerald-500 text-right text-white outline-none py-1 px-1 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
                     </td>
-                    <td className="py-2 px-3 text-right text-gray-400">
-                      {set.rpe ?? "--"}
+                    <td className="py-1 px-1 text-right">
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        step="0.5"
+                        min="1"
+                        max="10"
+                        value={getSetValue(set, "rpe")}
+                        onChange={(e) => updateSetEdit(set.id, "rpe", e.target.value)}
+                        placeholder="--"
+                        className="w-12 bg-transparent border-b border-transparent focus:border-emerald-500 text-right text-gray-400 outline-none py-1 px-1 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
                     </td>
                     <td className="py-2 px-3 text-center">
                       {set.completed ? (
@@ -385,54 +504,21 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
         </div>
       )}
 
-      {/* Edit Modal */}
-      {editing && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-md">
-            <h2 className="text-lg font-semibold mb-4">Edit Workout</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Name</label>
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Date & Time</label>
-                <input
-                  type="datetime-local"
-                  value={editDate}
-                  onChange={(e) => setEditDate(e.target.value)}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 [color-scheme:dark]"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Notes</label>
-                <textarea
-                  value={editNotes}
-                  onChange={(e) => setEditNotes(e.target.value)}
-                  rows={3}
-                  placeholder="Optional notes..."
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 resize-none"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button onClick={() => setEditing(false)} className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">
-                Cancel
-              </button>
-              <button
-                onClick={saveEdit}
-                disabled={savingEdit || !editName.trim()}
-                className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors disabled:opacity-50"
-              >
-                {savingEdit ? "Saving..." : "Save"}
-              </button>
-            </div>
-          </div>
+      {/* Floating save bar when changes exist */}
+      {hasChanges && (
+        <div className="sticky bottom-4 flex justify-center z-40">
+          <button
+            onClick={saveAll}
+            disabled={saving}
+            className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl shadow-lg shadow-emerald-900/30 transition-colors disabled:opacity-50"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V7l-4-4z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 3v4h8V3" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 14h10v7H7z" />
+            </svg>
+            {saving ? "Saving..." : "Save Changes"}
+          </button>
         </div>
       )}
 
