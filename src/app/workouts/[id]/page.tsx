@@ -342,10 +342,11 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
                 className="group relative p-1.5 rounded-lg text-emerald-400 hover:text-emerald-300 hover:bg-gray-800 transition-colors disabled:opacity-50"
                 title="Save changes"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V7l-4-4z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 3v4h8V3" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 14h10v7H7z" />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="3" />
+                  <path d="M7 3v5h10V3" />
+                  <rect x="10" y="4" width="3" height="3" />
+                  <rect x="6" y="13" width="12" height="8" rx="1" />
                 </svg>
                 <span className="invisible group-hover:visible absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-gray-300 bg-gray-800 border border-gray-700 rounded whitespace-nowrap z-10">
                   {saving ? "Saving..." : "Save changes"}
