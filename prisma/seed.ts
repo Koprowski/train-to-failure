@@ -55,6 +55,7 @@ const exercises = [
   { name: "Situps", muscleGroups: "abs,core,hip flexors", equipment: "bodyweight", type: "weight_reps" },
   { name: "Situps - Decline Weighted", muscleGroups: "abs,core", equipment: "bench", type: "weight_reps" },
   { name: "Leg Press - 45 Sled", muscleGroups: "quads,glutes,hamstrings", equipment: "machine", type: "weight_reps" },
+  { name: "Leg Press - Machine", muscleGroups: "quads,glutes,hamstrings", equipment: "machine", type: "weight_reps" },
   { name: "Hip Abduction", muscleGroups: "glutes,abductors", equipment: "machine", type: "weight_reps" },
   { name: "Hip Adduction", muscleGroups: "adductors", equipment: "machine", type: "weight_reps" },
   { name: "Dip", muscleGroups: "chest,triceps,shoulders", equipment: "bodyweight,dip_station", type: "weight_reps" },

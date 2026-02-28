@@ -229,6 +229,11 @@
     "imageUrl": "/gifs/as_sled-45-leg-press.gif",
     "muscleGroups": "quads,glutes,hamstrings"
   },
+  "Leg Press - Machine": {
+    "gifFile": "as_lever-seated-squat-calf-raise-on-leg-press-machine.gif",
+    "imageUrl": "/gifs/as_lever-seated-squat-calf-raise-on-leg-press-machine.gif",
+    "muscleGroups": "quads,glutes,hamstrings"
+  },
   "Treadmill Run": {
     "gifFile": "by_walking-on-incline-treadmill.gif",
     "imageUrl": "/gifs/by_walking-on-incline-treadmill.gif",
