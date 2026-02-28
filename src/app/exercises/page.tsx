@@ -29,7 +29,7 @@ const MUSCLE_GROUPS = [
 
 const EQUIPMENT = [
   "barbell", "bench", "bodyweight", "cable", "dumbbell",
-  "ez bar", "kettlebell", "machine", "none", "pull-up bar",
+  "ez bar", "kettlebell", "machine", "pull-up bar",
   "resistance band", "smith machine", "trap bar",
 ];
 
@@ -87,7 +87,7 @@ export default function ExercisesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [muscleFilter, setMuscleFilter] = useState("");
-  const [equipmentFilter, setEquipmentFilter] = useState<string[]>(["bodyweight"]);
+  const [equipmentFilter, setEquipmentFilter] = useState<string[]>([]);
   const [showEquipmentPicker, setShowEquipmentPicker] = useState(false);
   const [equipmentDraft, setEquipmentDraft] = useState<string[]>([]);
   const [bodySide, setBodySide] = useState<"front" | "back">("front");
