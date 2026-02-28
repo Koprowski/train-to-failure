@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 
@@ -32,6 +32,107 @@ const EQUIPMENT = [
   "ez bar", "kettlebell", "machine", "pull-up bar",
   "resistance band", "smith machine", "trap bar",
 ];
+
+const EQUIPMENT_ICONS: Record<string, React.ReactNode> = {
+  barbell: (
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
+      <rect x="1" y="9" width="3" height="6" rx="0.5" />
+      <rect x="4" y="10.5" width="2" height="3" rx="0.5" />
+      <rect x="20" y="9" width="3" height="6" rx="0.5" />
+      <rect x="18" y="10.5" width="2" height="3" rx="0.5" />
+      <line x1="6" y1="12" x2="18" y2="12" />
+    </svg>
+  ),
+  bench: (
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
+      <rect x="3" y="10" width="18" height="3" rx="1" />
+      <line x1="5" y1="13" x2="5" y2="19" />
+      <line x1="19" y1="13" x2="19" y2="19" />
+      <line x1="3" y1="19" x2="7" y2="19" />
+      <line x1="17" y1="19" x2="21" y2="19" />
+      <line x1="12" y1="10" x2="12" y2="5" />
+      <line x1="9" y1="5" x2="15" y2="5" />
+    </svg>
+  ),
+  bodyweight: (
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
+      <circle cx="12" cy="5" r="2.5" />
+      <path d="M12 9v5M12 14l-3 6M12 14l3 6M8 11h8" />
+    </svg>
+  ),
+  cable: (
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
+      <rect x="9" y="2" width="6" height="4" rx="1" />
+      <line x1="12" y1="6" x2="12" y2="16" strokeDasharray="2 2" />
+      <rect x="8" y="16" width="8" height="4" rx="1" />
+      <line x1="10" y1="18" x2="14" y2="18" />
+    </svg>
+  ),
+  dumbbell: (
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
+      <rect x="2" y="9.5" width="4" height="5" rx="0.5" />
+      <rect x="18" y="9.5" width="4" height="5" rx="0.5" />
+      <line x1="6" y1="12" x2="18" y2="12" />
+    </svg>
+  ),
+  "ez bar": (
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
+      <rect x="1" y="10" width="3" height="4" rx="0.5" />
+      <rect x="20" y="10" width="3" height="4" rx="0.5" />
+      <path d="M4 12h3l2-1.5h6l2 1.5h3" />
+    </svg>
+  ),
+  kettlebell: (
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
+      <path d="M9 6a3 3 0 016 0" />
+      <circle cx="12" cy="15" r="5" />
+      <line x1="10" y1="15" x2="14" y2="15" />
+    </svg>
+  ),
+  machine: (
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
+      <rect x="4" y="3" width="16" height="18" rx="2" />
+      <circle cx="12" cy="10" r="3" />
+      <line x1="12" y1="13" x2="12" y2="17" />
+      <line x1="10" y1="17" x2="14" y2="17" />
+    </svg>
+  ),
+  "pull-up bar": (
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
+      <line x1="2" y1="5" x2="22" y2="5" />
+      <line x1="4" y1="5" x2="4" y2="2" />
+      <line x1="20" y1="5" x2="20" y2="2" />
+      <circle cx="12" cy="9" r="1.5" />
+      <path d="M12 11v4M9 12l3-1 3 1M12 15l-2 4M12 15l2 4" />
+    </svg>
+  ),
+  "resistance band": (
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
+      <path d="M6 4c0 0-2 8 0 16" />
+      <path d="M18 4c0 0 2 8 0 16" />
+      <path d="M6 8c4-2 8-2 12 0" />
+      <path d="M6 16c4 2 8 2 12 0" />
+    </svg>
+  ),
+  "smith machine": (
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
+      <line x1="5" y1="2" x2="5" y2="22" />
+      <line x1="19" y1="2" x2="19" y2="22" />
+      <line x1="3" y1="22" x2="7" y2="22" />
+      <line x1="17" y1="22" x2="21" y2="22" />
+      <rect x="7" y="11" width="2" height="2" rx="0.5" />
+      <rect x="15" y="11" width="2" height="2" rx="0.5" />
+      <line x1="9" y1="12" x2="15" y2="12" />
+    </svg>
+  ),
+  "trap bar": (
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
+      <polygon points="12,4 20,9 20,15 12,20 4,15 4,9" />
+      <line x1="8" y1="11" x2="8" y2="13" />
+      <line x1="16" y1="11" x2="16" y2="13" />
+    </svg>
+  ),
+};
 
 // Map react-muscle-highlighter slugs to app muscle group names
 const SLUG_TO_MUSCLE: Record<string, string[]> = {
@@ -470,12 +571,13 @@ export default function ExercisesPage() {
                         selected ? prev.filter((e) => e !== eq) : [...prev, eq]
                       )
                     }
-                    className={`px-3 py-2 rounded-lg text-sm text-left transition-colors ${
+                    className={`px-3 py-2 rounded-lg text-sm text-left transition-colors flex items-center gap-2 ${
                       selected
                         ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500"
                         : "bg-gray-800 text-gray-300 border border-gray-700 hover:border-gray-600"
                     }`}
                   >
+                    {EQUIPMENT_ICONS[eq]}
                     {eq.charAt(0).toUpperCase() + eq.slice(1)}
                   </button>
                 );
