@@ -265,6 +265,13 @@ export default function DashboardPage() {
                     <Cell key={index} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
+                {/* Total sets in center */}
+                <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle" className="fill-white text-2xl font-bold">
+                  {muscleData.reduce((sum, d) => sum + d.setCount, 0)}
+                </text>
+                <text x="50%" y="58%" textAnchor="middle" dominantBaseline="middle" className="fill-gray-400 text-xs">
+                  sets
+                </text>
                 <Tooltip
                   contentStyle={{ backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: "8px" }}
                   labelStyle={{ color: "#fff" }}

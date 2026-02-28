@@ -66,19 +66,16 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
     return `${m}m`;
   };
 
-  const formatDate = (dateStr: string) => {
+  const formatDateTime = (dateStr: string) => {
     const d = new Date(dateStr);
-    return d.toLocaleDateString("en-US", {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
-  const formatTime = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+    const weekday = d.toLocaleDateString("en-US", { weekday: "long" });
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    const hour = d.getHours() % 12 || 12;
+    const min = String(d.getMinutes()).padStart(2, "0");
+    const ampm = d.getHours() >= 12 ? "PM" : "AM";
+    return `${weekday} ${mm}/${dd}/${yyyy} - ${hour}:${min}${ampm}`;
   };
 
   if (loading) {
@@ -212,37 +209,31 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
       </div>
 
       {/* Summary */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 overflow-hidden">
         <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">{workout.name}</h1>
-            <p className="text-gray-400 mt-1">{formatDate(workout.startedAt)} at {formatTime(workout.startedAt)}</p>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl font-bold truncate">{workout.name}</h1>
+            <p className="text-gray-400 mt-1 whitespace-nowrap">{formatDateTime(workout.startedAt)}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 shrink-0 ml-4">
             {workout.finishedAt && (
-              <>
-                <button
-                  onClick={saveAsTemplate}
-                  disabled={savingTemplate || templateSaved}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
-                  title="Save as template"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                  </svg>
-                  {templateSaved ? "Saved!" : savingTemplate ? "Saving..." : "Save Template"}
-                </button>
-                <button
-                  onClick={() => router.push(`/workouts/new?duplicateFrom=${workout.id}`)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
-                  title="Duplicate workout"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                  Repeat
-                </button>
-              </>
+              <button
+                onClick={saveAsTemplate}
+                disabled={savingTemplate || templateSaved}
+                className={`group relative p-1.5 rounded-lg transition-colors ${templateSaved ? "text-emerald-500" : "text-gray-400 hover:text-white hover:bg-gray-800"} disabled:opacity-50`}
+                title="Save as template"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {savingTemplate ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2zm7 14v-6m-3 3h6" />
+                  )}
+                </svg>
+                <span className="invisible group-hover:visible absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-gray-300 bg-gray-800 border border-gray-700 rounded whitespace-nowrap z-10">
+                  {templateSaved ? "Saved!" : savingTemplate ? "Saving..." : "Save as template"}
+                </span>
+              </button>
             )}
             <button
               onClick={openEdit}
@@ -264,6 +255,20 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
             </button>
           </div>
         </div>
+        {workout.finishedAt && (
+          <div className="flex justify-center mt-3">
+            <button
+              onClick={() => router.push(`/workouts/new?duplicateFrom=${workout.id}`)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors whitespace-nowrap"
+              title="Duplicate workout"
+            >
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              Repeat Workout
+            </button>
+          </div>
+        )}
 
         <div className="grid grid-cols-3 gap-4 mt-5">
           <div>
