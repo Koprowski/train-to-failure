@@ -224,6 +224,11 @@
     "imageUrl": "/gifs/as_weighted-decline-sit-up.gif",
     "muscleGroups": "abs,core"
   },
+  "Leg Press - 45 Sled": {
+    "gifFile": "as_sled-45-leg-press.gif",
+    "imageUrl": "/gifs/as_sled-45-leg-press.gif",
+    "muscleGroups": "quads,glutes,hamstrings"
+  },
   "Treadmill Run": {
     "gifFile": "by_walking-on-incline-treadmill.gif",
     "imageUrl": "/gifs/by_walking-on-incline-treadmill.gif",
