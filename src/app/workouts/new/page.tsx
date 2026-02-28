@@ -87,6 +87,7 @@ function WorkoutContent() {
   const [recentWorkouts, setRecentWorkouts] = useState<RecentWorkout[]>([]);
   const [templates, setTemplates] = useState<TemplateData[]>([]);
   const [launcherLoading, setLauncherLoading] = useState(true);
+  const [jsonMuscleGroups, setJsonMuscleGroups] = useState<string[]>([]);
 
   // Load launcher data (recent workouts + templates) when no query params
   useEffect(() => {
@@ -113,6 +114,21 @@ function WorkoutContent() {
     fetch("/api/exercises")
       .then((r) => r.json())
       .then((data) => setAllExercises(Array.isArray(data) ? data : []))
+      .catch(() => {});
+
+    // Also load muscle groups from exercises.json to ensure complete list
+    fetch("/gifs/exercises.json")
+      .then((r) => r.json())
+      .then((data: Record<string, { muscleGroups?: string }>) => {
+        const groups = new Set<string>();
+        for (const info of Object.values(data)) {
+          (info.muscleGroups || "").split(",").forEach((g: string) => {
+            const trimmed = g.trim().toLowerCase();
+            if (trimmed) groups.add(trimmed);
+          });
+        }
+        setJsonMuscleGroups(Array.from(groups).sort());
+      })
       .catch(() => {});
   }, []);
 
@@ -676,9 +692,9 @@ function WorkoutContent() {
     }
   };
 
-  // Build muscle group tabs dynamically from loaded exercises
+  // Build muscle group tabs from both DB exercises and exercises.json
   const muscleGroups = (() => {
-    const groups = new Set<string>();
+    const groups = new Set<string>(jsonMuscleGroups);
     allExercises.forEach((ex) => {
       ex.muscleGroups.split(",").forEach((g) => {
         const trimmed = g.trim().toLowerCase();
