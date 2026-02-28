@@ -308,5 +308,15 @@
     "gifFile": "as_barbell-incline-bench-press.gif",
     "imageUrl": "/gifs/as_barbell-incline-bench-press.gif",
     "muscleGroups": "chest,shoulders,triceps"
+  },
+  "Hip Abductor - Machine": {
+    "gifFile": "as_lever-seated-hip-abduction.gif",
+    "imageUrl": "/gifs/as_lever-seated-hip-abduction.gif",
+    "muscleGroups": "abductors,glutes"
+  },
+  "Hip Adductor - Machine": {
+    "gifFile": "as_lever-seated-hip-adduction.gif",
+    "imageUrl": "/gifs/as_lever-seated-hip-adduction.gif",
+    "muscleGroups": "adductors"
   }
 }

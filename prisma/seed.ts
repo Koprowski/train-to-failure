@@ -58,6 +58,8 @@ const exercises = [
   { name: "Leg Press - Machine", muscleGroups: "quads,glutes,hamstrings", equipment: "machine", type: "weight_reps" },
   { name: "Hip Abduction", muscleGroups: "glutes,abductors", equipment: "machine", type: "weight_reps" },
   { name: "Hip Adduction", muscleGroups: "adductors", equipment: "machine", type: "weight_reps" },
+  { name: "Hip Abductor - Machine", muscleGroups: "abductors,glutes", equipment: "machine", type: "weight_reps" },
+  { name: "Hip Adductor - Machine", muscleGroups: "adductors", equipment: "machine", type: "weight_reps" },
   { name: "Dip", muscleGroups: "chest,triceps,shoulders", equipment: "bodyweight,dip_station", type: "weight_reps" },
   { name: "Barbell Shrug", muscleGroups: "traps", equipment: "barbell", type: "weight_reps" },
   { name: "Cable Lateral Raise", muscleGroups: "shoulders", equipment: "cable", type: "weight_reps" },
