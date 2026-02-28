@@ -34,6 +34,8 @@ const COLORS = [
 
 const RADIAN = Math.PI / 180;
 
+const ANIM_DURATION = 800;
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function renderInnerLabel(props: any) {
   const { cx, cy, midAngle, innerRadius, outerRadius, value } = props;
@@ -48,13 +50,21 @@ function renderInnerLabel(props: any) {
 }
 
 function renderOuterLabel(props: any) {
-  const { cx, cy, midAngle, outerRadius, name, fill } = props;
+  const { cx, cy, midAngle, outerRadius, name, fill, viewBox } = props;
+  const chartW = viewBox?.width ?? 400;
+  const chartH = viewBox?.height ?? 360;
   const sin = Math.sin(-midAngle * RADIAN);
   const cos = Math.cos(-midAngle * RADIAN);
-  const ex = cx + (outerRadius + 12) * cos;
-  const ey = cy + (outerRadius + 12) * sin;
-  const tx = cx + (outerRadius + 28) * cos;
-  const ty = cy + (outerRadius + 28) * sin;
+  // Elbow point
+  const ex = cx + (outerRadius + 10) * cos;
+  const ey = cy + (outerRadius + 10) * sin;
+  // End point -- push further out horizontally
+  let tx = cx + (outerRadius + 26) * cos;
+  let ty = cy + (outerRadius + 26) * sin;
+  // Clamp to stay within chart bounds with padding
+  const pad = 6;
+  tx = Math.max(pad, Math.min(chartW - pad, tx));
+  ty = Math.max(pad + 8, Math.min(chartH - pad, ty));
   const textAnchor = cos >= 0 ? "start" : "end";
   return (
     <g>
@@ -72,6 +82,7 @@ export default function DashboardPage() {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [muscleData, setMuscleData] = useState<MuscleGroupData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [chartAnimDone, setChartAnimDone] = useState(false);
 
   const [swipeId, setSwipeId] = useState<string | null>(null);
   const [swipeX, setSwipeX] = useState(0);
@@ -157,6 +168,8 @@ export default function DashboardPage() {
       setWorkouts(Array.isArray(w) ? w : []);
       setMuscleData(m?.data ?? []);
       setLoading(false);
+      // Delay inner labels until pie animation completes
+      setTimeout(() => setChartAnimDone(true), ANIM_DURATION + 100);
     }).catch(() => setLoading(false));
   }, []);
 
@@ -283,9 +296,9 @@ export default function DashboardPage() {
             No data yet. Complete some workouts to see distribution.
           </p>
         ) : (
-          <div className="flex flex-col items-center">
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
+          <div className="flex flex-col items-center overflow-visible">
+            <ResponsiveContainer width="100%" height={360}>
+              <PieChart margin={{ top: 30, right: 60, bottom: 30, left: 60 }}>
                 <Pie
                   data={muscleData}
                   cx="50%"
@@ -297,35 +310,42 @@ export default function DashboardPage() {
                   nameKey="muscleGroup"
                   label={renderOuterLabel}
                   labelLine={false}
+                  animationDuration={ANIM_DURATION}
                 >
                   {muscleData.map((_, index) => (
                     <Cell key={index} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Pie
-                  data={muscleData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={50}
-                  outerRadius={90}
-                  paddingAngle={2}
-                  dataKey="setCount"
-                  nameKey="muscleGroup"
-                  label={renderInnerLabel}
-                  labelLine={false}
-                  isAnimationActive={false}
-                >
-                  {muscleData.map((_, index) => (
-                    <Cell key={index} fill="transparent" stroke="none" />
-                  ))}
-                </Pie>
+                {chartAnimDone && (
+                  <Pie
+                    data={muscleData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={90}
+                    paddingAngle={2}
+                    dataKey="setCount"
+                    nameKey="muscleGroup"
+                    label={renderInnerLabel}
+                    labelLine={false}
+                    isAnimationActive={false}
+                  >
+                    {muscleData.map((_, index) => (
+                      <Cell key={index} fill="transparent" stroke="none" />
+                    ))}
+                  </Pie>
+                )}
                 {/* Total sets in center */}
-                <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle" className="fill-white text-2xl font-bold">
-                  {muscleData.reduce((sum, d) => sum + d.setCount, 0)}
-                </text>
-                <text x="50%" y="58%" textAnchor="middle" dominantBaseline="middle" className="fill-gray-400 text-xs">
-                  sets
-                </text>
+                {chartAnimDone && (
+                  <>
+                    <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle" className="fill-white text-2xl font-bold">
+                      {muscleData.reduce((sum, d) => sum + d.setCount, 0)}
+                    </text>
+                    <text x="50%" y="58%" textAnchor="middle" dominantBaseline="middle" className="fill-gray-400 text-xs">
+                      sets
+                    </text>
+                  </>
+                )}
                 <Tooltip
                   contentStyle={{ backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: "8px" }}
                   labelStyle={{ color: "#fff" }}
