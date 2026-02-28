@@ -244,7 +244,7 @@ export default function DashboardPage() {
         ) : (
           <div className="space-y-3">
             {recentWorkouts.map((w) => {
-              const uniqueExercises = new Set(w.sets.map((s) => s.exerciseId)).size;
+              const totalReps = w.sets.reduce((sum, s) => sum + (s.reps || 0), 0);
               const volume = getTotalVolume(w.sets);
               const isActive = swipeId === w.id;
               const offset = isActive ? swipeX : 0;
@@ -273,7 +273,7 @@ export default function DashboardPage() {
                     <div>
                       <p className="font-medium">{w.name}</p>
                       <p className="text-gray-400 text-sm">
-                        {formatDate(w.startedAt)} &middot; {uniqueExercises} exercise{uniqueExercises !== 1 ? "s" : ""}
+                        {formatDate(w.startedAt)} &middot; {totalReps} rep{totalReps !== 1 ? "s" : ""}
                       </p>
                     </div>
                     <span className="text-gray-400 text-sm">{volume > 0 ? `${volume.toLocaleString()} lbs` : "--"}</span>
