@@ -104,28 +104,74 @@ export default function ExercisesPage() {
   });
   const [saving, setSaving] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
-  const touchStartX = useRef<number | null>(null);
-  const [flipping, setFlipping] = useState(false);
+  // Swipe-to-flip state
+  const [dragRotation, setDragRotation] = useState(0); // 0-180 degrees
+  const [isSnapping, setIsSnapping] = useState(false); // true during snap-back animation
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const swipeLocked = useRef<"horizontal" | "vertical" | null>(null);
+  const SWIPE_WIDTH = 150; // pixels for a full 180-degree rotation
 
   const flipBody = useCallback(() => {
-    if (flipping) return;
-    setFlipping(true);
-    // Switch side at midpoint of animation (250ms into 500ms)
+    // Animated flip for button taps
+    setIsSnapping(true);
+    setDragRotation(180);
     setTimeout(() => {
       setBodySide((prev) => (prev === "front" ? "back" : "front"));
-    }, 250);
-    setTimeout(() => setFlipping(false), 500);
-  }, [flipping]);
+      setDragRotation(0);
+      setIsSnapping(false);
+    }, 300);
+  }, []);
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
+    if (isSnapping) return;
+    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    swipeLocked.current = null;
   };
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current === null) return;
-    const dx = e.changedTouches[0].clientX - touchStartX.current;
-    touchStartX.current = null;
-    if (Math.abs(dx) > 50) {
-      flipBody();
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStart.current || isSnapping) return;
+    const dx = e.touches[0].clientX - touchStart.current.x;
+    const dy = e.touches[0].clientY - touchStart.current.y;
+
+    // Lock direction on first significant movement
+    if (swipeLocked.current === null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+      swipeLocked.current = Math.abs(dx) > Math.abs(dy) ? "horizontal" : "vertical";
+    }
+
+    if (swipeLocked.current !== "horizontal") return;
+
+    // Prevent vertical scroll while swiping horizontally
+    e.preventDefault();
+
+    // Map pixel distance to 0-180 degree rotation
+    const rotation = Math.min(180, Math.max(0, (Math.abs(dx) / SWIPE_WIDTH) * 180));
+    setDragRotation(rotation);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart.current || swipeLocked.current !== "horizontal") {
+      touchStart.current = null;
+      swipeLocked.current = null;
+      return;
+    }
+
+    touchStart.current = null;
+    swipeLocked.current = null;
+
+    if (dragRotation >= 90) {
+      // Past halfway -- complete the flip
+      setIsSnapping(true);
+      setDragRotation(180);
+      setTimeout(() => {
+        setBodySide((prev) => (prev === "front" ? "back" : "front"));
+        setDragRotation(0);
+        setIsSnapping(false);
+      }, 200);
+    } else {
+      // Snap back
+      setIsSnapping(true);
+      setDragRotation(0);
+      setTimeout(() => setIsSnapping(false), 200);
     }
   };
 
@@ -258,17 +304,18 @@ export default function ExercisesPage() {
             className="cursor-pointer"
             style={{ perspective: "800px" }}
             onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
             <div
               style={{
-                transition: flipping ? "transform 0.5s ease-in-out" : "none",
-                transform: flipping ? "rotateY(180deg)" : "rotateY(0deg)",
+                transition: isSnapping ? "transform 0.2s ease-out" : "none",
+                transform: `rotateY(${dragRotation <= 90 ? dragRotation : 180 - dragRotation}deg)`,
                 transformStyle: "preserve-3d",
               }}
             >
             <Body
-              side={bodySide}
+              side={dragRotation >= 90 ? (bodySide === "front" ? "back" : "front") : bodySide}
               gender="male"
               scale={1.2}
               border="#4b5563"
