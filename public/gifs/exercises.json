@@ -318,5 +318,10 @@
     "gifFile": "as_lever-seated-hip-adduction.gif",
     "imageUrl": "/gifs/as_lever-seated-hip-adduction.gif",
     "muscleGroups": "adductors"
+  },
+  "Hamstring - Leg Curl Machine": {
+    "gifFile": "as_leg-curl-machine.gif",
+    "imageUrl": "/gifs/as_leg-curl-machine.gif",
+    "muscleGroups": "hamstrings"
   }
 }

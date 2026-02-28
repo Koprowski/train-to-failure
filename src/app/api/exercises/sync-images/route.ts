@@ -19,6 +19,7 @@ const seedData: Record<string, { equipment: string; type: string }> = {
   "Hip Adduction": { equipment: "machine", type: "weight_reps" },
   "Hip Abductor - Machine": { equipment: "machine", type: "weight_reps" },
   "Hip Adductor - Machine": { equipment: "machine", type: "weight_reps" },
+  "Hamstring - Leg Curl Machine": { equipment: "machine", type: "weight_reps" },
   "Dip": { equipment: "bodyweight,dip_station", type: "weight_reps" },
   "Barbell Shrug": { equipment: "barbell", type: "weight_reps" },
   "Cable Lateral Raise": { equipment: "cable", type: "weight_reps" },
