@@ -87,7 +87,7 @@ export default function ExercisesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [muscleFilter, setMuscleFilter] = useState("");
-  const [equipmentFilter, setEquipmentFilter] = useState<string[]>([]);
+  const [equipmentFilter, setEquipmentFilter] = useState<string[]>(["bodyweight"]);
   const [showEquipmentPicker, setShowEquipmentPicker] = useState(false);
   const [equipmentDraft, setEquipmentDraft] = useState<string[]>([]);
   const [bodySide, setBodySide] = useState<"front" | "back">("front");

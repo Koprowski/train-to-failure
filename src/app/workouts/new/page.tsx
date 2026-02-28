@@ -76,6 +76,7 @@ function WorkoutContent() {
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [allExercises, setAllExercises] = useState<Exercise[]>([]);
   const [exerciseSearch, setExerciseSearch] = useState("");
+  const [muscleTab, setMuscleTab] = useState("recent");
   const [saving, setSaving] = useState(false);
   const [started, setStarted] = useState(false);
   const [activeExerciseIndex, setActiveExerciseIndex] = useState<number | null>(null);
@@ -675,9 +676,30 @@ function WorkoutContent() {
     }
   };
 
-  const filteredExercises = allExercises.filter((ex) =>
-    ex.name.toLowerCase().includes(exerciseSearch.toLowerCase())
+  // Build muscle group tabs dynamically from loaded exercises
+  const muscleGroups = (() => {
+    const groups = new Set<string>();
+    allExercises.forEach((ex) => {
+      ex.muscleGroups.split(",").forEach((g) => {
+        const trimmed = g.trim().toLowerCase();
+        if (trimmed) groups.add(trimmed);
+      });
+    });
+    return Array.from(groups).sort();
+  })();
+
+  // Get recently used exercise IDs from current workout blocks
+  const recentExerciseIds = new Set(
+    exerciseBlocks.map((b) => b.exercise.id)
   );
+
+  const filteredExercises = allExercises.filter((ex) => {
+    if (exerciseSearch && !ex.name.toLowerCase().includes(exerciseSearch.toLowerCase())) return false;
+    if (muscleTab === "all" || exerciseSearch) return true;
+    if (muscleTab === "recent") return recentExerciseIds.has(ex.id);
+    const exGroups = ex.muscleGroups.split(",").map((g) => g.trim().toLowerCase());
+    return exGroups.includes(muscleTab);
+  });
 
   const formatLauncherDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -1111,6 +1133,24 @@ function WorkoutContent() {
                 autoFocus
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
+            </div>
+            {/* Muscle group tabs */}
+            <div className="px-4 py-2 border-b border-gray-800 overflow-x-auto">
+              <div className="flex gap-1.5 min-w-max">
+                {["recent", "all", ...muscleGroups].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setMuscleTab(tab)}
+                    className={`px-2.5 py-1 rounded-lg text-xs whitespace-nowrap transition-colors ${
+                      muscleTab === tab
+                        ? "bg-emerald-500 text-white"
+                        : "bg-gray-800 text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="overflow-y-auto flex-1 p-2">
               {filteredExercises.length === 0 ? (
