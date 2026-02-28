@@ -236,6 +236,30 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
     }
   };
 
+  const [addingSet, setAddingSet] = useState<string | null>(null);
+
+  const addSet = async (exerciseId: string) => {
+    if (!workout || addingSet) return;
+    setAddingSet(exerciseId);
+    try {
+      const res = await fetch(`/api/workouts/${workout.id}/sets`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ exerciseId, completed: true }),
+      });
+      if (res.ok) {
+        // Reload workout to get updated sets
+        const updated = await (await fetch(`/api/workouts/${workout.id}`)).json();
+        setWorkout(updated);
+        initEditState(updated);
+      }
+    } catch (err) {
+      console.error("Failed to add set:", err);
+    } finally {
+      setAddingSet(null);
+    }
+  };
+
   const deleteWorkout = async () => {
     setDeleting(true);
     try {
@@ -476,6 +500,13 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
               </tbody>
             </table>
           </div>
+          <button
+            onClick={() => addSet(exercise.id)}
+            disabled={addingSet === exercise.id}
+            className="w-full py-2 text-xs text-gray-500 hover:text-emerald-400 hover:bg-gray-800/50 transition-colors disabled:opacity-50 border-t border-gray-800/50"
+          >
+            {addingSet === exercise.id ? "Adding..." : "+ Add Set"}
+          </button>
         </div>
       ))}
 
