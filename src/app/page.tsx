@@ -84,12 +84,12 @@ export default function DashboardPage() {
         <div className="flex gap-3">
           <Link
             href="/workouts/quick"
-            className="inline-flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 text-white font-semibold px-5 py-3 rounded-lg transition-colors border border-gray-700"
+            className="inline-flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-5 py-3 rounded-lg transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
-            Log Exercise
+            Quick Log
           </Link>
           <Link
             href="/workouts/new"
