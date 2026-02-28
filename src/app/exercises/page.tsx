@@ -86,7 +86,9 @@ export default function ExercisesPage() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [muscleFilter, setMuscleFilter] = useState("");
+  const [muscleFilter, setMuscleFilter] = useState<string[]>([]);
+  const [showMusclePicker, setShowMusclePicker] = useState(false);
+  const [muscleDraft, setMuscleDraft] = useState<string[]>([]);
   const [equipmentFilter, setEquipmentFilter] = useState<string[]>([]);
   const [showEquipmentPicker, setShowEquipmentPicker] = useState(false);
   const [equipmentDraft, setEquipmentDraft] = useState<string[]>([]);
@@ -119,12 +121,17 @@ export default function ExercisesPage() {
   const fetchExercises = useCallback(() => {
     const params = new URLSearchParams();
     if (search) params.set("search", search);
-    if (muscleFilter) params.set("muscleGroup", muscleFilter);
 
     fetch(`/api/exercises?${params}`)
       .then((r) => r.json())
       .then((data) => {
         let list = Array.isArray(data) ? data : [];
+        if (muscleFilter.length > 0) {
+          list = list.filter((ex: Exercise) => {
+            const exGroups = ex.muscleGroups.split(",").map((g) => g.trim().toLowerCase());
+            return muscleFilter.some((f) => exGroups.includes(f.toLowerCase()));
+          });
+        }
         if (equipmentFilter.length > 0) {
           list = list.filter((ex: Exercise) => {
             const exEquip = ex.equipment.split(",").map((e) => e.trim().toLowerCase());
@@ -182,16 +189,14 @@ export default function ExercisesPage() {
 
       {/* Dropdowns */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <select
-          value={muscleFilter}
-          onChange={(e) => setMuscleFilter(e.target.value)}
-          className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        <button
+          onClick={() => { setMuscleDraft([...muscleFilter]); setShowMusclePicker(true); }}
+          className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-left text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 truncate"
         >
-          <option value="">All Muscle Groups</option>
-          {MUSCLE_GROUPS.map((mg) => (
-            <option key={mg} value={mg}>{mg.charAt(0).toUpperCase() + mg.slice(1)}</option>
-          ))}
-        </select>
+          {muscleFilter.length === 0
+            ? "All Muscle Groups"
+            : muscleFilter.map((m) => m.charAt(0).toUpperCase() + m.slice(1)).join(", ")}
+        </button>
         <button
           onClick={() => { setEquipmentDraft([...equipmentFilter]); setShowEquipmentPicker(true); }}
           className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-left text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 truncate"
@@ -239,29 +244,27 @@ export default function ExercisesPage() {
               defaultFill="#1f2937"
               colors={["#10b981", "#34d399"]}
               data={
-                muscleFilter && MUSCLE_TO_SLUGS[muscleFilter]
-                  ? MUSCLE_TO_SLUGS[muscleFilter].map((slug) => ({ slug: slug as never, intensity: 2 }))
+                muscleFilter.length > 0
+                  ? muscleFilter.flatMap((m) => (MUSCLE_TO_SLUGS[m] || []).map((slug) => ({ slug: slug as never, intensity: 2 })))
                   : []
               }
               onBodyPartPress={(part: { slug?: string }) => {
                 if (!part.slug) return;
                 const muscles = SLUG_TO_MUSCLE[part.slug];
                 if (!muscles) return;
-                // If clicking the already-selected muscle, clear it
-                if (muscleFilter && muscles.includes(muscleFilter)) {
-                  setMuscleFilter("");
-                } else {
-                  setMuscleFilter(muscles[0]);
-                }
+                const target = muscles[0];
+                setMuscleFilter((prev) =>
+                  prev.includes(target) ? prev.filter((m) => m !== target) : [...prev, target]
+                );
               }}
             />
           </div>
-          {muscleFilter && (
+          {muscleFilter.length > 0 && (
             <button
-              onClick={() => setMuscleFilter("")}
+              onClick={() => setMuscleFilter([])}
               className="mt-2 text-xs text-gray-400 hover:text-white transition-colors"
             >
-              Clear: {muscleFilter}
+              Clear: {muscleFilter.join(", ")}
             </button>
           )}
         </div>
@@ -326,6 +329,51 @@ export default function ExercisesPage() {
           )}
         </div>
       </div>
+
+      {/* Muscle Group Picker Modal */}
+      {showMusclePicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowMusclePicker(false)}>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-white mb-4">Muscle Groups</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {MUSCLE_GROUPS.map((mg) => {
+                const selected = muscleDraft.includes(mg);
+                return (
+                  <button
+                    key={mg}
+                    onClick={() =>
+                      setMuscleDraft((prev) =>
+                        selected ? prev.filter((m) => m !== mg) : [...prev, mg]
+                      )
+                    }
+                    className={`px-3 py-2 rounded-lg text-sm text-left transition-colors ${
+                      selected
+                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500"
+                        : "bg-gray-800 text-gray-300 border border-gray-700 hover:border-gray-600"
+                    }`}
+                  >
+                    {mg.charAt(0).toUpperCase() + mg.slice(1)}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button
+                onClick={() => { setMuscleDraft([]); }}
+                className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+              >
+                Clear
+              </button>
+              <button
+                onClick={() => { setMuscleFilter(muscleDraft); setShowMusclePicker(false); }}
+                className="flex-1 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-semibold transition-colors"
+              >
+                Apply{muscleDraft.length > 0 ? ` (${muscleDraft.length})` : ""}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Equipment Picker Modal */}
       {showEquipmentPicker && (
