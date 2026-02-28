@@ -205,20 +205,18 @@ export default function ExercisesPage() {
   });
   const [saving, setSaving] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
-  // Flip animation state
-  const [flipAnim, setFlipAnim] = useState(false);
-  const flipAnimRef = useRef(false);
+  // Flip: use a key to trigger CSS keyframe animation
+  const [flipKey, setFlipKey] = useState(0);
+  const flipPending = useRef(false);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const flipBody = useCallback(() => {
-    if (flipAnimRef.current) return;
-    flipAnimRef.current = true;
-    setFlipAnim(true);
-    setTimeout(() => {
-      setBodySide((prev) => (prev === "front" ? "back" : "front"));
-      setFlipAnim(false);
-      flipAnimRef.current = false;
-    }, 300);
+    if (flipPending.current) return;
+    flipPending.current = true;
+    // Swap side immediately, trigger animation via key change
+    setBodySide((prev) => (prev === "front" ? "back" : "front"));
+    setFlipKey((k) => k + 1);
+    setTimeout(() => { flipPending.current = false; }, 400);
   }, []);
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -230,7 +228,6 @@ export default function ExercisesPage() {
     const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
     const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
     touchStartRef.current = null;
-    // Only flip on deliberate horizontal swipe (more horizontal than vertical, > 60px)
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
       flipBody();
     }
@@ -363,15 +360,13 @@ export default function ExercisesPage() {
           </div>
           <div
             className="cursor-pointer"
-            style={{ perspective: "800px" }}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
             <div
+              key={flipKey}
               style={{
-                transition: flipAnim ? "transform 0.3s ease-in-out" : "none",
-                transform: flipAnim ? "rotateY(90deg)" : "rotateY(0deg)",
-                transformStyle: "preserve-3d",
+                animation: flipKey > 0 ? "bodyFlipIn 0.35s ease-out" : "none",
               }}
             >
             <Body
