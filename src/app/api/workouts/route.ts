@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     if (authError) return authError;
 
     const body = await request.json();
-    const { name, templateId, notes, isQuickLog } = body;
+    const { name, templateId, notes, isQuickLog, startedAt } = body;
 
     if (!name) {
       return NextResponse.json(
@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
         notes: notes ?? null,
         isQuickLog: isQuickLog ?? false,
         userId,
+        ...(startedAt ? { startedAt: new Date(startedAt) } : {}),
       },
       include: {
         sets: { include: { exercise: true } },

@@ -44,6 +44,7 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editNotes, setEditNotes] = useState("");
+  const [editDate, setEditDate] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -140,19 +141,35 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
   const openEdit = () => {
     setEditName(workout.name);
     setEditNotes(workout.notes ?? "");
+    // Format startedAt for datetime-local input (YYYY-MM-DDTHH:mm)
+    const d = new Date(workout.startedAt);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    setEditDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
     setEditing(true);
   };
 
   const saveEdit = async () => {
     setSavingEdit(true);
     try {
+      const newStartedAt = new Date(editDate).toISOString();
+      const updateData: Record<string, unknown> = {
+        name: editName,
+        notes: editNotes || null,
+        startedAt: newStartedAt,
+      };
+      // Recalculate duration if workout is finished
+      if (workout.finishedAt) {
+        const dur = Math.round((new Date(workout.finishedAt).getTime() - new Date(newStartedAt).getTime()) / 1000);
+        if (dur > 0) updateData.duration = dur;
+      }
       const res = await fetch(`/api/workouts/${workout.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: editName, notes: editNotes || null }),
+        body: JSON.stringify(updateData),
       });
       if (res.ok) {
-        setWorkout({ ...workout, name: editName, notes: editNotes || null });
+        const updated = await res.json();
+        setWorkout(updated);
         setEditing(false);
       }
     } catch (err) {
@@ -381,6 +398,15 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Date & Time</label>
+                <input
+                  type="datetime-local"
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 [color-scheme:dark]"
                 />
               </div>
               <div>

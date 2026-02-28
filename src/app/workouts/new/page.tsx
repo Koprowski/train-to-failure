@@ -71,6 +71,7 @@ function WorkoutContent() {
 
   const [workoutId, setWorkoutId] = useState<string | null>(null);
   const [workoutName, setWorkoutName] = useState("");
+  const [customDate, setCustomDate] = useState("");
   const [exerciseBlocks, setExerciseBlocks] = useState<ExerciseBlock[]>([]);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [allExercises, setAllExercises] = useState<Exercise[]>([]);
@@ -362,7 +363,11 @@ function WorkoutContent() {
       const res = await fetch("/api/workouts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: workoutName, templateId: templateId || undefined }),
+        body: JSON.stringify({
+          name: workoutName,
+          templateId: templateId || undefined,
+          ...(customDate ? { startedAt: new Date(customDate).toISOString() } : {}),
+        }),
       });
       const data = await res.json();
       if (data.id) {
@@ -714,6 +719,13 @@ function WorkoutContent() {
             placeholder="e.g., Push Day, Upper Body"
             className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-4"
             onKeyDown={(e) => { if (e.key === "Enter") startWorkout(); }}
+          />
+          <label className="block text-sm font-medium text-gray-300 mb-2">Date & Time <span className="text-gray-500 font-normal">(optional, defaults to now)</span></label>
+          <input
+            type="datetime-local"
+            value={customDate}
+            onChange={(e) => setCustomDate(e.target.value)}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-4 [color-scheme:dark]"
           />
           <button
             onClick={startWorkout}
