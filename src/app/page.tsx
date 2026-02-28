@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 interface WorkoutSet {
@@ -32,9 +33,80 @@ const COLORS = [
 ];
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [muscleData, setMuscleData] = useState<MuscleGroupData[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [swipeId, setSwipeId] = useState<string | null>(null);
+  const [swipeX, setSwipeX] = useState(0);
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+
+  const handleTouchStart = (id: string, e: React.TouchEvent) => {
+    setTouchStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+    setSwipeId(id);
+    setSwipeX(0);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStart || !swipeId) return;
+    const dx = e.touches[0].clientX - touchStart.x;
+    const dy = e.touches[0].clientY - touchStart.y;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
+      setSwipeX(dx);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!swipeId) return;
+    const threshold = 80;
+    if (swipeX > threshold) {
+      handleDeleteWorkout(swipeId);
+    } else if (swipeX < -threshold) {
+      const w = workouts.find((w) => w.id === swipeId);
+      if (w) { setEditingWorkout(w); setEditName(w.name); }
+    } else if (Math.abs(swipeX) < 5) {
+      router.push(`/workouts/${swipeId}`);
+    }
+    setSwipeId(null);
+    setSwipeX(0);
+    setTouchStart(null);
+  };
+
+  const handleDeleteWorkout = async (id: string) => {
+    if (!confirm("Delete this workout?")) return;
+    setDeleting(id);
+    try {
+      const res = await fetch(`/api/workouts/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setWorkouts((prev) => prev.filter((w) => w.id !== id));
+      }
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const handleEditSave = async () => {
+    if (!editingWorkout) return;
+    setEditSaving(true);
+    try {
+      const res = await fetch(`/api/workouts/${editingWorkout.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: editName }),
+      });
+      if (res.ok) {
+        setWorkouts((prev) => prev.map((w) => w.id === editingWorkout.id ? { ...w, name: editName } : w));
+        setEditingWorkout(null);
+      }
+    } finally {
+      setEditSaving(false);
+    }
+  };
 
   useEffect(() => {
     Promise.all([
@@ -120,20 +192,39 @@ export default function DashboardPage() {
             {recentWorkouts.map((w) => {
               const uniqueExercises = new Set(w.sets.map((s) => s.exerciseId)).size;
               const volume = getTotalVolume(w.sets);
+              const isActive = swipeId === w.id;
+              const offset = isActive ? swipeX : 0;
               return (
-                <Link
-                  key={w.id}
-                  href={`/workouts/${w.id}`}
-                  className="flex items-center justify-between p-3 rounded-lg bg-gray-800/50 hover:bg-gray-800 transition-colors"
-                >
-                  <div>
-                    <p className="font-medium">{w.name}</p>
-                    <p className="text-gray-400 text-sm">
-                      {formatDate(w.startedAt)} &middot; {uniqueExercises} exercise{uniqueExercises !== 1 ? "s" : ""}
-                    </p>
+                <div key={w.id} className="relative overflow-hidden rounded-lg">
+                  {offset > 0 && (
+                    <div className="absolute inset-0 bg-red-500/20 flex items-center pl-4">
+                      <span className="text-red-400 text-sm font-medium">Delete</span>
+                    </div>
+                  )}
+                  {offset < 0 && (
+                    <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-end pr-4">
+                      <span className="text-blue-400 text-sm font-medium">Edit</span>
+                    </div>
+                  )}
+                  <div
+                    className={`flex items-center justify-between p-3 rounded-lg bg-gray-800/50 hover:bg-gray-800 transition-transform cursor-pointer relative ${
+                      deleting === w.id ? "opacity-50" : ""
+                    }`}
+                    style={{ transform: `translateX(${offset}px)` }}
+                    onTouchStart={(e) => handleTouchStart(w.id, e)}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                    onClick={() => { if (!swipeId) router.push(`/workouts/${w.id}`); }}
+                  >
+                    <div>
+                      <p className="font-medium">{w.name}</p>
+                      <p className="text-gray-400 text-sm">
+                        {formatDate(w.startedAt)} &middot; {uniqueExercises} exercise{uniqueExercises !== 1 ? "s" : ""}
+                      </p>
+                    </div>
+                    <span className="text-gray-400 text-sm">{volume > 0 ? `${volume.toLocaleString()} lbs` : "--"}</span>
                   </div>
-                  <span className="text-gray-400 text-sm">{volume > 0 ? `${volume.toLocaleString()} lbs` : "--"}</span>
-                </Link>
+                </div>
               );
             })}
           </div>
@@ -190,6 +281,50 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Edit Workout Modal */}
+      {editingWorkout && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setEditingWorkout(null)}>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Edit Workout</h2>
+              <button onClick={() => setEditingWorkout(null)} className="text-gray-400 hover:text-white">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Workout Name</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingWorkout(null)}
+                  className="flex-1 px-4 py-2.5 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleEditSave}
+                  disabled={editSaving}
+                  className="flex-1 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50"
+                >
+                  {editSaving ? "Saving..." : "Save"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
