@@ -184,7 +184,7 @@ export default function ExercisesPage() {
 
   return (
     <div className="space-y-4">
-      {/* Title row with + New button */}
+      {/* Title row with + New and filter icons */}
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-bold">Exercise Library</h1>
         <button
@@ -196,26 +196,34 @@ export default function ExercisesPage() {
           </svg>
           New
         </button>
-      </div>
-
-      {/* Dropdowns */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <button
-          onClick={() => { setMuscleDraft([...muscleFilter]); setShowMusclePicker(true); }}
-          className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-left text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 truncate"
-        >
-          {muscleFilter.length === 0
-            ? "All Muscle Groups"
-            : muscleFilter.map((m) => m.charAt(0).toUpperCase() + m.slice(1)).join(", ")}
-        </button>
-        <button
-          onClick={() => { setEquipmentDraft([...equipmentFilter]); setShowEquipmentPicker(true); }}
-          className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-left text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 truncate"
-        >
-          {equipmentFilter.length === 0
-            ? "All Equipment"
-            : equipmentFilter.map((e) => e.charAt(0).toUpperCase() + e.slice(1)).join(", ")}
-        </button>
+        <div className="flex items-center gap-1 ml-auto">
+          {/* Muscle group filter - person icon */}
+          <button
+            onClick={() => { setMuscleDraft([...muscleFilter]); setShowMusclePicker(true); }}
+            className={`relative p-2 rounded-lg transition-colors ${muscleFilter.length > 0 ? "text-emerald-400 bg-emerald-500/10" : "text-gray-400 hover:text-white"}`}
+            title={muscleFilter.length > 0 ? `Muscles: ${muscleFilter.join(", ")}` : "Filter by muscle group"}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            {muscleFilter.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{muscleFilter.length}</span>
+            )}
+          </button>
+          {/* Equipment filter - dumbbell icon */}
+          <button
+            onClick={() => { setEquipmentDraft([...equipmentFilter]); setShowEquipmentPicker(true); }}
+            className={`relative p-2 rounded-lg transition-colors ${equipmentFilter.length > 0 ? "text-emerald-400 bg-emerald-500/10" : "text-gray-400 hover:text-white"}`}
+            title={equipmentFilter.length > 0 ? `Equipment: ${equipmentFilter.join(", ")}` : "Filter by equipment"}
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M20.27 4.74a1 1 0 0 0-1.42 0l-1.53 1.53-1.06-1.06a1.5 1.5 0 0 0-2.12 0l-.71.71a1.5 1.5 0 0 0 0 2.12l.35.36-4.95 4.95-.35-.36a1.5 1.5 0 0 0-2.12 0l-.71.71a1.5 1.5 0 0 0 0 2.12l1.06 1.06-1.53 1.53a1 1 0 1 0 1.42 1.42l1.53-1.53 1.06 1.06a1.5 1.5 0 0 0 2.12 0l.71-.71a1.5 1.5 0 0 0 0-2.12l-.35-.36 4.95-4.95.35.36a1.5 1.5 0 0 0 2.12 0l.71-.71a1.5 1.5 0 0 0 0-2.12l-1.06-1.06 1.53-1.53a1 1 0 0 0 0-1.42z" />
+            </svg>
+            {equipmentFilter.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{equipmentFilter.length}</span>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Body Map + Grid */}
