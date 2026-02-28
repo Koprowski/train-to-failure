@@ -94,11 +94,11 @@ function ActivityLogContent() {
   const handleTouchEnd = () => {
     if (!swipeId) return;
     const threshold = 80;
-    if (swipeX > threshold) {
-      // Right swipe -> delete
+    if (swipeX < -threshold) {
+      // Left swipe -> delete
       handleDeleteSet(swipeId);
-    } else if (swipeX < -threshold) {
-      // Left swipe -> edit
+    } else if (swipeX > threshold) {
+      // Right swipe -> edit
       const set = sets.find((s) => s.id === swipeId);
       if (set) openEditModal(set);
     }
@@ -287,17 +287,17 @@ function ActivityLogContent() {
                     <div key={set.id} className="relative overflow-hidden rounded-lg">
                       {/* Swipe background indicators */}
                       {offset > 0 && (
-                        <div className="absolute inset-0 bg-red-500/20 flex items-center pl-4">
-                          <span className="text-red-400 text-sm font-medium">Delete</span>
-                        </div>
-                      )}
-                      {offset < 0 && (
-                        <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-end pr-4">
+                        <div className="absolute inset-0 bg-blue-500/20 flex items-center pl-4">
                           <span className="text-blue-400 text-sm font-medium">Edit</span>
                         </div>
                       )}
+                      {offset < 0 && (
+                        <div className="absolute inset-0 bg-red-500/20 flex items-center justify-end pr-4">
+                          <span className="text-red-400 text-sm font-medium">Delete</span>
+                        </div>
+                      )}
                       <div
-                        className={`bg-gray-900 border border-gray-800 rounded-lg p-3 flex items-center gap-3 relative transition-transform ${
+                        className={`bg-gray-900 border border-gray-800 rounded-lg p-3 flex items-center gap-3 relative transition-transform z-10 ${
                           deleting === set.id ? "opacity-50" : ""
                         }`}
                         style={{ transform: `translateX(${offset}px)` }}

@@ -64,9 +64,9 @@ export default function DashboardPage() {
   const handleTouchEnd = () => {
     if (!swipeId) return;
     const threshold = 80;
-    if (swipeX > threshold) {
+    if (swipeX < -threshold) {
       handleDeleteWorkout(swipeId);
-    } else if (swipeX < -threshold) {
+    } else if (swipeX > threshold) {
       const w = workouts.find((w) => w.id === swipeId);
       if (w) { setEditingWorkout(w); setEditName(w.name); }
     } else if (Math.abs(swipeX) < 5) {
@@ -197,17 +197,17 @@ export default function DashboardPage() {
               return (
                 <div key={w.id} className="relative overflow-hidden rounded-lg">
                   {offset > 0 && (
-                    <div className="absolute inset-0 bg-red-500/20 flex items-center pl-4">
-                      <span className="text-red-400 text-sm font-medium">Delete</span>
-                    </div>
-                  )}
-                  {offset < 0 && (
-                    <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-end pr-4">
+                    <div className="absolute inset-0 bg-blue-500/20 flex items-center pl-4">
                       <span className="text-blue-400 text-sm font-medium">Edit</span>
                     </div>
                   )}
+                  {offset < 0 && (
+                    <div className="absolute inset-0 bg-red-500/20 flex items-center justify-end pr-4">
+                      <span className="text-red-400 text-sm font-medium">Delete</span>
+                    </div>
+                  )}
                   <div
-                    className={`flex items-center justify-between p-3 rounded-lg bg-gray-800/50 hover:bg-gray-800 transition-transform cursor-pointer relative ${
+                    className={`flex items-center justify-between p-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition-transform cursor-pointer relative z-10 ${
                       deleting === w.id ? "opacity-50" : ""
                     }`}
                     style={{ transform: `translateX(${offset}px)` }}
