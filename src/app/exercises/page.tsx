@@ -179,7 +179,7 @@ export default function ExercisesPage() {
             <Body
               side={bodySide}
               gender="male"
-              scale={0.6}
+              scale={1.2}
               border="#4b5563"
               defaultFill="#1f2937"
               colors={["#10b981", "#34d399"]}
