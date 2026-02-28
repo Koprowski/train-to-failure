@@ -175,11 +175,10 @@ export default function DashboardPage() {
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
-    return d.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    return `${mm}/${dd}/${yyyy}`;
   };
 
   const getTotalVolume = (sets: WorkoutSet[]) => {
