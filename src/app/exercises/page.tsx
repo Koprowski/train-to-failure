@@ -250,14 +250,19 @@ export default function ExercisesPage() {
   };
 
   const handleTouchEnd = () => {
-    if (!touchStart.current || swipeLocked.current !== "horizontal") {
-      touchStart.current = null;
-      swipeLocked.current = null;
-      return;
-    }
-
+    const wasHorizontal = swipeLocked.current === "horizontal";
     touchStart.current = null;
     swipeLocked.current = null;
+
+    // Always snap back to flat if not a horizontal swipe or no rotation
+    if (!wasHorizontal || dragRotation === 0) {
+      if (dragRotation !== 0) {
+        setIsSnapping(true);
+        setDragRotation(0);
+        setTimeout(() => setIsSnapping(false), 200);
+      }
+      return;
+    }
 
     if (dragRotation >= 90) {
       // Past halfway -- complete the flip
