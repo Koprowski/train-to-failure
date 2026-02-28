@@ -41,6 +41,7 @@ export default function DashboardPage() {
   const [swipeId, setSwipeId] = useState<string | null>(null);
   const [swipeX, setSwipeX] = useState(0);
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
+  const [touchMoved, setTouchMoved] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
   const [editName, setEditName] = useState("");
@@ -50,12 +51,16 @@ export default function DashboardPage() {
     setTouchStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
     setSwipeId(id);
     setSwipeX(0);
+    setTouchMoved(false);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!touchStart || !swipeId) return;
     const dx = e.touches[0].clientX - touchStart.x;
     const dy = e.touches[0].clientY - touchStart.y;
+    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+      setTouchMoved(true);
+    }
     if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
       setSwipeX(dx);
     }
@@ -69,12 +74,13 @@ export default function DashboardPage() {
     } else if (swipeX > threshold) {
       const w = workouts.find((w) => w.id === swipeId);
       if (w) { setEditingWorkout(w); setEditName(w.name); }
-    } else if (Math.abs(swipeX) < 5) {
+    } else if (!touchMoved) {
       router.push(`/workouts/${swipeId}`);
     }
     setSwipeId(null);
     setSwipeX(0);
     setTouchStart(null);
+    setTouchMoved(false);
   };
 
   const handleDeleteWorkout = async (id: string) => {
