@@ -51,6 +51,7 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [addingSet, setAddingSet] = useState<string | null>(null);
 
   // Inline edit state
   const [editName, setEditName] = useState("");
@@ -235,8 +236,6 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
       setSavingTemplate(false);
     }
   };
-
-  const [addingSet, setAddingSet] = useState<string | null>(null);
 
   const addSet = async (exerciseId: string) => {
     if (!workout || addingSet) return;
