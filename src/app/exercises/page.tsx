@@ -137,7 +137,7 @@ const EQUIPMENT_ICONS: Record<string, React.ReactNode> = {
 // Map react-muscle-highlighter slugs to app muscle group names
 const SLUG_TO_MUSCLE: Record<string, string[]> = {
   abs: ["abs"],
-  adductors: ["adductors"],
+  adductors: ["adductors", "hip flexors"],
   biceps: ["biceps"],
   calves: ["calves"],
   chest: ["chest"],
@@ -146,7 +146,7 @@ const SLUG_TO_MUSCLE: Record<string, string[]> = {
   gluteal: ["glutes", "abductors"],
   hamstring: ["hamstrings"],
   obliques: ["obliques"],
-  quadriceps: ["quads"],
+  quadriceps: ["quads", "hip flexors"],
   trapezius: ["traps"],
   triceps: ["triceps"],
   "upper-back": ["back", "lats"],
