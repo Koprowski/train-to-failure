@@ -304,13 +304,18 @@ export default function ReportsPage() {
                     </label>
                   ))}
                   {hasWeightData && (
-                    <div className="flex items-center gap-1 ml-auto">
+                    <div className="flex items-center gap-2 ml-auto">
                       <span className={`text-xs font-medium ${chartMode === "volume" ? "text-white" : "text-gray-500"}`}>Volume</span>
                       <button
                         onClick={() => setChartMode(chartMode === "volume" ? "e1rm" : "volume")}
-                        className="relative w-10 h-5 rounded-full transition-colors bg-gray-700"
+                        className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors bg-gray-700 shrink-0"
+                        role="switch"
+                        aria-checked={chartMode === "e1rm"}
                       >
-                        <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-emerald-500 transition-transform ${chartMode === "e1rm" ? "translate-x-5" : "translate-x-0.5"}`} />
+                        <span
+                          className="inline-block h-3.5 w-3.5 rounded-full bg-emerald-500 transition-transform duration-200"
+                          style={{ transform: chartMode === "e1rm" ? "translateX(18px)" : "translateX(3px)" }}
+                        />
                       </button>
                       <span className={`text-xs font-medium ${chartMode === "e1rm" ? "text-white" : "text-gray-500"}`}>E1RM</span>
                     </div>
