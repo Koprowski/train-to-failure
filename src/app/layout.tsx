@@ -82,7 +82,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
             )}
           </svg>
         </button>
-        <h1 className="text-lg font-bold text-emerald-500">Train to Failure</h1>
+        <Link href="/" className="text-lg font-bold text-emerald-500">Train to Failure</Link>
         <div className="w-10" />
       </header>
 
