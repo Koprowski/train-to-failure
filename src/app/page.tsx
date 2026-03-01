@@ -280,7 +280,7 @@ export default function DashboardPage() {
                         {lastSets.map((s, i) => (
                           <div key={i} className="text-center text-xs min-w-[32px]">
                             <p className="text-gray-300 font-medium">{s.weightLbs ?? "BW"}</p>
-                            <p className="text-gray-500">{s.reps ?? 0}</p>
+                            <p className="text-gray-300">{s.reps ?? 0}</p>
                           </div>
                         ))}
                       </div>
