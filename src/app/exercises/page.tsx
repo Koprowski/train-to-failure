@@ -461,8 +461,10 @@ export default function ExercisesPage() {
               className={`relative p-2 rounded-lg transition-colors ${muscleFilter.length > 0 ? "text-emerald-400 bg-emerald-500/10" : "text-gray-400 hover:text-white"}`}
               title={muscleFilter.length > 0 ? `Muscles: ${muscleFilter.join(", ")}` : "Filter by muscle group"}
             >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M3 18.5V14a2 2 0 0 1 2-2h1.5a.5.5 0 0 0 .5-.5V11a3 3 0 0 1 3-3h.5a2.5 2.5 0 0 0 2.5-2.5V5a2 2 0 0 1 2-2c1.1 0 2 .9 2 2v1c0 .83.67 1.5 1.5 1.5S20 6.83 20 6V5.5a1.5 1.5 0 0 1 3 0V10a6 6 0 0 1-6 6h-3l-4 4H5a2 2 0 0 1-2-1.5z" />
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12.409 13.017A5 5 0 0 1 22 15c0 3.866-4 7-9 7-4.077 0-8.153-.82-10.371-2.462-.426-.316-.631-.832-.62-1.362C2.118 12.723 2.627 2 10 2a3 3 0 0 1 3 3 2 2 0 0 1-2 2c-1.105 0-1.64-.444-2-1" />
+                <path d="M15 14a5 5 0 0 0-7.584 2" />
+                <path d="M9.964 6.825C8.019 7.977 9.5 13 8 15" />
               </svg>
               {muscleFilter.length > 0 && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{muscleFilter.length}</span>
