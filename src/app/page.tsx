@@ -245,7 +245,6 @@ export default function DashboardPage() {
             {recentWorkouts.map((w) => {
               const totalReps = w.sets.reduce((sum, s) => sum + (s.reps || 0), 0);
               const lastSets = w.sets.filter((s) => s.completed).slice(-3);
-              const lastWeights = lastSets.map((s) => s.weightLbs ? String(s.weightLbs) : "BW").join("·");
               const isActive = swipeId === w.id;
               const offset = isActive ? swipeX : 0;
               return (
@@ -273,10 +272,15 @@ export default function DashboardPage() {
                     <div>
                       <p className="font-medium">{w.name}</p>
                       <p className="text-gray-400 text-sm">
-                        {formatDate(w.startedAt)}{lastWeights ? ` · ${lastWeights}` : ""}
+                        {formatDate(w.startedAt)} &middot; {totalReps} rep{totalReps !== 1 ? "s" : ""}
                       </p>
                     </div>
-                    <span className="text-gray-400 text-sm">{totalReps} rep{totalReps !== 1 ? "s" : ""}</span>
+                    {lastSets.length > 0 && (
+                      <div className="text-right text-xs shrink-0">
+                        <p className="text-gray-300">{lastSets.map((s) => s.weightLbs ?? "BW").join("·")}</p>
+                        <p className="text-gray-500">{lastSets.map((s) => s.reps ?? 0).join("·")}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -308,7 +312,7 @@ export default function DashboardPage() {
                   paddingAngle={2}
                   dataKey="setCount"
                   nameKey="muscleGroup"
-                  label={renderOuterLabel}
+                  label={chartAnimDone ? renderOuterLabel : false}
                   labelLine={false}
                   animationDuration={ANIM_DURATION}
                 >
