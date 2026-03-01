@@ -276,9 +276,13 @@ export default function DashboardPage() {
                       </p>
                     </div>
                     {lastSets.length > 0 && (
-                      <div className="text-right text-xs shrink-0">
-                        <p className="text-gray-300">{lastSets.map((s) => s.weightLbs ?? "BW").join("·")}</p>
-                        <p className="text-gray-500">{lastSets.map((s) => s.reps ?? 0).join("·")}</p>
+                      <div className="flex gap-2 shrink-0">
+                        {lastSets.map((s, i) => (
+                          <div key={i} className="text-center text-xs min-w-[32px]">
+                            <p className="text-gray-300 font-medium">{s.weightLbs ?? "BW"}</p>
+                            <p className="text-gray-500">{s.reps ?? 0}</p>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
