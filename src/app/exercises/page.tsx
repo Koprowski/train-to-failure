@@ -390,8 +390,19 @@ export default function ExercisesPage() {
 
   return (
     <div className="space-y-4">
-      {/* Title */}
-      <h1 className="text-2xl font-bold">Exercise Library</h1>
+      {/* Title row with + New */}
+      <div className="flex items-center gap-3">
+        <h1 className="text-2xl font-bold">Exercise Library</h1>
+        <button
+          onClick={() => setShowModal(true)}
+          className="inline-flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-lg text-sm transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          New
+        </button>
+      </div>
 
       {/* Body Map + Grid */}
       <div className="flex flex-col lg:flex-row gap-4">
@@ -410,33 +421,26 @@ export default function ExercisesPage() {
             >
               Back
             </button>
-            {/* Search - flexed bicep icon */}
+            {/* Search icon */}
             <button
               onClick={() => setShowSearch(true)}
-              className="px-2 py-1.5 text-sm rounded-lg bg-gray-800 text-gray-400 hover:text-white transition-colors leading-none"
+              className="px-2 py-1 text-xs rounded-lg bg-gray-800 text-gray-400 hover:text-white transition-colors"
               title="Search exercises"
             >
-              💪
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
             </button>
             <div className="flex items-center gap-1 ml-auto">
-              {/* + New */}
-              <button
-                onClick={() => setShowModal(true)}
-                className="inline-flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-lg text-sm transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                New
-              </button>
-              {/* Muscle group filter */}
+              {/* Muscle group filter - flexed arm icon */}
               <button
                 onClick={() => { setMuscleDraft([...muscleFilter]); setShowMusclePicker(true); }}
                 className={`relative p-2 rounded-lg transition-colors ${muscleFilter.length > 0 ? "text-emerald-400 bg-emerald-500/10" : "text-gray-400 hover:text-white"}`}
                 title={muscleFilter.length > 0 ? `Muscles: ${muscleFilter.join(", ")}` : "Filter by muscle group"}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                  <path d="M5 17c1-1 2-3 2-5V9c0-2 1-4 3-5 1.5-.8 3-.5 4 .5s1.5 2.5 1 4c2-.5 3.5.5 4 2s0 3.5-1.5 4.5" />
+                  <path d="M18.5 15c-1 1-2.5 2-5 2H11c-2 0-3.5-.5-5-2" />
                 </svg>
                 {muscleFilter.length > 0 && (
                   <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{muscleFilter.length}</span>
