@@ -698,10 +698,10 @@ function WorkoutContent() {
     allExercises.forEach((ex) => {
       ex.muscleGroups.split(",").forEach((g) => {
         const trimmed = g.trim().toLowerCase();
-        if (trimmed) groups.add(trimmed);
+        if (trimmed && trimmed !== "core") groups.add(trimmed);
       });
     });
-    return Array.from(groups).sort();
+    return Array.from(groups).sort((a, b) => a.localeCompare(b));
   })();
 
   // Get recently used exercise IDs from current workout blocks
