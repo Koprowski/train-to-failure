@@ -27,16 +27,7 @@ interface RecentExercise {
   }[];
 }
 
-const MUSCLE_TABS = [
-  { label: "Recent", filter: null },
-  { label: "All", filter: null },
-  { label: "Arms", filter: ["biceps", "triceps", "forearms"] },
-  { label: "Back", filter: ["back", "lats", "traps"] },
-  { label: "Chest", filter: ["chest"] },
-  { label: "Core", filter: ["abs", "obliques"] },
-  { label: "Legs", filter: ["quads", "hamstrings", "glutes", "calves"] },
-  { label: "Shoulders", filter: ["shoulders"] },
-];
+const PINNED_TABS = ["Recent", "All"];
 
 export default function QuickLogPage() {
   const router = useRouter();
@@ -94,6 +85,19 @@ export default function QuickLogPage() {
     if (diffDays < 7) return `${diffDays} days ago`;
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
+
+  // Build muscle group tabs dynamically from exercise data
+  const muscleGroupTabs = (() => {
+    const groups = new Set<string>();
+    for (const ex of allExercises) {
+      for (const mg of ex.muscleGroups.split(",").map((g) => g.trim().toLowerCase()).filter(Boolean)) {
+        groups.add(mg);
+      }
+    }
+    return Array.from(groups).sort((a, b) => a.localeCompare(b));
+  })();
+
+  const allTabs = [...PINNED_TABS, ...muscleGroupTabs.map((mg) => mg.charAt(0).toUpperCase() + mg.slice(1))];
 
   const searchResults = search.trim()
     ? allExercises.filter(
@@ -184,17 +188,17 @@ export default function QuickLogPage() {
         <div className="space-y-4">
           {/* Tab bar */}
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-            {MUSCLE_TABS.map((tab) => (
+            {allTabs.map((tab) => (
               <button
-                key={tab.label}
-                onClick={() => setActiveTab(tab.label)}
+                key={tab}
+                onClick={() => setActiveTab(tab)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                  activeTab === tab.label
+                  activeTab === tab
                     ? "bg-emerald-500 text-white"
                     : "bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700"
                 }`}
               >
-                {tab.label}
+                {tab}
               </button>
             ))}
           </div>
@@ -244,10 +248,10 @@ export default function QuickLogPage() {
 
           {/* All / Muscle group tabs */}
           {activeTab !== "Recent" && (() => {
-            const tab = MUSCLE_TABS.find((t) => t.label === activeTab);
-            const filtered = tab?.filter
+            const filterGroup = activeTab === "All" ? null : activeTab.toLowerCase();
+            const filtered = filterGroup
               ? allExercises.filter((ex) =>
-                  tab.filter!.some((mg) => ex.muscleGroups.toLowerCase().includes(mg))
+                  ex.muscleGroups.toLowerCase().split(",").map((g) => g.trim()).includes(filterGroup)
                 )
               : allExercises;
             return filtered.length === 0 ? (
