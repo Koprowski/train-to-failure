@@ -388,10 +388,12 @@ export default function ExercisesPage() {
     }
   };
 
+  const bottomRef = useRef<HTMLDivElement>(null);
+
   return (
     <div className="space-y-4">
-      {/* Title row with + New */}
-      <div className="flex items-center gap-3">
+      {/* Title row with + New right-justified */}
+      <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Exercise Library</h1>
         <button
           onClick={() => setShowModal(true)}
@@ -404,63 +406,88 @@ export default function ExercisesPage() {
         </button>
       </div>
 
+      {/* Sticky toolbar - stays fixed below navbar on scroll */}
+      <div className="sticky top-14 z-30 bg-black/90 backdrop-blur-sm -mx-4 px-4 py-2 lg:static lg:mx-0 lg:px-0 lg:py-0 lg:bg-transparent lg:backdrop-blur-none">
+        <div className="flex items-center gap-2">
+          {/* Front/Back centered */}
+          <button
+            onClick={() => { if (bodySide !== "front") flipBody(true); }}
+            className={`px-3 py-1 text-xs rounded-lg transition-colors ${bodySide === "front" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+          >
+            Front
+          </button>
+          <button
+            onClick={() => { if (bodySide !== "back") flipBody(true); }}
+            className={`px-3 py-1 text-xs rounded-lg transition-colors ${bodySide === "back" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+          >
+            Back
+          </button>
+          <div className="flex items-center gap-1 ml-auto">
+            {/* Search icon */}
+            <button
+              onClick={() => setShowSearch(true)}
+              className="p-2 rounded-lg text-gray-400 hover:text-white transition-colors"
+              title="Search exercises"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+            {/* Muscle group filter - flexed arm icon */}
+            <button
+              onClick={() => { setMuscleDraft([...muscleFilter]); setShowMusclePicker(true); }}
+              className={`relative p-2 rounded-lg transition-colors ${muscleFilter.length > 0 ? "text-emerald-400 bg-emerald-500/10" : "text-gray-400 hover:text-white"}`}
+              title={muscleFilter.length > 0 ? `Muscles: ${muscleFilter.join(", ")}` : "Filter by muscle group"}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                <path d="M5 17c1-1 2-3 2-5V9c0-2 1-4 3-5 1.5-.8 3-.5 4 .5s1.5 2.5 1 4c2-.5 3.5.5 4 2s0 3.5-1.5 4.5" />
+                <path d="M18.5 15c-1 1-2.5 2-5 2H11c-2 0-3.5-.5-5-2" />
+              </svg>
+              {muscleFilter.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{muscleFilter.length}</span>
+              )}
+            </button>
+            {/* Equipment filter */}
+            <button
+              onClick={() => { setEquipmentDraft([...equipmentFilter]); setShowEquipmentPicker(true); }}
+              className={`relative p-2 rounded-lg transition-colors ${equipmentFilter.length > 0 ? "text-emerald-400 bg-emerald-500/10" : "text-gray-400 hover:text-white"}`}
+              title={equipmentFilter.length > 0 ? `Equipment: ${equipmentFilter.join(", ")}` : "Filter by equipment"}
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M20.27 4.74a1 1 0 0 0-1.42 0l-1.53 1.53-1.06-1.06a1.5 1.5 0 0 0-2.12 0l-.71.71a1.5 1.5 0 0 0 0 2.12l.35.36-4.95 4.95-.35-.36a1.5 1.5 0 0 0-2.12 0l-.71.71a1.5 1.5 0 0 0 0 2.12l1.06 1.06-1.53 1.53a1 1 0 1 0 1.42 1.42l1.53-1.53 1.06 1.06a1.5 1.5 0 0 0 2.12 0l.71-.71a1.5 1.5 0 0 0 0-2.12l-.35-.36 4.95-4.95.35.36a1.5 1.5 0 0 0 2.12 0l.71-.71a1.5 1.5 0 0 0 0-2.12l-1.06-1.06 1.53-1.53a1 1 0 0 0 0-1.42z" />
+              </svg>
+              {equipmentFilter.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{equipmentFilter.length}</span>
+              )}
+            </button>
+            {/* Scroll to top */}
+            <button
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              className="p-2 rounded-lg text-gray-400 hover:text-white transition-colors"
+              title="Scroll to top"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+              </svg>
+            </button>
+            {/* Scroll to bottom */}
+            <button
+              onClick={() => bottomRef.current?.scrollIntoView({ behavior: "smooth" })}
+              className="p-2 rounded-lg text-gray-400 hover:text-white transition-colors"
+              title="Scroll to bottom"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Body Map + Grid */}
       <div className="flex flex-col lg:flex-row gap-4">
         {/* Body Map */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex flex-col items-center shrink-0">
-          <div className="flex items-center gap-2 mb-3 w-full">
-            <button
-              onClick={() => { if (bodySide !== "front") flipBody(true); }}
-              className={`px-3 py-1 text-xs rounded-lg transition-colors ${bodySide === "front" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
-            >
-              Front
-            </button>
-            <button
-              onClick={() => { if (bodySide !== "back") flipBody(true); }}
-              className={`px-3 py-1 text-xs rounded-lg transition-colors ${bodySide === "back" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
-            >
-              Back
-            </button>
-            {/* Search icon */}
-            <button
-              onClick={() => setShowSearch(true)}
-              className="px-2 py-1 text-xs rounded-lg bg-gray-800 text-gray-400 hover:text-white transition-colors"
-              title="Search exercises"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </button>
-            <div className="flex items-center gap-1 ml-auto">
-              {/* Muscle group filter - flexed arm icon */}
-              <button
-                onClick={() => { setMuscleDraft([...muscleFilter]); setShowMusclePicker(true); }}
-                className={`relative p-2 rounded-lg transition-colors ${muscleFilter.length > 0 ? "text-emerald-400 bg-emerald-500/10" : "text-gray-400 hover:text-white"}`}
-                title={muscleFilter.length > 0 ? `Muscles: ${muscleFilter.join(", ")}` : "Filter by muscle group"}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                  <path d="M5 17c1-1 2-3 2-5V9c0-2 1-4 3-5 1.5-.8 3-.5 4 .5s1.5 2.5 1 4c2-.5 3.5.5 4 2s0 3.5-1.5 4.5" />
-                  <path d="M18.5 15c-1 1-2.5 2-5 2H11c-2 0-3.5-.5-5-2" />
-                </svg>
-                {muscleFilter.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{muscleFilter.length}</span>
-                )}
-              </button>
-              {/* Equipment filter */}
-              <button
-                onClick={() => { setEquipmentDraft([...equipmentFilter]); setShowEquipmentPicker(true); }}
-                className={`relative p-2 rounded-lg transition-colors ${equipmentFilter.length > 0 ? "text-emerald-400 bg-emerald-500/10" : "text-gray-400 hover:text-white"}`}
-                title={equipmentFilter.length > 0 ? `Equipment: ${equipmentFilter.join(", ")}` : "Filter by equipment"}
-              >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M20.27 4.74a1 1 0 0 0-1.42 0l-1.53 1.53-1.06-1.06a1.5 1.5 0 0 0-2.12 0l-.71.71a1.5 1.5 0 0 0 0 2.12l.35.36-4.95 4.95-.35-.36a1.5 1.5 0 0 0-2.12 0l-.71.71a1.5 1.5 0 0 0 0 2.12l1.06 1.06-1.53 1.53a1 1 0 1 0 1.42 1.42l1.53-1.53 1.06 1.06a1.5 1.5 0 0 0 2.12 0l.71-.71a1.5 1.5 0 0 0 0-2.12l-.35-.36 4.95-4.95.35.36a1.5 1.5 0 0 0 2.12 0l.71-.71a1.5 1.5 0 0 0 0-2.12l-1.06-1.06 1.53-1.53a1 1 0 0 0 0-1.42z" />
-                </svg>
-                {equipmentFilter.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{equipmentFilter.length}</span>
-                )}
-              </button>
-            </div>
-          </div>
           <div
             className="cursor-pointer relative"
             onTouchStart={handleTouchStart}
@@ -572,6 +599,7 @@ export default function ExercisesPage() {
           )}
         </div>
       </div>
+      <div ref={bottomRef} />
 
       {/* Muscle Group Picker Modal */}
       {showMusclePicker && (
