@@ -308,13 +308,20 @@ export default function ReportsPage() {
                       <span className={`text-xs font-medium ${chartMode === "volume" ? "text-white" : "text-gray-500"}`}>Volume</span>
                       <button
                         onClick={() => setChartMode(chartMode === "volume" ? "e1rm" : "volume")}
-                        className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors bg-gray-700 shrink-0"
                         role="switch"
                         aria-checked={chartMode === "e1rm"}
+                        style={{ position: "relative", display: "inline-flex", alignItems: "center", width: 36, height: 20, borderRadius: 10, backgroundColor: "#374151", flexShrink: 0 }}
                       >
                         <span
-                          className="inline-block h-3.5 w-3.5 rounded-full bg-emerald-500 transition-transform duration-200"
-                          style={{ transform: chartMode === "e1rm" ? "translateX(18px)" : "translateX(3px)" }}
+                          style={{
+                            display: "block",
+                            width: 14,
+                            height: 14,
+                            borderRadius: "50%",
+                            backgroundColor: "#10b981",
+                            transition: "transform 200ms",
+                            transform: chartMode === "e1rm" ? "translateX(19px)" : "translateX(3px)",
+                          }}
                         />
                       </button>
                       <span className={`text-xs font-medium ${chartMode === "e1rm" ? "text-white" : "text-gray-500"}`}>E1RM</span>
