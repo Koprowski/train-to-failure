@@ -663,50 +663,28 @@ export default function ExercisesPage() {
         </div>
       )}
 
-      {/* Search Modal */}
+      {/* Inline Search Bar */}
       {showSearch && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 p-4 bg-black/60" onClick={() => { setShowSearch(false); }}>
-          <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md p-4" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-3">
-              <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                type="text"
-                autoFocus
-                placeholder="Search exercises..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="flex-1 bg-transparent text-white placeholder-gray-500 focus:outline-none text-lg"
-              />
-              {search && (
-                <button onClick={() => setSearch("")} className="text-gray-400 hover:text-white">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-            </div>
-            {search && (
-              <div className="mt-3 border-t border-gray-800 pt-3 max-h-64 overflow-y-auto space-y-1">
-                {exercises.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-4">No exercises found</p>
-                ) : (
-                  exercises.map((ex) => (
-                    <Link
-                      key={ex.id}
-                      href={`/exercises/${ex.id}`}
-                      className="block px-3 py-2 rounded-lg hover:bg-gray-800 text-white text-sm transition-colors"
-                      onClick={() => setShowSearch(false)}
-                    >
-                      <span className="font-medium">{ex.name}</span>
-                      <span className="text-gray-500 ml-2 text-xs">{ex.muscleGroups}</span>
-                    </Link>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-3 flex items-center gap-3">
+          <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            autoFocus
+            placeholder="Search exercises..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1 bg-transparent text-white placeholder-gray-500 focus:outline-none text-lg"
+          />
+          <button
+            onClick={() => { setSearch(""); setShowSearch(false); }}
+            className="text-gray-400 hover:text-white"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
       )}
 
