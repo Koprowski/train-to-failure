@@ -95,13 +95,9 @@ export default function QuickLogPage() {
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
-  // Filter exercises for search results (exclude ones already in recents)
-  const recentIds = new Set(recentExercises.map((r) => r.exercise.id));
   const searchResults = search.trim()
     ? allExercises.filter(
-        (ex) =>
-          ex.name.toLowerCase().includes(search.toLowerCase()) &&
-          !recentIds.has(ex.id)
+        (ex) => ex.name.toLowerCase().includes(search.toLowerCase())
       )
     : [];
 
