@@ -30,7 +30,6 @@ interface Session {
 }
 
 const SET_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
-const VOLUME_COLOR = "#6366f1";
 
 export default function ReportsPage() {
   const [recentExercises, setRecentExercises] = useState<RecentExercise[]>([]);
@@ -40,7 +39,7 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(false);
   const [exercisesLoading, setExercisesLoading] = useState(true);
   const [visibleSets, setVisibleSets] = useState<Set<number>>(new Set());
-  const [showVolume, setShowVolume] = useState(false);
+  const [chartMode, setChartMode] = useState<"volume" | "e1rm">("volume");
   const carouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -103,11 +102,15 @@ export default function ReportsPage() {
     const dateDetails = new Map<string, { weight: number; reps: number }>();
     for (const set of s.sets) {
       const key = `Set ${set.setNumber}`;
-      row[key] = hasWeightData ? set.weightLbs * set.reps : set.reps;
+      if (!hasWeightData) {
+        row[key] = set.reps;
+      } else if (chartMode === "volume") {
+        row[key] = set.weightLbs * set.reps;
+      } else {
+        // E1RM: weight * (1 + reps/30)
+        row[key] = set.reps === 1 ? set.weightLbs : Math.round(set.weightLbs * (1 + set.reps / 30) * 10) / 10;
+      }
       dateDetails.set(key, { weight: set.weightLbs, reps: set.reps });
-    }
-    if (hasWeightData) {
-      row["Volume"] = s.totalVolume;
     }
     row["Total Reps"] = s.sets.reduce((sum, set) => sum + set.reps, 0);
     setDetails.set(s.date, dateDetails);
@@ -279,10 +282,10 @@ export default function ReportsPage() {
               <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="text-lg font-semibold">
-                    {selectedExerciseName} - {hasWeightData ? "Volume Per Set Over Time" : "Reps Per Set Over Time"}
+                    {selectedExerciseName} - {!hasWeightData ? "Reps Per Set Over Time" : chartMode === "volume" ? "Volume Per Set Over Time" : "Est. 1RM Per Set Over Time"}
                   </h2>
                 </div>
-                <div className="flex flex-wrap gap-3 mb-4">
+                <div className="flex flex-wrap items-center gap-3 mb-4">
                   {Array.from({ length: maxSetNumber }, (_, i) => i + 1).map((setNum) => (
                     <label key={setNum} className="flex items-center gap-2 text-sm cursor-pointer">
                       <input
@@ -301,21 +304,16 @@ export default function ReportsPage() {
                     </label>
                   ))}
                   {hasWeightData && (
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={showVolume}
-                        onChange={() => setShowVolume(!showVolume)}
-                        className="rounded border-gray-600 bg-gray-800 text-emerald-500 focus:ring-emerald-500"
-                      />
-                      <span className="flex items-center gap-1.5">
-                        <span
-                          className="w-3 h-0.5 rounded"
-                          style={{ backgroundColor: VOLUME_COLOR }}
-                        />
-                        Total Volume
-                      </span>
-                    </label>
+                    <div className="flex items-center gap-1 ml-auto">
+                      <span className={`text-xs font-medium ${chartMode === "volume" ? "text-white" : "text-gray-500"}`}>Volume</span>
+                      <button
+                        onClick={() => setChartMode(chartMode === "volume" ? "e1rm" : "volume")}
+                        className="relative w-10 h-5 rounded-full transition-colors bg-gray-700"
+                      >
+                        <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-emerald-500 transition-transform ${chartMode === "e1rm" ? "translate-x-5" : "translate-x-0.5"}`} />
+                      </button>
+                      <span className={`text-xs font-medium ${chartMode === "e1rm" ? "text-white" : "text-gray-500"}`}>E1RM</span>
+                    </div>
                   )}
                 </div>
 
@@ -335,17 +333,8 @@ export default function ReportsPage() {
                       stroke="#9ca3af"
                       tick={{ fontSize: 12 }}
                       yAxisId="weight"
-                      label={{ value: hasWeightData ? "lbs (vol)" : "reps", angle: -90, position: "insideLeft", style: { fill: "#9ca3af" } }}
+                      label={{ value: !hasWeightData ? "reps" : chartMode === "volume" ? "lbs (vol)" : "lbs (E1RM)", angle: -90, position: "insideLeft", style: { fill: "#9ca3af" } }}
                     />
-                    {showVolume && (
-                      <YAxis
-                        stroke="#9ca3af"
-                        tick={{ fontSize: 12 }}
-                        yAxisId="volume"
-                        orientation="right"
-                        label={{ value: "volume (lbs)", angle: 90, position: "insideRight", style: { fill: "#9ca3af" } }}
-                      />
-                    )}
                     <Tooltip
                       contentStyle={{ backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: "8px" }}
                       labelStyle={{ color: "#fff" }}
@@ -356,16 +345,16 @@ export default function ReportsPage() {
                       }}
                       formatter={(value: number | undefined, name: string | undefined, props: { payload?: Record<string, string | number> }) => {
                         const v = value ?? 0;
-                        if (name === "Volume") return [`${v.toLocaleString()} lbs`, "Total Volume"];
                         if (name === "Total Reps") return [`${v}`, "Total Reps"];
                         const date = props.payload?.date as string | undefined;
                         if (date && name) {
                           const details = setDetails.get(date)?.get(name);
                           if (details) {
-                            if (hasWeightData) {
+                            if (!hasWeightData) return [`${details.reps} reps`, name];
+                            if (chartMode === "volume") {
                               return [`${v.toLocaleString()} lbs (${details.reps} x ${details.weight} lbs)`, name];
                             }
-                            return [`${details.reps} reps`, name];
+                            return [`${v} lbs E1RM (${details.reps} x ${details.weight} lbs)`, name];
                           }
                         }
                         return [hasWeightData ? `${v.toLocaleString()} lbs` : `${v} reps`, name ?? ""];
@@ -385,17 +374,6 @@ export default function ReportsPage() {
                           yAxisId="weight"
                         />
                       ) : null
-                    )}
-                    {showVolume && (
-                      <Line
-                        type="monotone"
-                        dataKey="Volume"
-                        stroke={VOLUME_COLOR}
-                        strokeWidth={2}
-                        strokeDasharray="5 5"
-                        dot={{ r: 3 }}
-                        yAxisId="volume"
-                      />
                     )}
                   </LineChart>
                 </ResponsiveContainer>
