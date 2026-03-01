@@ -52,6 +52,9 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
   const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [addingSet, setAddingSet] = useState<string | null>(null);
+  const [showExercisePicker, setShowExercisePicker] = useState(false);
+  const [allExercises, setAllExercises] = useState<Exercise[]>([]);
+  const [exerciseSearch, setExerciseSearch] = useState("");
 
   // Inline edit state
   const [editName, setEditName] = useState("");
@@ -264,6 +267,42 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
       setAddingSet(null);
     }
   };
+
+  const openExercisePicker = async () => {
+    if (allExercises.length === 0) {
+      const res = await fetch("/api/exercises");
+      const data = await res.json();
+      setAllExercises(Array.isArray(data) ? data : []);
+    }
+    setExerciseSearch("");
+    setShowExercisePicker(true);
+  };
+
+  const addExercise = async (exerciseId: string) => {
+    if (!workout) return;
+    setShowExercisePicker(false);
+    setAddingSet(exerciseId);
+    try {
+      const res = await fetch(`/api/workouts/${workout.id}/sets`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ exerciseId, completed: true }),
+      });
+      if (res.ok) {
+        const updated = await (await fetch(`/api/workouts/${workout.id}`)).json();
+        setWorkout(updated);
+        initEditState(updated);
+      }
+    } catch (err) {
+      console.error("Failed to add exercise:", err);
+    } finally {
+      setAddingSet(null);
+    }
+  };
+
+  const filteredPickerExercises = allExercises.filter((ex) =>
+    !exerciseSearch || ex.name.toLowerCase().includes(exerciseSearch.toLowerCase())
+  );
 
   const deleteWorkout = async () => {
     setDeleting(true);
@@ -541,18 +580,65 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
         </div>
       )}
 
-      {/* Save As Template */}
-      {workout.finishedAt && (
-        <div className="flex justify-center pt-4 pb-2">
-          <button
-            onClick={saveAsTemplate}
-            disabled={savingTemplate || templateSaved}
-            className={`text-sm transition-colors ${templateSaved ? "text-emerald-500" : "text-gray-500 hover:text-white"} disabled:opacity-50`}
-          >
-            {templateSaved ? "Template Saved!" : savingTemplate ? "Saving..." : "Save Workout As Template"}
-          </button>
+      {/* Add Exercise */}
+      <button
+        onClick={openExercisePicker}
+        className="w-full py-3 border border-dashed border-gray-700 rounded-xl text-gray-400 hover:text-emerald-400 hover:border-emerald-500/50 transition-colors text-sm"
+      >
+        + Add Exercise
+      </button>
+
+      {/* Exercise Picker Modal */}
+      {showExercisePicker && (
+        <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50">
+          <div className="bg-gray-900 border border-gray-800 rounded-t-2xl sm:rounded-xl w-full sm:max-w-md max-h-[70vh] flex flex-col">
+            <div className="p-4 border-b border-gray-800">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-lg font-semibold">Add Exercise</h2>
+                <button onClick={() => setShowExercisePicker(false)} className="text-gray-400 hover:text-white p-1">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <input
+                type="text"
+                value={exerciseSearch}
+                onChange={(e) => setExerciseSearch(e.target.value)}
+                placeholder="Search exercises..."
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                autoFocus
+              />
+            </div>
+            <div className="overflow-y-auto flex-1 p-2">
+              {filteredPickerExercises.map((ex) => (
+                <button
+                  key={ex.id}
+                  onClick={() => addExercise(ex.id)}
+                  className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                  <p className="text-sm text-white">{ex.name}</p>
+                  <p className="text-xs text-gray-500 capitalize">{ex.muscleGroups}</p>
+                </button>
+              ))}
+              {filteredPickerExercises.length === 0 && (
+                <p className="text-gray-500 text-sm text-center py-8">No exercises found</p>
+              )}
+            </div>
+          </div>
         </div>
       )}
+
+      {/* Save As Template */}
+      <div className="flex justify-center pt-4 pb-2">
+        <button
+          onClick={saveAsTemplate}
+          disabled={savingTemplate || templateSaved}
+          className={`text-sm transition-colors ${templateSaved ? "text-emerald-500" : "text-gray-500 hover:text-white"} disabled:opacity-50`}
+        >
+          {templateSaved ? "Template Saved!" : savingTemplate ? "Saving..." : "Save Workout As Template"}
+        </button>
+      </div>
 
       {/* Floating save bar when changes exist */}
       {hasChanges && (
