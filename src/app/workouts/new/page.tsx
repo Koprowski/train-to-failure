@@ -894,29 +894,29 @@ function WorkoutContent() {
           >
             {saving ? "Saving..." : "Finish"}
           </button>
+          <button
+            onClick={() => {
+              if (!customDate && startTimeRef.current) {
+                const d = startTimeRef.current;
+                const pad = (n: number) => String(n).padStart(2, "0");
+                setCustomDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+              }
+              setShowDateModal(true);
+            }}
+            className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            {(() => {
+              const d = customDate ? new Date(customDate) : startTimeRef.current ?? new Date();
+              const mm = String(d.getMonth() + 1).padStart(2, "0");
+              const dd = String(d.getDate()).padStart(2, "0");
+              const yyyy = d.getFullYear();
+              const hour = d.getHours() % 12 || 12;
+              const min = String(d.getMinutes()).padStart(2, "0");
+              const ampm = d.getHours() >= 12 ? "PM" : "AM";
+              return `${mm}/${dd}/${yyyy} ${hour}:${min}${ampm}`;
+            })()}
+          </button>
         </div>
-        <button
-          onClick={() => {
-            if (!customDate && startTimeRef.current) {
-              const d = startTimeRef.current;
-              const pad = (n: number) => String(n).padStart(2, "0");
-              setCustomDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
-            }
-            setShowDateModal(true);
-          }}
-          className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-        >
-          {(() => {
-            const d = customDate ? new Date(customDate) : startTimeRef.current ?? new Date();
-            const mm = String(d.getMonth() + 1).padStart(2, "0");
-            const dd = String(d.getDate()).padStart(2, "0");
-            const yyyy = d.getFullYear();
-            const hour = d.getHours() % 12 || 12;
-            const min = String(d.getMinutes()).padStart(2, "0");
-            const ampm = d.getHours() >= 12 ? "PM" : "AM";
-            return `${mm}/${dd}/${yyyy} ${hour}:${min}${ampm}`;
-          })()}
-        </button>
       </div>
 
       {/* Date edit modal */}
