@@ -83,7 +83,15 @@ function AppShell({ children }: { children: React.ReactNode }) {
           </svg>
         </button>
         <Link href="/" className="text-lg font-bold text-emerald-500">Train to Failure</Link>
-        <div className="w-10" />
+        <Link
+          href="/workouts/quick"
+          className="p-2 rounded-lg text-emerald-500 hover:bg-gray-800 transition-colors"
+          aria-label="Quick Log"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </Link>
       </header>
 
       {/* Sidebar overlay */}

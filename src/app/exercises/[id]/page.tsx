@@ -25,6 +25,7 @@ interface HistoryEntry {
   maxWeight: number;
   totalVolume: number;
   estimated1RM: number;
+  totalReps: number;
 }
 
 const BADGE_COLORS: Record<string, string> = {
@@ -123,7 +124,7 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
   const [exercise, setExercise] = useState<Exercise | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [chartMetric, setChartMetric] = useState<"maxWeight" | "estimated1RM" | "totalVolume">("maxWeight");
+  const [chartMetric, setChartMetric] = useState<"maxWeight" | "estimated1RM" | "totalVolume" | "totalReps">("estimated1RM");
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -143,7 +144,10 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
       fetch(`/api/stats?exerciseId=${id}`).then((r) => r.json()),
     ]).then(([ex, stats]) => {
       setExercise(ex);
-      setHistory(stats?.history ?? []);
+      const h = stats?.history ?? [];
+      setHistory(h);
+      const hasWeight = h.some((e: HistoryEntry) => e.maxWeight > 0);
+      setChartMetric(hasWeight ? "estimated1RM" : "totalReps");
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [id]);
@@ -236,7 +240,8 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
     }
   }
 
-  const chartLabel = chartMetric === "maxWeight" ? "Max Weight (lbs)" : chartMetric === "estimated1RM" ? "Est. 1RM (lbs)" : "Total Volume (lbs)";
+  const hasWeightData = history.some((h) => h.maxWeight > 0);
+  const chartLabel = chartMetric === "maxWeight" ? "Max Weight (lbs)" : chartMetric === "estimated1RM" ? "Est. 1RM (lbs)" : chartMetric === "totalVolume" ? "Total Volume (lbs)" : "Total Reps";
 
   return (
     <div className="space-y-6">
@@ -359,19 +364,26 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <h2 className="text-lg font-semibold">Progress History</h2>
           <div className="flex gap-2">
-            {(["maxWeight", "estimated1RM", "totalVolume"] as const).map((metric) => (
-              <button
-                key={metric}
-                onClick={() => setChartMetric(metric)}
-                className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
-                  chartMetric === metric
-                    ? "bg-emerald-500 text-white"
-                    : "bg-gray-800 text-gray-400 hover:text-white"
-                }`}
-              >
-                {metric === "maxWeight" ? "Weight" : metric === "estimated1RM" ? "Est. 1RM" : "Volume"}
-              </button>
-            ))}
+            {(["estimated1RM", "maxWeight", "totalVolume", "totalReps"] as const).map((metric) => {
+              const isWeightMetric = metric !== "totalReps";
+              const disabled = isWeightMetric && !hasWeightData;
+              return (
+                <button
+                  key={metric}
+                  onClick={() => !disabled && setChartMetric(metric)}
+                  disabled={disabled}
+                  className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
+                    chartMetric === metric
+                      ? "bg-emerald-500 text-white"
+                      : disabled
+                        ? "bg-gray-800 text-gray-600 cursor-not-allowed"
+                        : "bg-gray-800 text-gray-400 hover:text-white"
+                  }`}
+                >
+                  {metric === "maxWeight" ? "Weight" : metric === "estimated1RM" ? "Est. 1RM" : metric === "totalVolume" ? "Volume" : "Reps"}
+                </button>
+              );
+            })}
           </div>
         </div>
         {history.length === 0 ? (
@@ -421,9 +433,10 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
                 <tr className="text-gray-400 border-b border-gray-800">
                   <th className="text-left py-2 pr-4">Date</th>
                   <th className="text-left py-2 pr-4">Workout</th>
-                  <th className="text-right py-2 pr-4">Max Weight</th>
-                  <th className="text-right py-2 pr-4">Volume</th>
-                  <th className="text-right py-2">Est. 1RM</th>
+                  <th className="text-right py-2 pr-4">Reps</th>
+                  {hasWeightData && <th className="text-right py-2 pr-4">Max Weight</th>}
+                  {hasWeightData && <th className="text-right py-2 pr-4">Volume</th>}
+                  {hasWeightData && <th className="text-right py-2">Est. 1RM</th>}
                 </tr>
               </thead>
               <tbody>
@@ -431,9 +444,10 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
                   <tr key={h.date} className="border-b border-gray-800/50">
                     <td className="py-2.5 pr-4 text-gray-300">{h.date}</td>
                     <td className="py-2.5 pr-4 text-gray-300">{h.workoutName}</td>
-                    <td className="py-2.5 pr-4 text-right">{h.maxWeight} lbs</td>
-                    <td className="py-2.5 pr-4 text-right">{h.totalVolume.toLocaleString()} lbs</td>
-                    <td className="py-2.5 text-right text-emerald-500">{h.estimated1RM} lbs</td>
+                    <td className="py-2.5 pr-4 text-right">{h.totalReps}</td>
+                    {hasWeightData && <td className="py-2.5 pr-4 text-right">{h.maxWeight} lbs</td>}
+                    {hasWeightData && <td className="py-2.5 pr-4 text-right">{h.totalVolume.toLocaleString()} lbs</td>}
+                    {hasWeightData && <td className="py-2.5 text-right text-emerald-500">{h.estimated1RM} lbs</td>}
                   </tr>
                 ))}
               </tbody>

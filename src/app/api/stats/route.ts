@@ -22,7 +22,6 @@ export async function GET(request: NextRequest) {
       where: {
         exerciseId,
         completed: true,
-        weightLbs: { not: null },
         reps: { not: null },
         workout: { userId },
       },
@@ -35,17 +34,17 @@ export async function GET(request: NextRequest) {
     // Group sets by workout date and compute stats
     const workoutMap = new Map<
       string,
-      { date: string; workoutName: string; maxWeight: number; totalVolume: number; estimated1RM: number; sets: typeof sets }
+      { date: string; workoutName: string; maxWeight: number; totalVolume: number; estimated1RM: number; totalReps: number; sets: typeof sets }
     >();
 
     for (const set of sets) {
       const dateKey = set.workout.startedAt.toISOString().split("T")[0];
-      const weight = set.weightLbs!;
+      const weight = set.weightLbs ?? 0;
       const reps = set.reps!;
       const volume = weight * reps;
 
-      // Epley formula for estimated 1RM
-      const e1rm = reps === 1 ? weight : weight * (1 + reps / 30);
+      // Epley formula for estimated 1RM (only meaningful with weight)
+      const e1rm = weight > 0 ? (reps === 1 ? weight : weight * (1 + reps / 30)) : 0;
 
       if (!workoutMap.has(dateKey)) {
         workoutMap.set(dateKey, {
@@ -54,12 +53,14 @@ export async function GET(request: NextRequest) {
           maxWeight: weight,
           totalVolume: 0,
           estimated1RM: e1rm,
+          totalReps: 0,
           sets: [],
         });
       }
 
       const entry = workoutMap.get(dateKey)!;
       entry.totalVolume += volume;
+      entry.totalReps += reps;
       if (weight > entry.maxWeight) entry.maxWeight = weight;
       if (e1rm > entry.estimated1RM) entry.estimated1RM = e1rm;
       entry.sets.push(set);

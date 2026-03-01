@@ -29,7 +29,6 @@ export async function GET(request: NextRequest) {
       where: {
         exerciseId,
         completed: true,
-        weightLbs: { not: null },
         reps: { not: null },
         workout: {
           userId,
@@ -60,7 +59,7 @@ export async function GET(request: NextRequest) {
       }
 
       const session = sessionMap.get(dateKey)!;
-      const weight = set.weightLbs!;
+      const weight = set.weightLbs ?? 0;
       const reps = set.reps!;
       session.sets.push({
         setNumber: set.setNumber,

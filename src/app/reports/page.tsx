@@ -86,6 +86,9 @@ export default function ReportsPage() {
     }
   }, [selectedExercise, days, fetchProgress]);
 
+  // Detect if exercise has weight data
+  const hasWeightData = sessions.some((s) => s.sets.some((set) => set.weightLbs > 0));
+
   // Chart data
   const maxSetNumber = sessions.reduce(
     (max, s) => Math.max(max, ...s.sets.map((set) => set.setNumber)),
@@ -100,10 +103,13 @@ export default function ReportsPage() {
     const dateDetails = new Map<string, { weight: number; reps: number }>();
     for (const set of s.sets) {
       const key = `Set ${set.setNumber}`;
-      row[key] = set.weightLbs * set.reps;
+      row[key] = hasWeightData ? set.weightLbs * set.reps : set.reps;
       dateDetails.set(key, { weight: set.weightLbs, reps: set.reps });
     }
-    row["Volume"] = s.totalVolume;
+    if (hasWeightData) {
+      row["Volume"] = s.totalVolume;
+    }
+    row["Total Reps"] = s.sets.reduce((sum, set) => sum + set.reps, 0);
     setDetails.set(s.date, dateDetails);
     return row;
   });
@@ -114,6 +120,11 @@ export default function ReportsPage() {
     (max, s) => Math.max(max, ...s.sets.map((set) => set.weightLbs)),
     0
   );
+  const totalReps = sessions.reduce(
+    (sum, s) => sum + s.sets.reduce((ss, set) => ss + set.reps, 0),
+    0
+  );
+  const avgRepsPerSession = totalSessions > 0 ? Math.round(totalReps / totalSessions) : 0;
   const avgVolume = totalSessions > 0
     ? Math.round(sessions.reduce((sum, s) => sum + s.totalVolume, 0) / totalSessions)
     : 0;
@@ -121,8 +132,11 @@ export default function ReportsPage() {
   const getTrend = () => {
     if (totalSessions < 4) return "neutral";
     const mid = Math.floor(totalSessions / 2);
-    const firstHalf = sessions.slice(0, mid).reduce((s, x) => s + x.totalVolume, 0) / mid;
-    const secondHalf = sessions.slice(mid).reduce((s, x) => s + x.totalVolume, 0) / (totalSessions - mid);
+    const metricFn = hasWeightData
+      ? (s: Session) => s.totalVolume
+      : (s: Session) => s.sets.reduce((sum, set) => sum + set.reps, 0);
+    const firstHalf = sessions.slice(0, mid).reduce((s, x) => s + metricFn(x), 0) / mid;
+    const secondHalf = sessions.slice(mid).reduce((s, x) => s + metricFn(x), 0) / (totalSessions - mid);
     const change = (secondHalf - firstHalf) / firstHalf;
     if (change > 0.05) return "up";
     if (change < -0.05) return "down";
@@ -265,7 +279,7 @@ export default function ReportsPage() {
               <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="text-lg font-semibold">
-                    {selectedExerciseName} - Volume Per Set Over Time
+                    {selectedExerciseName} - {hasWeightData ? "Volume Per Set Over Time" : "Reps Per Set Over Time"}
                   </h2>
                 </div>
                 <div className="flex flex-wrap gap-3 mb-4">
@@ -286,21 +300,23 @@ export default function ReportsPage() {
                       </span>
                     </label>
                   ))}
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={showVolume}
-                      onChange={() => setShowVolume(!showVolume)}
-                      className="rounded border-gray-600 bg-gray-800 text-emerald-500 focus:ring-emerald-500"
-                    />
-                    <span className="flex items-center gap-1.5">
-                      <span
-                        className="w-3 h-0.5 rounded"
-                        style={{ backgroundColor: VOLUME_COLOR }}
+                  {hasWeightData && (
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={showVolume}
+                        onChange={() => setShowVolume(!showVolume)}
+                        className="rounded border-gray-600 bg-gray-800 text-emerald-500 focus:ring-emerald-500"
                       />
-                      Total Volume
-                    </span>
-                  </label>
+                      <span className="flex items-center gap-1.5">
+                        <span
+                          className="w-3 h-0.5 rounded"
+                          style={{ backgroundColor: VOLUME_COLOR }}
+                        />
+                        Total Volume
+                      </span>
+                    </label>
+                  )}
                 </div>
 
                 <ResponsiveContainer width="100%" height={320}>
@@ -319,7 +335,7 @@ export default function ReportsPage() {
                       stroke="#9ca3af"
                       tick={{ fontSize: 12 }}
                       yAxisId="weight"
-                      label={{ value: "lbs (vol)", angle: -90, position: "insideLeft", style: { fill: "#9ca3af" } }}
+                      label={{ value: hasWeightData ? "lbs (vol)" : "reps", angle: -90, position: "insideLeft", style: { fill: "#9ca3af" } }}
                     />
                     {showVolume && (
                       <YAxis
@@ -341,14 +357,18 @@ export default function ReportsPage() {
                       formatter={(value: number | undefined, name: string | undefined, props: { payload?: Record<string, string | number> }) => {
                         const v = value ?? 0;
                         if (name === "Volume") return [`${v.toLocaleString()} lbs`, "Total Volume"];
+                        if (name === "Total Reps") return [`${v}`, "Total Reps"];
                         const date = props.payload?.date as string | undefined;
                         if (date && name) {
                           const details = setDetails.get(date)?.get(name);
                           if (details) {
-                            return [`${v.toLocaleString()} lbs (${details.reps} x ${details.weight} lbs)`, name];
+                            if (hasWeightData) {
+                              return [`${v.toLocaleString()} lbs (${details.reps} x ${details.weight} lbs)`, name];
+                            }
+                            return [`${details.reps} reps`, name];
                           }
                         }
-                        return [`${v.toLocaleString()} lbs`, name ?? ""];
+                        return [hasWeightData ? `${v.toLocaleString()} lbs` : `${v} reps`, name ?? ""];
                       }}
                     />
                     <Legend />
@@ -388,12 +408,12 @@ export default function ReportsPage() {
                   <p className="text-2xl font-bold mt-1">{totalSessions}</p>
                 </div>
                 <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
-                  <p className="text-gray-400 text-sm">Max Weight</p>
-                  <p className="text-2xl font-bold mt-1">{maxWeight} lbs</p>
+                  <p className="text-gray-400 text-sm">{hasWeightData ? "Max Weight" : "Total Reps"}</p>
+                  <p className="text-2xl font-bold mt-1">{hasWeightData ? `${maxWeight} lbs` : totalReps}</p>
                 </div>
                 <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
-                  <p className="text-gray-400 text-sm">Avg Volume</p>
-                  <p className="text-2xl font-bold mt-1">{avgVolume.toLocaleString()} lbs</p>
+                  <p className="text-gray-400 text-sm">{hasWeightData ? "Avg Volume" : "Avg Reps/Session"}</p>
+                  <p className="text-2xl font-bold mt-1">{hasWeightData ? `${avgVolume.toLocaleString()} lbs` : avgRepsPerSession}</p>
                 </div>
                 <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
                   <p className="text-gray-400 text-sm">Trend</p>
@@ -414,8 +434,8 @@ export default function ReportsPage() {
                       <tr className="text-gray-400 border-b border-gray-800">
                         <th className="text-left py-2 pr-4">Date</th>
                         <th className="text-left py-2 pr-4">Sets</th>
-                        <th className="text-right py-2 pr-4">Max Weight</th>
-                        <th className="text-right py-2">Volume</th>
+                        {hasWeightData && <th className="text-right py-2 pr-4">Max Weight</th>}
+                        <th className="text-right py-2">{hasWeightData ? "Volume" : "Total Reps"}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -429,12 +449,20 @@ export default function ReportsPage() {
                             })}
                           </td>
                           <td className="py-2 pr-4 text-gray-400">
-                            {s.sets.map((set) => `${set.weightLbs}x${set.reps}`).join(", ")}
+                            {hasWeightData
+                              ? s.sets.map((set) => `${set.weightLbs}x${set.reps}`).join(", ")
+                              : s.sets.map((set) => `${set.reps} reps`).join(", ")}
                           </td>
-                          <td className="py-2 pr-4 text-right">
-                            {Math.max(...s.sets.map((set) => set.weightLbs))} lbs
+                          {hasWeightData && (
+                            <td className="py-2 pr-4 text-right">
+                              {Math.max(...s.sets.map((set) => set.weightLbs))} lbs
+                            </td>
+                          )}
+                          <td className="py-2 text-right">
+                            {hasWeightData
+                              ? `${s.totalVolume.toLocaleString()} lbs`
+                              : s.sets.reduce((sum, set) => sum + set.reps, 0)}
                           </td>
-                          <td className="py-2 text-right">{s.totalVolume.toLocaleString()} lbs</td>
                         </tr>
                       ))}
                     </tbody>
