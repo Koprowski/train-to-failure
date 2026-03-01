@@ -78,6 +78,7 @@ function WorkoutContent() {
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [muscleTab, setMuscleTab] = useState("recent");
   const [saving, setSaving] = useState(false);
+  const [showDateModal, setShowDateModal] = useState(false);
   const [started, setStarted] = useState(false);
   const [activeExerciseIndex, setActiveExerciseIndex] = useState<number | null>(null);
   const startTimeRef = useRef<Date | null>(null);
@@ -894,7 +895,53 @@ function WorkoutContent() {
             {saving ? "Saving..." : "Finish"}
           </button>
         </div>
+        <button
+          onClick={() => {
+            if (!customDate && startTimeRef.current) {
+              const d = startTimeRef.current;
+              const pad = (n: number) => String(n).padStart(2, "0");
+              setCustomDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+            }
+            setShowDateModal(true);
+          }}
+          className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+        >
+          {(() => {
+            const d = customDate ? new Date(customDate) : startTimeRef.current ?? new Date();
+            const mm = String(d.getMonth() + 1).padStart(2, "0");
+            const dd = String(d.getDate()).padStart(2, "0");
+            const yyyy = d.getFullYear();
+            const hour = d.getHours() % 12 || 12;
+            const min = String(d.getMinutes()).padStart(2, "0");
+            const ampm = d.getHours() >= 12 ? "PM" : "AM";
+            return `${mm}/${dd}/${yyyy} ${hour}:${min}${ampm}`;
+          })()}
+        </button>
       </div>
+
+      {/* Date edit modal */}
+      {showDateModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-sm">
+            <h2 className="text-lg font-semibold mb-4">Edit Workout Date</h2>
+            <input
+              type="datetime-local"
+              value={customDate}
+              onChange={(e) => setCustomDate(e.target.value)}
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 [color-scheme:dark]"
+              autoFocus
+            />
+            <div className="flex justify-end mt-4">
+              <button
+                onClick={() => setShowDateModal(false)}
+                className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Exercise blocks */}
       {exerciseBlocks.map((block, blockIndex) => {
