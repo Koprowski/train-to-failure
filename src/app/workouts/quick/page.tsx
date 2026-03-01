@@ -35,7 +35,7 @@ const MUSCLE_TABS = [
   { label: "Shoulders", filter: ["shoulders"] },
   { label: "Arms", filter: ["biceps", "triceps", "forearms"] },
   { label: "Legs", filter: ["quads", "hamstrings", "glutes", "calves"] },
-  { label: "Core", filter: ["abs", "core"] },
+  { label: "Core", filter: ["abs", "obliques"] },
 ];
 
 export default function QuickLogPage() {

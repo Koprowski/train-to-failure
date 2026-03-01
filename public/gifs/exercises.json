@@ -182,7 +182,7 @@
   "Plank": {
     "gifFile": "as_weighted-front-plank.gif",
     "imageUrl": "/gifs/as_weighted-front-plank.gif",
-    "muscleGroups": "abs,core"
+    "muscleGroups": "abs"
   },
   "Hanging Leg Raise": {
     "gifFile": "as_hanging-leg-raise.gif",
@@ -192,7 +192,7 @@
   "Ab Wheel Rollout": {
     "gifFile": "as_wheel-rollerout.gif",
     "imageUrl": "/gifs/as_wheel-rollerout.gif",
-    "muscleGroups": "abs,core"
+    "muscleGroups": "abs"
   },
   "Russian Twist": {
     "gifFile": "as_weighted-russian-twist.gif",
@@ -202,27 +202,27 @@
   "Dead Bug": {
     "gifFile": "as_dead-bug.gif",
     "imageUrl": "/gifs/as_dead-bug.gif",
-    "muscleGroups": "abs,core"
+    "muscleGroups": "abs"
   },
   "Side Plank": {
     "gifFile": "as_push-up-to-side-plank.gif",
     "imageUrl": "/gifs/as_push-up-to-side-plank.gif",
-    "muscleGroups": "obliques,core"
+    "muscleGroups": "obliques"
   },
   "Situps - Decline": {
     "gifFile": "as_decline-sit-up.gif",
     "imageUrl": "/gifs/as_decline-sit-up.gif",
-    "muscleGroups": "abs,core"
+    "muscleGroups": "abs"
   },
   "Situps": {
     "gifFile": "as_sit-up-with-arms-on-chest.gif",
     "imageUrl": "/gifs/as_sit-up-with-arms-on-chest.gif",
-    "muscleGroups": "abs,core,hip flexors"
+    "muscleGroups": "abs,hip flexors"
   },
   "Situps - Decline Weighted": {
     "gifFile": "as_weighted-decline-sit-up.gif",
     "imageUrl": "/gifs/as_weighted-decline-sit-up.gif",
-    "muscleGroups": "abs,core"
+    "muscleGroups": "abs"
   },
   "Leg Press - 45 Sled": {
     "gifFile": "as_sled-45-leg-press.gif",
@@ -302,7 +302,7 @@
   "Farmer's Walk": {
     "gifFile": "as_farmers-walk.gif",
     "imageUrl": "/gifs/as_farmers-walk.gif",
-    "muscleGroups": "traps,forearms,core"
+    "muscleGroups": "traps,forearms,abs"
   },
   "Incline Barbell Bench Press": {
     "gifFile": "as_barbell-incline-bench-press.gif",

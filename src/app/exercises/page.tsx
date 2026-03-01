@@ -23,8 +23,8 @@ interface Exercise {
 
 const MUSCLE_GROUPS = [
   "abs", "abductors", "adductors", "back", "biceps", "calves",
-  "chest", "core", "forearms", "glutes", "hamstrings", "hip flexors",
-  "lats", "quads", "shoulders", "traps", "triceps",
+  "chest", "forearms", "glutes", "hamstrings", "hip flexors",
+  "lats", "obliques", "quads", "shoulders", "traps", "triceps",
 ];
 
 const EQUIPMENT = [
@@ -136,7 +136,7 @@ const EQUIPMENT_ICONS: Record<string, React.ReactNode> = {
 
 // Map react-muscle-highlighter slugs to app muscle group names
 const SLUG_TO_MUSCLE: Record<string, string[]> = {
-  abs: ["abs", "core"],
+  abs: ["abs"],
   adductors: ["adductors"],
   biceps: ["biceps"],
   calves: ["calves"],
@@ -145,7 +145,7 @@ const SLUG_TO_MUSCLE: Record<string, string[]> = {
   forearm: ["forearms"],
   gluteal: ["glutes"],
   hamstring: ["hamstrings"],
-  obliques: ["core"],
+  obliques: ["obliques"],
   quadriceps: ["quads"],
   trapezius: ["traps"],
   triceps: ["triceps"],
@@ -173,7 +173,7 @@ const BADGE_COLORS: Record<string, string> = {
   glutes: "bg-orange-500/20 text-orange-400",
   calves: "bg-cyan-500/20 text-cyan-400",
   abs: "bg-indigo-500/20 text-indigo-400",
-  core: "bg-indigo-500/20 text-indigo-400",
+  obliques: "bg-violet-500/20 text-violet-400",
   lats: "bg-blue-500/20 text-blue-400",
   traps: "bg-amber-500/20 text-amber-400",
   forearms: "bg-lime-500/20 text-lime-400",
