@@ -30,12 +30,12 @@ interface RecentExercise {
 const MUSCLE_TABS = [
   { label: "Recent", filter: null },
   { label: "All", filter: null },
-  { label: "Chest", filter: ["chest"] },
-  { label: "Back", filter: ["back", "lats", "traps"] },
-  { label: "Shoulders", filter: ["shoulders"] },
   { label: "Arms", filter: ["biceps", "triceps", "forearms"] },
-  { label: "Legs", filter: ["quads", "hamstrings", "glutes", "calves"] },
+  { label: "Back", filter: ["back", "lats", "traps"] },
+  { label: "Chest", filter: ["chest"] },
   { label: "Core", filter: ["abs", "obliques"] },
+  { label: "Legs", filter: ["quads", "hamstrings", "glutes", "calves"] },
+  { label: "Shoulders", filter: ["shoulders"] },
 ];
 
 export default function QuickLogPage() {
