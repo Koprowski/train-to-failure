@@ -143,7 +143,7 @@ const SLUG_TO_MUSCLE: Record<string, string[]> = {
   chest: ["chest"],
   deltoids: ["shoulders"],
   forearm: ["forearms"],
-  gluteal: ["glutes"],
+  gluteal: ["glutes", "abductors"],
   hamstring: ["hamstrings"],
   obliques: ["obliques"],
   quadriceps: ["quads"],
