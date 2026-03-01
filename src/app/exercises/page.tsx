@@ -461,9 +461,8 @@ export default function ExercisesPage() {
               className={`relative p-2 rounded-lg transition-colors ${muscleFilter.length > 0 ? "text-emerald-400 bg-emerald-500/10" : "text-gray-400 hover:text-white"}`}
               title={muscleFilter.length > 0 ? `Muscles: ${muscleFilter.join(", ")}` : "Filter by muscle group"}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                <path d="M5 17c1-1 2-3 2-5V9c0-2 1-4 3-5 1.5-.8 3-.5 4 .5s1.5 2.5 1 4c2-.5 3.5.5 4 2s0 3.5-1.5 4.5" />
-                <path d="M18.5 15c-1 1-2.5 2-5 2H11c-2 0-3.5-.5-5-2" />
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M3 18.5V14a2 2 0 0 1 2-2h1.5a.5.5 0 0 0 .5-.5V11a3 3 0 0 1 3-3h.5a2.5 2.5 0 0 0 2.5-2.5V5a2 2 0 0 1 2-2c1.1 0 2 .9 2 2v1c0 .83.67 1.5 1.5 1.5S20 6.83 20 6V5.5a1.5 1.5 0 0 1 3 0V10a6 6 0 0 1-6 6h-3l-4 4H5a2 2 0 0 1-2-1.5z" />
               </svg>
               {muscleFilter.length > 0 && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{muscleFilter.length}</span>
@@ -606,7 +605,14 @@ export default function ExercisesPage() {
       {showMusclePicker && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowMusclePicker(false)}>
           <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-white mb-4">Muscle Groups</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Muscle Groups</h3>
+              <button onClick={() => setShowMusclePicker(false)} className="text-gray-400 hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               {MUSCLE_GROUPS.map((mg) => {
                 const selected = muscleDraft.includes(mg);
@@ -651,7 +657,14 @@ export default function ExercisesPage() {
       {showEquipmentPicker && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowEquipmentPicker(false)}>
           <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-white mb-4">Equipment</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Equipment</h3>
+              <button onClick={() => setShowEquipmentPicker(false)} className="text-gray-400 hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               {EQUIPMENT.map((eq) => {
                 const selected = equipmentDraft.includes(eq);
