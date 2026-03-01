@@ -427,7 +427,7 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
           <textarea
             value={editNotes}
             onChange={(e) => setEditNotes(e.target.value)}
-            rows={2}
+            rows={1}
             placeholder="Add notes..."
             className="w-full bg-transparent border-none outline-none text-sm text-gray-400 focus:text-white resize-none p-0 placeholder-gray-600"
           />
