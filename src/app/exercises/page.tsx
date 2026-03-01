@@ -408,22 +408,45 @@ export default function ExercisesPage() {
 
       {/* Sticky toolbar - stays fixed below navbar on scroll */}
       <div className="sticky top-14 z-30 bg-black/90 backdrop-blur-sm -mx-4 px-4 py-2 lg:static lg:mx-0 lg:px-0 lg:py-0 lg:bg-transparent lg:backdrop-blur-none">
-        <div className="flex items-center gap-2">
-          {/* Front/Back centered */}
-          <button
-            onClick={() => { if (bodySide !== "front") flipBody(true); }}
-            className={`px-3 py-1 text-xs rounded-lg transition-colors ${bodySide === "front" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
-          >
-            Front
-          </button>
-          <button
-            onClick={() => { if (bodySide !== "back") flipBody(true); }}
-            className={`px-3 py-1 text-xs rounded-lg transition-colors ${bodySide === "back" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
-          >
-            Back
-          </button>
-          <div className="flex items-center gap-1 ml-auto">
-            {/* Search icon */}
+        <div className="flex items-center">
+          {/* Left: scroll arrows */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              className="p-2 rounded-lg text-gray-400 hover:text-white transition-colors"
+              title="Scroll to top"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+              </svg>
+            </button>
+            <button
+              onClick={() => bottomRef.current?.scrollIntoView({ behavior: "smooth" })}
+              className="p-2 rounded-lg text-gray-400 hover:text-white transition-colors"
+              title="Scroll to bottom"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </div>
+          {/* Center: Front/Back */}
+          <div className="flex-1 flex items-center justify-center gap-2">
+            <button
+              onClick={() => { if (bodySide !== "front") flipBody(true); }}
+              className={`px-3 py-1 text-xs rounded-lg transition-colors ${bodySide === "front" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+            >
+              Front
+            </button>
+            <button
+              onClick={() => { if (bodySide !== "back") flipBody(true); }}
+              className={`px-3 py-1 text-xs rounded-lg transition-colors ${bodySide === "back" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+            >
+              Back
+            </button>
+          </div>
+          {/* Right: search, muscle, equipment icons */}
+          <div className="flex items-center gap-1">
             <button
               onClick={() => setShowSearch(true)}
               className="p-2 rounded-lg text-gray-400 hover:text-white transition-colors"
@@ -433,7 +456,6 @@ export default function ExercisesPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </button>
-            {/* Muscle group filter - flexed arm icon */}
             <button
               onClick={() => { setMuscleDraft([...muscleFilter]); setShowMusclePicker(true); }}
               className={`relative p-2 rounded-lg transition-colors ${muscleFilter.length > 0 ? "text-emerald-400 bg-emerald-500/10" : "text-gray-400 hover:text-white"}`}
@@ -447,7 +469,6 @@ export default function ExercisesPage() {
                 <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{muscleFilter.length}</span>
               )}
             </button>
-            {/* Equipment filter */}
             <button
               onClick={() => { setEquipmentDraft([...equipmentFilter]); setShowEquipmentPicker(true); }}
               className={`relative p-2 rounded-lg transition-colors ${equipmentFilter.length > 0 ? "text-emerald-400 bg-emerald-500/10" : "text-gray-400 hover:text-white"}`}
@@ -459,26 +480,6 @@ export default function ExercisesPage() {
               {equipmentFilter.length > 0 && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{equipmentFilter.length}</span>
               )}
-            </button>
-            {/* Scroll to top */}
-            <button
-              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-              className="p-2 rounded-lg text-gray-400 hover:text-white transition-colors"
-              title="Scroll to top"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-              </svg>
-            </button>
-            {/* Scroll to bottom */}
-            <button
-              onClick={() => bottomRef.current?.scrollIntoView({ behavior: "smooth" })}
-              className="p-2 rounded-lg text-gray-400 hover:text-white transition-colors"
-              title="Scroll to bottom"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
             </button>
           </div>
         </div>
