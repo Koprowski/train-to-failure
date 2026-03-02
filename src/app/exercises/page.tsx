@@ -425,9 +425,9 @@ export default function ExercisesPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div className="space-y-4">
+    <div>
       {/* Title row with + New right-justified */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">Exercise Library</h1>
         <button
           onClick={() => setShowModal(true)}
