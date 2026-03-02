@@ -622,19 +622,21 @@ export default function ExercisesPage() {
                         <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">Custom</span>
                       )}
                     </div>
-                    <div className="flex flex-wrap gap-1.5 mt-3">
-                      {ex.muscleGroups.split(",").map((mg) => mg.trim()).filter(Boolean).map((mg) => (
-                        <span key={mg} className={`text-xs px-2 py-0.5 rounded-full ${getBadgeColor(mg)}`}>
-                          {mg}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {ex.equipment.split(",").map((eq) => eq.trim()).filter(Boolean).map((eq) => (
-                        <span key={eq} className="text-xs px-2 py-0.5 rounded-full bg-gray-700/50 text-gray-400">
-                          {eq}
-                        </span>
-                      ))}
+                    <div className="flex items-start justify-between gap-2 mt-3">
+                      <div className="flex flex-wrap gap-1.5">
+                        {ex.muscleGroups.split(",").map((mg) => mg.trim()).filter(Boolean).map((mg) => (
+                          <span key={mg} className={`text-xs px-2 py-0.5 rounded-full ${getBadgeColor(mg)}`}>
+                            {mg}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 justify-end shrink-0">
+                        {ex.equipment.split(",").map((eq) => eq.trim()).filter(Boolean).map((eq) => (
+                          <span key={eq} className="text-xs px-2 py-0.5 rounded-full bg-gray-700/50 text-gray-400">
+                            {eq}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                     <p className="text-xs text-gray-500 mt-3 capitalize">{ex.type.replace("_", " ")}</p>
                   </div>
