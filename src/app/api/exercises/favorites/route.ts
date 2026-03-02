@@ -7,12 +7,17 @@ export async function GET() {
   const { error, userId } = await requireAuth();
   if (error) return error;
 
-  const favorites = await prisma.favoriteExercise.findMany({
-    where: { userId: userId! },
-    select: { exerciseId: true },
-  });
+  try {
+    const favorites = await prisma.favoriteExercise.findMany({
+      where: { userId: userId! },
+      select: { exerciseId: true },
+    });
 
-  return NextResponse.json(favorites.map((f: { exerciseId: string }) => f.exerciseId));
+    return NextResponse.json(favorites.map((f: { exerciseId: string }) => f.exerciseId));
+  } catch {
+    // Table may not exist yet if migration hasn't been applied
+    return NextResponse.json([]);
+  }
 }
 
 // POST /api/exercises/favorites - toggle favorite for an exercise
@@ -25,17 +30,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "exerciseId required" }, { status: 400 });
   }
 
-  const existing = await prisma.favoriteExercise.findUnique({
-    where: { userId_exerciseId: { userId: userId!, exerciseId } },
-  });
-
-  if (existing) {
-    await prisma.favoriteExercise.delete({ where: { id: existing.id } });
-    return NextResponse.json({ favorited: false });
-  } else {
-    await prisma.favoriteExercise.create({
-      data: { userId: userId!, exerciseId },
+  try {
+    const existing = await prisma.favoriteExercise.findUnique({
+      where: { userId_exerciseId: { userId: userId!, exerciseId } },
     });
-    return NextResponse.json({ favorited: true });
+
+    if (existing) {
+      await prisma.favoriteExercise.delete({ where: { id: existing.id } });
+      return NextResponse.json({ favorited: false });
+    } else {
+      await prisma.favoriteExercise.create({
+        data: { userId: userId!, exerciseId },
+      });
+      return NextResponse.json({ favorited: true });
+    }
+  } catch {
+    // Table may not exist yet if migration hasn't been applied
+    return NextResponse.json({ error: "Favorites not available yet" }, { status: 503 });
   }
 }
