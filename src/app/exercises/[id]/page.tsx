@@ -482,9 +482,16 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
 
       {/* Edit Modal */}
       {editing && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-semibold mb-4">Edit Exercise</h2>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setEditing(false)}>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Edit Exercise</h2>
+              <button onClick={() => setEditing(false)} className="text-gray-400 hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm text-gray-400 mb-1">Name</label>
@@ -533,7 +540,7 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
                 <textarea
                   value={editForm.instructions}
                   onChange={(e) => setEditForm({ ...editForm, instructions: e.target.value })}
-                  rows={4}
+                  rows={2}
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 resize-none"
                 />
               </div>
