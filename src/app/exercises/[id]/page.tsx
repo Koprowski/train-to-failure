@@ -5,6 +5,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
+const MUSCLE_GROUPS = [
+  "abs", "abductors", "adductors", "back", "biceps", "calves",
+  "chest", "forearms", "glutes", "hamstrings", "hip flexors",
+  "lats", "obliques", "quads", "shoulders", "traps", "triceps",
+];
+
+const EQUIPMENT = [
+  "barbell", "bench", "bodyweight", "cable", "dumbbell",
+  "ez bar", "kettlebell", "machine", "pull-up bar",
+  "resistance band", "smith machine", "trap bar",
+];
+
 interface Exercise {
   id: string;
   name: string;
@@ -137,6 +149,10 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
     instructions: "",
     videoUrl: "",
   });
+  const [showMusclePickerEdit, setShowMusclePickerEdit] = useState(false);
+  const [muscleDraftEdit, setMuscleDraftEdit] = useState<string[]>([]);
+  const [showEquipmentPickerEdit, setShowEquipmentPickerEdit] = useState(false);
+  const [equipmentDraftEdit, setEquipmentDraftEdit] = useState<string[]>([]);
 
   useEffect(() => {
     Promise.all([
@@ -504,23 +520,29 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-1">Muscle Groups</label>
-                <input
-                  type="text"
-                  value={editForm.muscleGroups}
-                  onChange={(e) => setEditForm({ ...editForm, muscleGroups: e.target.value })}
-                  placeholder="e.g. chest, triceps"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
-                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMuscleDraftEdit(editForm.muscleGroups.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean));
+                    setShowMusclePickerEdit(true);
+                  }}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-left text-white focus:outline-none focus:border-emerald-500"
+                >
+                  {editForm.muscleGroups || <span className="text-gray-500">Select muscle groups...</span>}
+                </button>
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-1">Equipment</label>
-                <input
-                  type="text"
-                  value={editForm.equipment}
-                  onChange={(e) => setEditForm({ ...editForm, equipment: e.target.value })}
-                  placeholder="e.g. barbell, bench"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
-                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEquipmentDraftEdit(editForm.equipment.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean));
+                    setShowEquipmentPickerEdit(true);
+                  }}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-left text-white focus:outline-none focus:border-emerald-500"
+                >
+                  {editForm.equipment || <span className="text-gray-500">Select equipment...</span>}
+                </button>
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-1">Type</label>
@@ -568,6 +590,116 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
                 className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors disabled:opacity-50"
               >
                 {saving ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Muscle Group Picker (stacked above edit modal) */}
+      {showMusclePickerEdit && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60" onClick={() => setShowMusclePickerEdit(false)}>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Muscle Groups</h3>
+              <button onClick={() => setShowMusclePickerEdit(false)} className="text-gray-400 hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {MUSCLE_GROUPS.map((mg) => {
+                const selected = muscleDraftEdit.includes(mg);
+                return (
+                  <button
+                    key={mg}
+                    onClick={() =>
+                      setMuscleDraftEdit((prev) =>
+                        selected ? prev.filter((m) => m !== mg) : [...prev, mg]
+                      )
+                    }
+                    className={`px-3 py-2 rounded-lg text-sm text-left transition-colors ${
+                      selected
+                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500"
+                        : "bg-gray-800 text-gray-300 border border-gray-700 hover:border-gray-600"
+                    }`}
+                  >
+                    {mg.charAt(0).toUpperCase() + mg.slice(1)}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button
+                onClick={() => setMuscleDraftEdit([])}
+                className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+              >
+                Clear
+              </button>
+              <button
+                onClick={() => {
+                  setEditForm((prev) => ({ ...prev, muscleGroups: muscleDraftEdit.join(",") }));
+                  setShowMusclePickerEdit(false);
+                }}
+                className="flex-1 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-semibold transition-colors"
+              >
+                Apply{muscleDraftEdit.length > 0 ? ` (${muscleDraftEdit.length})` : ""}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Equipment Picker (stacked above edit modal) */}
+      {showEquipmentPickerEdit && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60" onClick={() => setShowEquipmentPickerEdit(false)}>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Equipment</h3>
+              <button onClick={() => setShowEquipmentPickerEdit(false)} className="text-gray-400 hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {EQUIPMENT.map((eq) => {
+                const selected = equipmentDraftEdit.includes(eq);
+                return (
+                  <button
+                    key={eq}
+                    onClick={() =>
+                      setEquipmentDraftEdit((prev) =>
+                        selected ? prev.filter((e) => e !== eq) : [...prev, eq]
+                      )
+                    }
+                    className={`px-3 py-2 rounded-lg text-sm text-left transition-colors ${
+                      selected
+                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500"
+                        : "bg-gray-800 text-gray-300 border border-gray-700 hover:border-gray-600"
+                    }`}
+                  >
+                    {eq.charAt(0).toUpperCase() + eq.slice(1)}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button
+                onClick={() => setEquipmentDraftEdit([])}
+                className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+              >
+                Clear
+              </button>
+              <button
+                onClick={() => {
+                  setEditForm((prev) => ({ ...prev, equipment: equipmentDraftEdit.join(",") }));
+                  setShowEquipmentPickerEdit(false);
+                }}
+                className="flex-1 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-semibold transition-colors"
+              >
+                Apply{equipmentDraftEdit.length > 0 ? ` (${equipmentDraftEdit.length})` : ""}
               </button>
             </div>
           </div>

@@ -29,7 +29,7 @@ export async function POST() {
     where: { isCustom: false },
     select: { name: true },
   });
-  const existingNames = new Set(existing.map((e) => e.name));
+  const existingNames = new Set(existing.map((e: { name: string }) => e.name));
 
   // Insert missing exercises
   const added: string[] = [];

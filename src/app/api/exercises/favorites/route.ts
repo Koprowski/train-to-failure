@@ -12,7 +12,7 @@ export async function GET() {
     select: { exerciseId: true },
   });
 
-  return NextResponse.json(favorites.map((f) => f.exerciseId));
+  return NextResponse.json(favorites.map((f: { exerciseId: string }) => f.exerciseId));
 }
 
 // POST /api/exercises/favorites - toggle favorite for an exercise
