@@ -370,7 +370,7 @@ export default function ExercisesPage() {
   // Fetch favorites on mount
   useEffect(() => {
     fetch("/api/exercises/favorites")
-      .then((r) => r.json())
+      .then((r) => r.ok ? r.json() : [])
       .then((ids) => { if (Array.isArray(ids)) setFavoriteIds(new Set(ids)); })
       .catch(() => {});
   }, []);

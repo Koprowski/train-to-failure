@@ -41,15 +41,15 @@ export default function QuickLogPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/exercises/recent?days=14").then((r) => r.json()),
-      fetch("/api/exercises").then((r) => r.json()),
-      fetch("/api/exercises/favorites").then((r) => r.json()),
+      fetch("/api/exercises/recent?days=14").then((r) => r.json()).catch(() => []),
+      fetch("/api/exercises").then((r) => r.json()).catch(() => []),
+      fetch("/api/exercises/favorites").then((r) => r.ok ? r.json() : []).catch(() => []),
     ]).then(([recent, all, favIds]) => {
       setRecentExercises(Array.isArray(recent) ? recent : []);
       setAllExercises(Array.isArray(all) ? all : []);
       if (Array.isArray(favIds)) setFavoriteIds(new Set(favIds));
       setLoading(false);
-    }).catch(() => setLoading(false));
+    });
   }, []);
 
   const startQuickLog = async (exercise: Exercise) => {
