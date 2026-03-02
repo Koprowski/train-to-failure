@@ -51,6 +51,7 @@ model User {
   workoutTemplates WorkoutTemplate[]
   bodyMetrics      BodyMetric[]
   exercises        Exercise[]        @relation("CustomExercises")
+  favoriteExercises FavoriteExercise[]
 }
 
 model VerificationToken {
@@ -80,6 +81,7 @@ model Exercise {
   workoutSets       WorkoutSet[]
   workoutExercises  WorkoutExercise[]
   templateExercises TemplateExercise[]
+  favoritedBy       FavoriteExercise[]
 
   @@index([userId])
 }
@@ -203,6 +205,19 @@ model BodyMetric {
 
   createdAt DateTime @default(now())
 
+  @@index([userId])
+}
+
+model FavoriteExercise {
+  id         String   @id @default(uuid())
+  userId     String
+  exerciseId String
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, exerciseId])
   @@index([userId])
 }
 

@@ -27,12 +27,13 @@ interface RecentExercise {
   }[];
 }
 
-const PINNED_TABS = ["Recent", "All"];
+const PINNED_TABS = ["Recent", "Favorites", "All"];
 
 export default function QuickLogPage() {
   const router = useRouter();
   const [recentExercises, setRecentExercises] = useState<RecentExercise[]>([]);
   const [allExercises, setAllExercises] = useState<Exercise[]>([]);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("Recent");
   const [loading, setLoading] = useState(true);
@@ -42,9 +43,11 @@ export default function QuickLogPage() {
     Promise.all([
       fetch("/api/exercises/recent?days=14").then((r) => r.json()),
       fetch("/api/exercises").then((r) => r.json()),
-    ]).then(([recent, all]) => {
+      fetch("/api/exercises/favorites").then((r) => r.json()),
+    ]).then(([recent, all, favIds]) => {
       setRecentExercises(Array.isArray(recent) ? recent : []);
       setAllExercises(Array.isArray(all) ? all : []);
+      if (Array.isArray(favIds)) setFavoriteIds(new Set(favIds));
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
@@ -246,8 +249,46 @@ export default function QuickLogPage() {
             </div>
           )}
 
+          {/* Favorites tab */}
+          {activeTab === "Favorites" && (() => {
+            const favorites = allExercises.filter((ex) => favoriteIds.has(ex.id));
+            return favorites.length === 0 ? (
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
+                <p className="text-gray-500 text-sm">No favorites yet. Tap the heart icon on exercises in the library to add them.</p>
+              </div>
+            ) : (
+              <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden divide-y divide-gray-800">
+                {favorites.map((ex) => (
+                  <button
+                    key={ex.id}
+                    onClick={() => startQuickLog(ex)}
+                    disabled={starting !== null}
+                    className="w-full text-left px-4 py-3 hover:bg-gray-800/50 transition-colors flex items-center gap-3 disabled:opacity-50"
+                  >
+                    {ex.imageUrl ? (
+                      <img src={ex.imageUrl} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
+                    ) : (
+                      <div className="w-10 h-10 rounded bg-gray-700 shrink-0 flex items-center justify-center text-gray-500">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-white">{ex.name}</p>
+                      <p className="text-xs text-gray-400 capitalize">{ex.muscleGroups}</p>
+                    </div>
+                    {starting === ex.id && (
+                      <div className="ml-auto animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-500" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
+
           {/* All / Muscle group tabs */}
-          {activeTab !== "Recent" && (() => {
+          {activeTab !== "Recent" && activeTab !== "Favorites" && (() => {
             const filterGroup = activeTab === "All" ? null : activeTab.toLowerCase();
             const filtered = filterGroup
               ? allExercises.filter((ex) =>

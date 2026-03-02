@@ -194,6 +194,7 @@ export default function ExercisesPage() {
   const [showEquipmentPicker, setShowEquipmentPicker] = useState(false);
   const [equipmentDraft, setEquipmentDraft] = useState<string[]>([]);
   const [bodySide, setBodySide] = useState<"front" | "back">("front");
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -365,6 +366,39 @@ export default function ExercisesPage() {
     const timer = setTimeout(fetchExercises, 300);
     return () => clearTimeout(timer);
   }, [fetchExercises]);
+
+  // Fetch favorites on mount
+  useEffect(() => {
+    fetch("/api/exercises/favorites")
+      .then((r) => r.json())
+      .then((ids) => { if (Array.isArray(ids)) setFavoriteIds(new Set(ids)); })
+      .catch(() => {});
+  }, []);
+
+  const toggleFavorite = async (exerciseId: string) => {
+    // Optimistic update
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(exerciseId)) next.delete(exerciseId);
+      else next.add(exerciseId);
+      return next;
+    });
+    try {
+      await fetch("/api/exercises/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ exerciseId }),
+      });
+    } catch {
+      // Revert on failure
+      setFavoriteIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(exerciseId)) next.delete(exerciseId);
+        else next.add(exerciseId);
+        return next;
+      });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -558,8 +592,17 @@ export default function ExercisesPage() {
                 <Link
                   key={ex.id}
                   href={`/exercises/${ex.id}`}
-                  className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden hover:border-gray-700 transition-colors group"
+                  className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden hover:border-gray-700 transition-colors group relative"
                 >
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(ex.id); }}
+                    className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-black/40 hover:bg-black/60 transition-colors"
+                    aria-label={favoriteIds.has(ex.id) ? "Remove from favorites" : "Add to favorites"}
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill={favoriteIds.has(ex.id) ? "#ef4444" : "none"} stroke={favoriteIds.has(ex.id) ? "#ef4444" : "currentColor"} strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+                    </svg>
+                  </button>
                   {ex.imageUrl && (
                     <div className="bg-white flex items-center justify-center">
                       <img
