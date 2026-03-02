@@ -323,5 +323,10 @@
     "gifFile": "as_leg-curl-machine.gif",
     "imageUrl": "/gifs/as_leg-curl-machine.gif",
     "muscleGroups": "hamstrings"
+  },
+  "Kettlebell - One Arm Clean + Jerk": {
+    "gifFile": "by_kettlebell-one-arm-clean-and-jerk.gif",
+    "imageUrl": "/gifs/by_kettlebell-one-arm-clean-and-jerk.gif",
+    "muscleGroups": "shoulders,glutes,quads,back"
   }
 }

@@ -73,4 +73,5 @@ export const SEED_EXERCISES: SeedExercise[] = [
   { name: "Good Morning", muscleGroups: "hamstrings,back,glutes", equipment: "barbell", type: "weight_reps" },
   { name: "Farmer's Walk", muscleGroups: "traps,forearms,abs", equipment: "dumbbell", type: "time" },
   { name: "Incline Barbell Bench Press", muscleGroups: "chest,shoulders,triceps", equipment: "barbell,bench", type: "weight_reps" },
+  { name: "Kettlebell - One Arm Clean + Jerk", muscleGroups: "shoulders,glutes,quads,back", equipment: "kettlebell", type: "weight_reps" },
 ];

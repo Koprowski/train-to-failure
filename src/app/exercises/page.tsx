@@ -523,7 +523,7 @@ export default function ExercisesPage() {
       {/* Body Map + Grid */}
       <div className="flex flex-col lg:flex-row gap-4">
         {/* Body Map */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex flex-col items-center shrink-0">
+        <div className="bg-gray-900 border border-gray-800 rounded-xl px-4 flex flex-col items-center shrink-0">
           <div
             className="cursor-pointer relative"
             onTouchStart={handleTouchStart}
