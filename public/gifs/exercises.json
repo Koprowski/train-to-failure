@@ -328,5 +328,10 @@
     "gifFile": "by_kettlebell-one-arm-clean-and-jerk.gif",
     "imageUrl": "/gifs/by_kettlebell-one-arm-clean-and-jerk.gif",
     "muscleGroups": "shoulders,glutes,quads,back"
+  },
+  "Back Extension": {
+    "gifFile": "weighted-back-extension.gif",
+    "imageUrl": "/gifs/weighted-back-extension.gif",
+    "muscleGroups": "back,glutes,hamstrings"
   }
 }
