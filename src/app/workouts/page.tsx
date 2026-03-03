@@ -29,6 +29,8 @@ function SwipeableCard({
   formatDuration,
   formatDate,
   formatTime,
+  favoriteIds,
+  toggleFavorite,
 }: {
   workout: Workout;
   onDelete: () => void;
@@ -36,6 +38,8 @@ function SwipeableCard({
   formatDuration: (s: number | null) => string;
   formatDate: (d: string) => string;
   formatTime: (d: string) => string;
+  favoriteIds: Set<string>;
+  toggleFavorite: (exerciseId: string) => void;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const dragState = useRef<{
@@ -48,7 +52,17 @@ function SwipeableCard({
   const [transitioning, setTransitioning] = useState(false);
 
   const isActive = !workout.finishedAt;
-  const uniqueExercises = [...new Set(workout.sets.map((s) => s.exercise.name))];
+  const uniqueExercises = (() => {
+    const seen = new Set<string>();
+    const result: { id: string; name: string }[] = [];
+    for (const s of workout.sets) {
+      if (!seen.has(s.exerciseId)) {
+        seen.add(s.exerciseId);
+        result.push({ id: s.exerciseId, name: s.exercise.name });
+      }
+    }
+    return result;
+  })();
   const totalVolume = workout.sets.reduce((sum, s) => {
     if (s.weightLbs && s.reps) return sum + s.weightLbs * s.reps;
     return sum;
@@ -189,9 +203,18 @@ function SwipeableCard({
             </div>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
-            {uniqueExercises.slice(0, 5).map((name) => (
-              <span key={name} className="text-xs px-2 py-0.5 rounded-full bg-gray-800 text-gray-400">
-                {name}
+            {uniqueExercises.slice(0, 5).map((ex) => (
+              <span key={ex.id} className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-800 text-gray-400">
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(ex.id); }}
+                  className="shrink-0"
+                  aria-label={favoriteIds.has(ex.id) ? "Remove from favorites" : "Add to favorites"}
+                >
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill={favoriteIds.has(ex.id) ? "#ef4444" : "none"} stroke={favoriteIds.has(ex.id) ? "#ef4444" : "currentColor"} strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+                  </svg>
+                </button>
+                {ex.name}
               </span>
             ))}
             {uniqueExercises.length > 5 && (
@@ -218,16 +241,41 @@ export default function WorkoutsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [repeating, setRepeating] = useState<string | null>(null);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    fetch("/api/workouts")
-      .then((r) => r.json())
-      .then((data) => {
-        setWorkouts(Array.isArray(data) ? data : []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    Promise.all([
+      fetch("/api/workouts").then((r) => r.ok ? r.json() : []).catch(() => []),
+      fetch("/api/exercises/favorites").then((r) => r.ok ? r.json() : []).catch(() => []),
+    ]).then(([data, favIds]) => {
+      setWorkouts(Array.isArray(data) ? data : []);
+      if (Array.isArray(favIds)) setFavoriteIds(new Set(favIds));
+      setLoading(false);
+    });
   }, []);
+
+  const toggleFavorite = async (exerciseId: string) => {
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(exerciseId)) next.delete(exerciseId);
+      else next.add(exerciseId);
+      return next;
+    });
+    try {
+      await fetch("/api/exercises/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ exerciseId }),
+      });
+    } catch {
+      setFavoriteIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(exerciseId)) next.delete(exerciseId);
+        else next.add(exerciseId);
+        return next;
+      });
+    }
+  };
 
   const formatDuration = (seconds: number | null) => {
     if (!seconds) return "--";
@@ -336,6 +384,8 @@ export default function WorkoutsPage() {
               formatDuration={formatDuration}
               formatDate={formatDate}
               formatTime={formatTime}
+              favoriteIds={favoriteIds}
+              toggleFavorite={toggleFavorite}
             />
           ))}
         </div>
