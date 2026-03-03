@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 
@@ -336,6 +336,16 @@ export default function ExercisesPage() {
     }
   }, [flipBody, setRotation]);
 
+  const onBodyPartPress = useCallback((part: { slug?: string }) => {
+    if (!part.slug) return;
+    const muscles = SLUG_TO_MUSCLE[part.slug];
+    if (!muscles) return;
+    const target = muscles[0];
+    setMuscleFilter((prev) =>
+      prev.includes(target) ? prev.filter((m) => m !== target) : [...prev, target]
+    );
+  }, []);
+
   const fetchExercises = useCallback(() => {
     const params = new URLSearchParams();
     if (search) params.set("search", search);
@@ -366,6 +376,23 @@ export default function ExercisesPage() {
     const timer = setTimeout(fetchExercises, 300);
     return () => clearTimeout(timer);
   }, [fetchExercises]);
+
+  const bodyMapElement = useMemo(() => (
+    <Body
+      side={bodySide}
+      gender="male"
+      scale={1.2}
+      border="#4b5563"
+      defaultFill="#1f2937"
+      colors={["#10b981", "#34d399"]}
+      data={
+        muscleFilter.length > 0
+          ? muscleFilter.flatMap((m) => (MUSCLE_TO_SLUGS[m] || []).map((slug) => ({ slug: slug as never, intensity: 2 })))
+          : []
+      }
+      onBodyPartPress={onBodyPartPress}
+    />
+  ), [bodySide, muscleFilter, onBodyPartPress]);
 
   // Fetch favorites on mount
   useEffect(() => {
@@ -566,28 +593,7 @@ export default function ExercisesPage() {
               ref={flipContainerRef}
               style={{ transformStyle: "preserve-3d", backfaceVisibility: "hidden" }}
             >
-            <Body
-              side={bodySide}
-              gender="male"
-              scale={1.2}
-              border="#4b5563"
-              defaultFill="#1f2937"
-              colors={["#10b981", "#34d399"]}
-              data={
-                muscleFilter.length > 0
-                  ? muscleFilter.flatMap((m) => (MUSCLE_TO_SLUGS[m] || []).map((slug) => ({ slug: slug as never, intensity: 2 })))
-                  : []
-              }
-              onBodyPartPress={(part: { slug?: string }) => {
-                if (!part.slug) return;
-                const muscles = SLUG_TO_MUSCLE[part.slug];
-                if (!muscles) return;
-                const target = muscles[0];
-                setMuscleFilter((prev) =>
-                  prev.includes(target) ? prev.filter((m) => m !== target) : [...prev, target]
-                );
-              }}
-            />
+            {bodyMapElement}
             </div>
           </div>
           {muscleFilter.length > 0 && (
