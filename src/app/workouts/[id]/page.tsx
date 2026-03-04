@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback, use } from "react";
+import { useEffect, useState, useCallback, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -64,7 +64,7 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
   const [editDurationM, setEditDurationM] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [setEdits, setSetEdits] = useState<Record<string, SetEdits>>({});
-  const dateInputRef = useRef<HTMLInputElement>(null);
+
 
   // Track the "clean" state to detect changes
   const [cleanState, setCleanState] = useState<{ name: string; notes: string; date: string; durationH: string; durationM: string } | null>(null);
@@ -343,25 +343,11 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
               placeholder="Workout name"
             />
             <button
-              onClick={() => {
-                setShowDatePicker(true);
-                setTimeout(() => dateInputRef.current?.showPicker?.(), 50);
-              }}
+              onClick={() => setShowDatePicker(true)}
               className="text-gray-400 mt-1 whitespace-nowrap hover:text-emerald-400 transition-colors text-left"
             >
               {formatDateTime(editDate || workout.startedAt)}
             </button>
-            {showDatePicker && (
-              <input
-                ref={dateInputRef}
-                type="datetime-local"
-                value={editDate}
-                onChange={(e) => { setEditDate(e.target.value); setShowDatePicker(false); }}
-                onBlur={() => setShowDatePicker(false)}
-                className="block mt-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-emerald-500 [color-scheme:dark]"
-                autoFocus
-              />
-            )}
           </div>
           <div className="flex items-center gap-1 shrink-0 ml-4">
             {/* Save button -- only visible when changes exist */}
@@ -631,6 +617,30 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
             </svg>
             {saving ? "Saving..." : "Save Changes"}
           </button>
+        </div>
+      )}
+
+      {/* Date edit modal */}
+      {showDatePicker && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-sm">
+            <h2 className="text-lg font-semibold mb-4">Edit Workout Date</h2>
+            <input
+              type="datetime-local"
+              value={editDate}
+              onChange={(e) => setEditDate(e.target.value)}
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 [color-scheme:dark]"
+              autoFocus
+            />
+            <div className="flex justify-end mt-4">
+              <button
+                onClick={() => setShowDatePicker(false)}
+                className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors"
+              >
+                Done
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
