@@ -683,6 +683,7 @@ function WorkoutContent() {
           finishedAt: new Date().toISOString(),
           duration: totalDuration,
           name: workoutName,
+          ...(customDate ? { startedAt: new Date(customDate).toISOString() } : {}),
         }),
       });
 
