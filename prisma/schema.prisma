@@ -49,7 +49,6 @@ model User {
   workouts         Workout[]
   workoutSets      WorkoutSet[]
   workoutTemplates WorkoutTemplate[]
-  bodyMetrics      BodyMetric[]
   exercises        Exercise[]        @relation("CustomExercises")
   favoriteExercises FavoriteExercise[]
 }
@@ -191,21 +190,6 @@ model TemplateExercise {
   exercise Exercise        @relation(fields: [exerciseId], references: [id])
 
   @@index([templateId])
-}
-
-model BodyMetric {
-  id         String   @id @default(uuid())
-  userId     String
-  date       DateTime
-  weightLbs  Float?
-  bodyFatPct Float?
-  notes      String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-
-  @@index([userId])
 }
 
 model FavoriteExercise {
