@@ -77,6 +77,30 @@ export default function QuickLogPage() {
     }
   };
 
+  const toggleFavorite = async (e: React.MouseEvent, exerciseId: string) => {
+    e.stopPropagation();
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(exerciseId)) next.delete(exerciseId);
+      else next.add(exerciseId);
+      return next;
+    });
+    try {
+      await fetch("/api/exercises/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ exerciseId }),
+      });
+    } catch {
+      setFavoriteIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(exerciseId)) next.delete(exerciseId);
+        else next.add(exerciseId);
+        return next;
+      });
+    }
+  };
+
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
     const now = new Date();
@@ -157,29 +181,35 @@ export default function QuickLogPage() {
           ) : (
             <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden divide-y divide-gray-800">
               {searchResults.slice(0, 10).map((ex) => (
-                <button
-                  key={ex.id}
-                  onClick={() => startQuickLog(ex)}
-                  disabled={starting !== null}
-                  className="w-full text-left px-4 py-3 hover:bg-gray-800/50 transition-colors flex items-center gap-3 disabled:opacity-50"
-                >
-                  {ex.imageUrl ? (
-                    <img src={ex.imageUrl} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
-                  ) : (
-                    <div className="w-10 h-10 rounded bg-gray-700 shrink-0 flex items-center justify-center text-gray-500">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
+                <div key={ex.id} className="flex items-center hover:bg-gray-800/50 transition-colors">
+                  <button
+                    onClick={() => startQuickLog(ex)}
+                    disabled={starting !== null}
+                    className="flex-1 text-left px-4 py-3 flex items-center gap-3 disabled:opacity-50"
+                  >
+                    {ex.imageUrl ? (
+                      <img src={ex.imageUrl} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
+                    ) : (
+                      <div className="w-10 h-10 rounded bg-gray-700 shrink-0 flex items-center justify-center text-gray-500">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-medium text-white">{ex.name}</p>
+                      <p className="text-xs text-gray-400 capitalize">{ex.muscleGroups}</p>
                     </div>
-                  )}
-                  <div>
-                    <p className="font-medium text-white">{ex.name}</p>
-                    <p className="text-xs text-gray-400 capitalize">{ex.muscleGroups}</p>
-                  </div>
-                  {starting === ex.id && (
-                    <div className="ml-auto animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-500" />
-                  )}
-                </button>
+                    {starting === ex.id && (
+                      <div className="ml-auto animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-500" />
+                    )}
+                  </button>
+                  <button onClick={(e) => toggleFavorite(e, ex.id)} className="px-3 py-3 shrink-0">
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill={favoriteIds.has(ex.id) ? "#ef4444" : "none"} stroke={favoriteIds.has(ex.id) ? "#ef4444" : "#6b7280"} strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+                    </svg>
+                  </button>
+                </div>
               ))}
             </div>
           )}
@@ -215,13 +245,12 @@ export default function QuickLogPage() {
                 </div>
               ) : (
                 recentExercises.map((recent) => (
-                  <button
-                    key={recent.exercise.id}
-                    onClick={() => startQuickLog(recent.exercise)}
-                    disabled={starting !== null}
-                    className="w-full text-left bg-gray-900 border border-gray-800 rounded-xl p-4 hover:bg-gray-800/50 transition-colors disabled:opacity-50"
-                  >
-                    <div className="flex items-center gap-3">
+                  <div key={recent.exercise.id} className="flex items-center bg-gray-900 border border-gray-800 rounded-xl hover:bg-gray-800/50 transition-colors">
+                    <button
+                      onClick={() => startQuickLog(recent.exercise)}
+                      disabled={starting !== null}
+                      className="flex-1 text-left p-4 flex items-center gap-3 disabled:opacity-50"
+                    >
                       {recent.exercise.imageUrl ? (
                         <img src={recent.exercise.imageUrl} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
                       ) : (
@@ -242,8 +271,13 @@ export default function QuickLogPage() {
                       {starting === recent.exercise.id && (
                         <div className="ml-2 animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-500" />
                       )}
-                    </div>
-                  </button>
+                    </button>
+                    <button onClick={(e) => toggleFavorite(e, recent.exercise.id)} className="px-3 py-3 shrink-0">
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill={favoriteIds.has(recent.exercise.id) ? "#ef4444" : "none"} stroke={favoriteIds.has(recent.exercise.id) ? "#ef4444" : "#6b7280"} strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+                      </svg>
+                    </button>
+                  </div>
                 ))
               )}
             </div>
@@ -259,29 +293,35 @@ export default function QuickLogPage() {
             ) : (
               <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden divide-y divide-gray-800">
                 {favorites.map((ex) => (
-                  <button
-                    key={ex.id}
-                    onClick={() => startQuickLog(ex)}
-                    disabled={starting !== null}
-                    className="w-full text-left px-4 py-3 hover:bg-gray-800/50 transition-colors flex items-center gap-3 disabled:opacity-50"
-                  >
-                    {ex.imageUrl ? (
-                      <img src={ex.imageUrl} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
-                    ) : (
-                      <div className="w-10 h-10 rounded bg-gray-700 shrink-0 flex items-center justify-center text-gray-500">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
+                  <div key={ex.id} className="flex items-center hover:bg-gray-800/50 transition-colors">
+                    <button
+                      onClick={() => startQuickLog(ex)}
+                      disabled={starting !== null}
+                      className="flex-1 text-left px-4 py-3 flex items-center gap-3 disabled:opacity-50"
+                    >
+                      {ex.imageUrl ? (
+                        <img src={ex.imageUrl} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
+                      ) : (
+                        <div className="w-10 h-10 rounded bg-gray-700 shrink-0 flex items-center justify-center text-gray-500">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-white">{ex.name}</p>
+                        <p className="text-xs text-gray-400 capitalize">{ex.muscleGroups}</p>
                       </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-white">{ex.name}</p>
-                      <p className="text-xs text-gray-400 capitalize">{ex.muscleGroups}</p>
-                    </div>
-                    {starting === ex.id && (
-                      <div className="ml-auto animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-500" />
-                    )}
-                  </button>
+                      {starting === ex.id && (
+                        <div className="ml-auto animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-500" />
+                      )}
+                    </button>
+                    <button onClick={(e) => toggleFavorite(e, ex.id)} className="px-3 py-3 shrink-0">
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill={favoriteIds.has(ex.id) ? "#ef4444" : "none"} stroke={favoriteIds.has(ex.id) ? "#ef4444" : "#6b7280"} strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+                      </svg>
+                    </button>
+                  </div>
                 ))}
               </div>
             );
@@ -302,29 +342,35 @@ export default function QuickLogPage() {
             ) : (
               <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden divide-y divide-gray-800">
                 {filtered.map((ex) => (
-                  <button
-                    key={ex.id}
-                    onClick={() => startQuickLog(ex)}
-                    disabled={starting !== null}
-                    className="w-full text-left px-4 py-3 hover:bg-gray-800/50 transition-colors flex items-center gap-3 disabled:opacity-50"
-                  >
-                    {ex.imageUrl ? (
-                      <img src={ex.imageUrl} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
-                    ) : (
-                      <div className="w-10 h-10 rounded bg-gray-700 shrink-0 flex items-center justify-center text-gray-500">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
+                  <div key={ex.id} className="flex items-center hover:bg-gray-800/50 transition-colors">
+                    <button
+                      onClick={() => startQuickLog(ex)}
+                      disabled={starting !== null}
+                      className="flex-1 text-left px-4 py-3 flex items-center gap-3 disabled:opacity-50"
+                    >
+                      {ex.imageUrl ? (
+                        <img src={ex.imageUrl} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
+                      ) : (
+                        <div className="w-10 h-10 rounded bg-gray-700 shrink-0 flex items-center justify-center text-gray-500">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-white">{ex.name}</p>
+                        <p className="text-xs text-gray-400 capitalize">{ex.muscleGroups}</p>
                       </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-white">{ex.name}</p>
-                      <p className="text-xs text-gray-400 capitalize">{ex.muscleGroups}</p>
-                    </div>
-                    {starting === ex.id && (
-                      <div className="ml-auto animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-500" />
-                    )}
-                  </button>
+                      {starting === ex.id && (
+                        <div className="ml-auto animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-500" />
+                      )}
+                    </button>
+                    <button onClick={(e) => toggleFavorite(e, ex.id)} className="px-3 py-3 shrink-0">
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill={favoriteIds.has(ex.id) ? "#ef4444" : "none"} stroke={favoriteIds.has(ex.id) ? "#ef4444" : "#6b7280"} strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+                      </svg>
+                    </button>
+                  </div>
                 ))}
               </div>
             );
