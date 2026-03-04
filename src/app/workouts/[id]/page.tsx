@@ -322,25 +322,6 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
 
   const completedSets = workout.sets.filter((s) => s.completed).length;
 
-  const setTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      warmup: "W",
-      working: "",
-      dropset: "D",
-      failure: "F",
-    };
-    return labels[type] ?? "";
-  };
-
-  const setTypeColor = (type: string) => {
-    const colors: Record<string, string> = {
-      warmup: "text-yellow-500",
-      dropset: "text-blue-500",
-      failure: "text-red-500",
-    };
-    return colors[type] ?? "";
-  };
-
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
@@ -509,11 +490,6 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
                   <tr key={set.id} className={`border-b border-gray-800/50 ${set.completed ? "" : "opacity-50"}`}>
                     <td className="py-2 px-4">
                       <span className="text-gray-300">{set.setNumber}</span>
-                      {setTypeLabel(set.setType) && (
-                        <span className={`ml-1.5 text-xs font-medium ${setTypeColor(set.setType)}`}>
-                          {setTypeLabel(set.setType)}
-                        </span>
-                      )}
                     </td>
                     <td className="py-1 px-1 text-right">
                       <input

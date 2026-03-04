@@ -1026,7 +1026,6 @@ function WorkoutContent() {
                 <thead>
                   <tr className="text-gray-400 text-xs border-b border-gray-800">
                     <th className="py-2 px-3 text-left w-10">Set</th>
-                    <th className="py-2 px-2 text-left w-24">Type</th>
                     <th className="py-2 px-2 text-right w-20">Weight</th>
                     <th className="py-2 px-2 text-right w-16">Reps</th>
                     {(block.exercise.type === "time" || block.exercise.type === "cardio") && (
@@ -1055,18 +1054,6 @@ function WorkoutContent() {
                       className={`border-b border-gray-800/50 ${set.completed ? "bg-emerald-500/5" : ""}`}
                     >
                       <td className="py-1.5 px-3 text-gray-400 font-medium">{set.setNumber}</td>
-                      <td className="py-1.5 px-2">
-                        <select
-                          value={set.setType}
-                          onChange={(e) => updateSet(blockIndex, setIndex, "setType", e.target.value)}
-                          className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-white w-full focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                        >
-                          <option value="warmup">Warmup</option>
-                          <option value="working">Working</option>
-                          <option value="dropset">Dropset</option>
-                          <option value="failure">Failure</option>
-                        </select>
-                      </td>
                       <td className="py-1.5 px-2">
                         <input
                           type="number"
