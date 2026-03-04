@@ -206,9 +206,10 @@ function SwipeableCard({
               const setCount = ex.sets.length;
               const maxWeight = Math.max(...ex.sets.map((s) => s.weightLbs ?? 0));
               const avgReps = ex.sets.reduce((sum, s) => sum + (s.reps ?? 0), 0) / (setCount || 1);
+              const hasReps = ex.sets.some((s) => s.reps);
               const summary = maxWeight > 0
                 ? `${setCount}x${Math.round(avgReps)} @ ${maxWeight} lbs`
-                : ex.sets.some((s) => s.reps) ? `${setCount} sets` : "";
+                : hasReps ? `${setCount}x${Math.round(avgReps)}` : "";
               return (
                 <div key={ex.id} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2 min-w-0">
