@@ -53,15 +53,14 @@ function SwipeableCard({
 
   const isActive = !workout.finishedAt;
   const uniqueExercises = (() => {
-    const seen = new Set<string>();
-    const result: { id: string; name: string }[] = [];
+    const map = new Map<string, { id: string; name: string; sets: { weightLbs: number | null; reps: number | null }[] }>();
     for (const s of workout.sets) {
-      if (!seen.has(s.exerciseId)) {
-        seen.add(s.exerciseId);
-        result.push({ id: s.exerciseId, name: s.exercise.name });
+      if (!map.has(s.exerciseId)) {
+        map.set(s.exerciseId, { id: s.exerciseId, name: s.exercise.name, sets: [] });
       }
+      map.get(s.exerciseId)!.sets.push({ weightLbs: s.weightLbs, reps: s.reps });
     }
-    return result;
+    return Array.from(map.values());
   })();
   const totalVolume = workout.sets.reduce((sum, s) => {
     if (s.weightLbs && s.reps) return sum + s.weightLbs * s.reps;
@@ -202,25 +201,34 @@ function SwipeableCard({
               </button>
             </div>
           </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {uniqueExercises.slice(0, 5).map((ex) => (
-              <span key={ex.id} className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-800 text-gray-400">
-                <button
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(ex.id); }}
-                  className="shrink-0"
-                  aria-label={favoriteIds.has(ex.id) ? "Remove from favorites" : "Add to favorites"}
-                >
-                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill={favoriteIds.has(ex.id) ? "#ef4444" : "none"} stroke={favoriteIds.has(ex.id) ? "#ef4444" : "currentColor"} strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
-                  </svg>
-                </button>
-                {ex.name}
-              </span>
-            ))}
+          <div className="mt-3 space-y-1.5">
+            {uniqueExercises.slice(0, 5).map((ex) => {
+              const setCount = ex.sets.length;
+              const maxWeight = Math.max(...ex.sets.map((s) => s.weightLbs ?? 0));
+              const avgReps = ex.sets.reduce((sum, s) => sum + (s.reps ?? 0), 0) / (setCount || 1);
+              const summary = maxWeight > 0
+                ? `${setCount}x${Math.round(avgReps)} @ ${maxWeight} lbs`
+                : ex.sets.some((s) => s.reps) ? `${setCount} sets` : "";
+              return (
+                <div key={ex.id} className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(ex.id); }}
+                      className="shrink-0"
+                      aria-label={favoriteIds.has(ex.id) ? "Remove from favorites" : "Add to favorites"}
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill={favoriteIds.has(ex.id) ? "#ef4444" : "none"} stroke={favoriteIds.has(ex.id) ? "#ef4444" : "currentColor"} strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+                      </svg>
+                    </button>
+                    <span className="text-gray-300 truncate">{ex.name}</span>
+                  </div>
+                  {summary && <span className="text-emerald-500 text-xs font-medium shrink-0 ml-2">{summary}</span>}
+                </div>
+              );
+            })}
             {uniqueExercises.length > 5 && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-gray-800 text-gray-500">
-                +{uniqueExercises.length - 5} more
-              </span>
+              <p className="text-xs text-gray-500">+{uniqueExercises.length - 5} more exercises</p>
             )}
           </div>
           {totalVolume > 0 && (
