@@ -39,6 +39,7 @@ interface SetEdits {
   weightLbs?: string;
   reps?: string;
   rpe?: string;
+  completed?: boolean;
 }
 
 export default function WorkoutDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -126,7 +127,7 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
   const hasSetChanges = Object.keys(setEdits).length > 0;
   const hasChanges = hasWorkoutChanges || hasSetChanges;
 
-  const updateSetEdit = (setId: string, field: keyof SetEdits, value: string) => {
+  const updateSetEdit = (setId: string, field: keyof SetEdits, value: string | boolean) => {
     setSetEdits((prev) => {
       const existing = prev[setId] ?? {};
       return { ...prev, [setId]: { ...existing, [field]: value } };
@@ -163,10 +164,11 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
 
       // Save set-level changes
       const setPromises = Object.entries(setEdits).map(([setId, edits]) => {
-        const data: Record<string, number | null> = {};
+        const data: Record<string, number | boolean | null> = {};
         if (edits.weightLbs !== undefined) data.weightLbs = edits.weightLbs ? Number(edits.weightLbs) : null;
         if (edits.reps !== undefined) data.reps = edits.reps ? Number(edits.reps) : null;
         if (edits.rpe !== undefined) data.rpe = edits.rpe ? Number(edits.rpe) : null;
+        if (edits.completed !== undefined) data.completed = edits.completed;
         return fetch(`/api/workouts/${workout.id}/sets/${setId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -473,7 +475,7 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
               </thead>
               <tbody>
                 {sets.map((set) => (
-                  <tr key={set.id} className={`border-b border-gray-800/50 ${set.completed ? "" : "opacity-50"}`}>
+                  <tr key={set.id} className={`border-b border-gray-800/50 ${(setEdits[set.id]?.completed ?? set.completed) ? "" : "opacity-60"}`}>
                     <td className="py-2 px-4">
                       <span className="text-gray-300">{set.setNumber}</span>
                     </td>
@@ -511,15 +513,21 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
                       />
                     </td>
                     <td className="py-2 px-3 text-center">
-                      {set.completed ? (
-                        <span className="text-emerald-500">
-                          <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </span>
-                      ) : (
-                        <span className="text-gray-600">--</span>
-                      )}
+                      <button
+                        onClick={() => {
+                          const currentCompleted = setEdits[set.id]?.completed ?? set.completed;
+                          updateSetEdit(set.id, "completed", !currentCompleted);
+                        }}
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                          (setEdits[set.id]?.completed ?? set.completed)
+                            ? "bg-emerald-500 border-emerald-500 text-white"
+                            : "border-gray-600 text-transparent hover:border-gray-500"
+                        }`}
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </button>
                     </td>
                   </tr>
                 ))}

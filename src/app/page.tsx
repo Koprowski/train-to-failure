@@ -245,6 +245,7 @@ export default function DashboardPage() {
             {recentWorkouts.map((w) => {
               const totalReps = w.sets.reduce((sum, s) => sum + (s.reps || 0), 0);
               const lastSets = w.sets.filter((s) => s.completed).slice(-3);
+              const hasIncompleteSets = w.sets.some((s) => !s.completed);
               const isActive = swipeId === w.id;
               const offset = isActive ? swipeX : 0;
               return (
@@ -260,7 +261,7 @@ export default function DashboardPage() {
                     </div>
                   )}
                   <div
-                    className={`flex items-center justify-between p-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition-transform cursor-pointer relative z-10 ${
+                    className={`group flex items-center justify-between p-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition-transform cursor-pointer relative z-10 ${
                       deleting === w.id ? "opacity-50" : ""
                     }`}
                     style={{ transform: `translateX(${offset}px)` }}
@@ -270,7 +271,12 @@ export default function DashboardPage() {
                     onClick={() => { if (!swipeId) router.push(`/workouts/${w.id}`); }}
                   >
                     <div>
-                      <p className="font-medium">{w.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{w.name}</p>
+                        {hasIncompleteSets && (
+                          <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded-full leading-none">Needs Review</span>
+                        )}
+                      </div>
                       <p className="text-gray-400 text-sm">
                         {formatDate(w.startedAt)} &middot; {totalReps} rep{totalReps !== 1 ? "s" : ""}
                       </p>
@@ -286,15 +292,26 @@ export default function DashboardPage() {
                           ))}
                         </div>
                       )}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); router.push(`/workouts/new?duplicateFrom=${w.id}`); }}
-                        className="p-1.5 rounded text-gray-500 hover:text-emerald-400 transition-colors"
-                        title="Repeat workout"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                      </button>
+                      <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); router.push(`/workouts/${w.id}`); }}
+                          className="p-1.5 rounded text-gray-500 hover:text-blue-400 transition-colors"
+                          title="Edit workout"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); router.push(`/workouts/new?duplicateFrom=${w.id}`); }}
+                          className="p-1.5 rounded text-gray-500 hover:text-emerald-400 transition-colors"
+                          title="Repeat workout"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

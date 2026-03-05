@@ -9,6 +9,7 @@ interface WorkoutSet {
   exerciseId: string;
   weightLbs: number | null;
   reps: number | null;
+  completed: boolean;
   exercise: { name: string };
 }
 
@@ -52,6 +53,7 @@ function SwipeableCard({
   const [transitioning, setTransitioning] = useState(false);
 
   const isActive = !workout.finishedAt;
+  const hasIncompleteSets = !isActive && workout.sets.some((s) => !s.completed);
   const uniqueExercises = (() => {
     const map = new Map<string, { id: string; name: string; sets: { weightLbs: number | null; reps: number | null }[] }>();
     for (const s of workout.sets) {
@@ -177,6 +179,11 @@ function SwipeableCard({
                 {isActive && (
                   <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full shrink-0">
                     In Progress
+                  </span>
+                )}
+                {hasIncompleteSets && (
+                  <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full shrink-0">
+                    Needs Review
                   </span>
                 )}
               </div>
