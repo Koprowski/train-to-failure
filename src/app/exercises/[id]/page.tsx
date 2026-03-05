@@ -482,7 +482,7 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
                   return `${date.getMonth() + 1}/${date.getDate()}`;
                 }}
               />
-              <YAxis stroke="#6b7280" fontSize={12} />
+              <YAxis stroke="#6b7280" fontSize={12} domain={[(min: number) => Math.max(0, Math.floor(min * 0.9)), (max: number) => Math.ceil(max * 1.05)]} />
               <Tooltip
                 contentStyle={{ backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: "8px" }}
                 labelStyle={{ color: "#fff" }}
