@@ -333,5 +333,10 @@
     "gifFile": "weighted-back-extension.gif",
     "imageUrl": "/gifs/weighted-back-extension.gif",
     "muscleGroups": "back,glutes,hamstrings"
+  },
+  "Wall Sit": {
+    "gifFile": "wall-sit.gif",
+    "imageUrl": "/gifs/wall-sit.gif",
+    "muscleGroups": "quads,glutes,calves"
   }
 }
