@@ -11,6 +11,7 @@ interface WorkoutSet {
   weightLbs: number | null;
   reps: number | null;
   completed: boolean;
+  exercise: { name: string };
 }
 
 interface Workout {
@@ -94,6 +95,7 @@ export default function DashboardPage() {
   const [editSaving, setEditSaving] = useState(false);
   const [editingDateId, setEditingDateId] = useState<string | null>(null);
   const [editDateVal, setEditDateVal] = useState("");
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
   const handleTouchStart = (id: string, e: React.TouchEvent) => {
     setTouchStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
@@ -186,13 +188,38 @@ export default function DashboardPage() {
     }
   };
 
+  const toggleFavorite = async (exerciseId: string) => {
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(exerciseId)) next.delete(exerciseId);
+      else next.add(exerciseId);
+      return next;
+    });
+    try {
+      await fetch("/api/exercises/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ exerciseId }),
+      });
+    } catch {
+      setFavoriteIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(exerciseId)) next.delete(exerciseId);
+        else next.add(exerciseId);
+        return next;
+      });
+    }
+  };
+
   useEffect(() => {
     Promise.all([
       fetch("/api/workouts").then((r) => r.json()),
       fetch("/api/stats/muscle-groups?days=30").then((r) => r.json()),
-    ]).then(([w, m]) => {
+      fetch("/api/exercises/favorites").then((r) => r.ok ? r.json() : []).catch(() => []),
+    ]).then(([w, m, favIds]) => {
       setWorkouts(Array.isArray(w) ? w : []);
       setMuscleData(m?.data ?? []);
+      if (Array.isArray(favIds)) setFavoriteIds(new Set(favIds));
       setLoading(false);
       // Delay inner labels until pie animation completes
       setTimeout(() => setChartAnimDone(true), ANIM_DURATION + 100);
@@ -201,17 +228,17 @@ export default function DashboardPage() {
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    const yyyy = d.getFullYear();
-    return `${mm}/${dd}/${yyyy}`;
+    return d.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
   };
 
-  const getTotalVolume = (sets: WorkoutSet[]) => {
-    return sets.reduce((sum, s) => {
-      if (s.weightLbs && s.reps && s.completed) return sum + s.weightLbs * s.reps;
-      return sum;
-    }, 0);
+  const formatTime = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   };
 
   const recentWorkouts = workouts.slice(0, 5);
@@ -269,11 +296,23 @@ export default function DashboardPage() {
         ) : (
           <div className="space-y-3">
             {recentWorkouts.map((w) => {
-              const totalReps = w.sets.reduce((sum, s) => sum + (s.reps || 0), 0);
-              const lastSets = w.sets.slice(-3);
               const hasIncompleteSets = w.sets.some((s) => !s.completed);
               const isActive = swipeId === w.id;
               const offset = isActive ? swipeX : 0;
+              const uniqueExercises = (() => {
+                const map = new Map<string, { id: string; name: string; sets: { weightLbs: number | null; reps: number | null }[] }>();
+                for (const s of w.sets) {
+                  if (!map.has(s.exerciseId)) {
+                    map.set(s.exerciseId, { id: s.exerciseId, name: s.exercise.name, sets: [] });
+                  }
+                  map.get(s.exerciseId)!.sets.push({ weightLbs: s.weightLbs, reps: s.reps });
+                }
+                return Array.from(map.values());
+              })();
+              const totalVolume = w.sets.reduce((sum, s) => {
+                if (s.weightLbs && s.reps) return sum + s.weightLbs * s.reps;
+                return sum;
+              }, 0);
               return (
                 <div key={w.id} className="relative overflow-hidden rounded-lg">
                   {offset > 0 && (
@@ -287,7 +326,7 @@ export default function DashboardPage() {
                     </div>
                   )}
                   <div
-                    className={`group p-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition-transform cursor-pointer relative z-10 ${
+                    className={`p-4 rounded-lg bg-gray-800 hover:bg-gray-700 transition-transform cursor-pointer relative z-10 ${
                       deleting === w.id ? "opacity-50" : ""
                     }`}
                     style={{ transform: `translateX(${offset}px)` }}
@@ -296,27 +335,29 @@ export default function DashboardPage() {
                     onTouchEnd={handleTouchEnd}
                     onClick={() => { if (!swipeId) router.push(`/workouts/${w.id}`); }}
                   >
-                    {/* Top row: name + icons */}
                     <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <p className="font-medium truncate">{w.name}</p>
-                        {hasIncompleteSets && (
-                          <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded-full leading-none shrink-0">Needs Review</span>
-                        )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-white truncate">{w.name}</h3>
+                          {hasIncompleteSets && (
+                            <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full shrink-0">
+                              Needs Review
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-gray-400 text-sm mt-1">
+                          <button
+                            onClick={(e) => openDateEditor(e, w)}
+                            className="hover:text-emerald-400 transition-colors"
+                          >
+                            {formatDate(w.startedAt)} at {formatTime(w.startedAt)}
+                          </button>
+                        </p>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0 ml-2">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); router.push(`/workouts/${w.id}`); }}
-                          className="p-1 rounded text-gray-500 hover:text-blue-400 transition-colors"
-                          title="Edit workout"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
+                      <div className="flex items-start gap-2 shrink-0 ml-4">
                         <button
                           onClick={(e) => { e.stopPropagation(); router.push(`/workouts/new?duplicateFrom=${w.id}`); }}
-                          className="p-1 rounded text-gray-500 hover:text-emerald-400 transition-colors"
+                          className="p-1.5 rounded text-gray-500 hover:text-emerald-400 transition-colors"
                           title="Repeat workout"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -325,28 +366,42 @@ export default function DashboardPage() {
                         </button>
                       </div>
                     </div>
-                    {/* Bottom row: date + set data */}
-                    <div className="flex items-center justify-between mt-1">
-                      <p className="text-gray-400 text-sm">
-                        <button
-                          onClick={(e) => openDateEditor(e, w)}
-                          className="hover:text-emerald-400 transition-colors"
-                        >
-                          {formatDate(w.startedAt)}
-                        </button>
-                        {" "}&middot; {totalReps} rep{totalReps !== 1 ? "s" : ""}
-                      </p>
-                      {lastSets.length > 0 && (
-                        <div className="flex gap-2 shrink-0">
-                          {lastSets.map((s, i) => (
-                            <div key={i} className="text-center text-xs min-w-[32px]">
-                              <p className="text-gray-300 font-medium">{s.weightLbs ?? "BW"}</p>
-                              <p className="text-gray-300">{s.reps ?? 0}</p>
+                    <div className="mt-3 space-y-1.5">
+                      {uniqueExercises.slice(0, 5).map((ex) => (
+                        <div key={ex.id} className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleFavorite(ex.id); }}
+                              className="shrink-0"
+                              aria-label={favoriteIds.has(ex.id) ? "Remove from favorites" : "Add to favorites"}
+                            >
+                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill={favoriteIds.has(ex.id) ? "#ef4444" : "none"} stroke={favoriteIds.has(ex.id) ? "#ef4444" : "currentColor"} strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+                              </svg>
+                            </button>
+                            <span className="text-gray-300 truncate">{ex.name}</span>
+                          </div>
+                          {ex.sets.length > 0 && (
+                            <div className="flex gap-2 shrink-0 ml-2">
+                              {ex.sets.map((s, i) => (
+                                <div key={i} className="text-center text-xs min-w-[32px]">
+                                  <p className="text-gray-300 font-medium">{s.weightLbs ?? "BW"}</p>
+                                  <p className="text-gray-300">{s.reps ?? 0}</p>
+                                </div>
+                              ))}
                             </div>
-                          ))}
+                          )}
                         </div>
+                      ))}
+                      {uniqueExercises.length > 5 && (
+                        <p className="text-xs text-gray-500">+{uniqueExercises.length - 5} more exercises</p>
                       )}
                     </div>
+                    {totalVolume > 0 && (
+                      <p className="text-gray-500 text-xs mt-2">
+                        Total volume: {totalVolume.toLocaleString()} lbs
+                      </p>
+                    )}
                   </div>
                 </div>
               );
