@@ -166,13 +166,13 @@ for (const [slug, muscles] of Object.entries(SLUG_TO_MUSCLE)) {
 // Muscle label positions: [side, labelTopPercent, muscleName, muscleXPercent, muscleYPercent]
 // muscleX/Y are target points on the body diagram (% of body width/height)
 const FRONT_LABELS: [string, number, string, number, number][] = [
-  ["left", 12, "traps",       30, 15],
-  ["left", 22, "shoulders",   18, 23],
-  ["left", 30, "chest",       30, 29],
+  ["left", 10, "traps",       38, 11],
+  ["left", 20, "shoulders",   18, 22],
+  ["left", 30, "chest",       30, 28],
   ["left", 38, "biceps",      14, 35],
-  ["left", 50, "obliques",    25, 42],
+  ["left", 46, "obliques",    25, 37],
   ["left", 62, "quads",       35, 62],
-  ["right", 30, "abs",        50, 36],
+  ["right", 30, "abs",        50, 35],
   ["right", 38, "forearms",   85, 43],
   ["right", 50, "hip flexors",60, 50],
   ["right", 62, "adductors",  55, 58],
@@ -180,17 +180,21 @@ const FRONT_LABELS: [string, number, string, number, number][] = [
 ];
 
 const BACK_LABELS: [string, number, string, number, number][] = [
-  ["left", 12, "traps",       30, 15],
-  ["left", 22, "shoulders",   18, 23],
-  ["left", 30, "back",        35, 28],
-  ["left", 40, "lats",        22, 35],
-  ["left", 52, "glutes",      35, 50],
-  ["left", 65, "hamstrings",  38, 65],
+  ["left", 10, "traps",       40, 12],
+  ["left", 20, "shoulders",   18, 22],
+  ["left", 30, "back",        45, 26],
+  ["left", 40, "lats",        25, 33],
+  ["left", 52, "glutes",      40, 48],
+  ["left", 65, "hamstrings",  40, 63],
   ["right", 30, "triceps",    82, 32],
   ["right", 40, "forearms",   85, 43],
-  ["right", 52, "abductors",  65, 50],
+  ["right", 52, "abductors",  62, 48],
   ["right", 78, "calves",     62, 78],
 ];
+
+function properCase(s: string) {
+  return s.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+}
 
 const BADGE_COLORS: Record<string, string> = {
   chest: "bg-red-500/20 text-red-400",
@@ -607,7 +611,7 @@ export default function ExercisesPage() {
         {/* Body Map with Slicer Labels */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl px-2 py-4 flex flex-col items-center shrink-0">
           {/* Container: labels + body + SVG lines */}
-          <div className="relative" style={{ width: "22rem", height: "24rem" }}>
+          <div className="relative" style={{ width: "24rem", height: "24rem" }}>
             {/* SVG connecting lines */}
             <svg className="absolute inset-0 w-full h-full pointer-events-none z-20">
               {(bodySide === "front" ? FRONT_LABELS : BACK_LABELS).map(([side, labelTop, muscle, muscleX, muscleY]) => {
@@ -650,13 +654,13 @@ export default function ExercisesPage() {
                           prev.includes(muscle) ? prev.filter((m) => m !== muscle) : [...prev, muscle]
                         )
                       }
-                      className={`absolute right-0 text-xs font-semibold transition-colors whitespace-nowrap ${
+                      className={`absolute right-0 text-sm font-semibold transition-colors whitespace-nowrap ${
                         active ? "text-emerald-400" : "text-white/70 hover:text-white"
                       }`}
                       style={{ top: `${top}%`, transform: "translateY(-50%)" }}
                     >
-                      <span className={`px-2 py-0.5 rounded ${active ? "bg-emerald-500/20 border border-emerald-500/40" : "bg-gray-800/80"}`}>
-                        {muscle}
+                      <span className={`px-2.5 py-1 rounded ${active ? "bg-emerald-500/20 border border-emerald-500/40" : "bg-gray-800/80"}`}>
+                        {properCase(muscle)}
                       </span>
                     </button>
                   );
@@ -700,13 +704,13 @@ export default function ExercisesPage() {
                           prev.includes(muscle) ? prev.filter((m) => m !== muscle) : [...prev, muscle]
                         )
                       }
-                      className={`absolute left-0 text-xs font-semibold transition-colors whitespace-nowrap ${
+                      className={`absolute left-0 text-sm font-semibold transition-colors whitespace-nowrap ${
                         active ? "text-emerald-400" : "text-white/70 hover:text-white"
                       }`}
                       style={{ top: `${top}%`, transform: "translateY(-50%)" }}
                     >
-                      <span className={`px-2 py-0.5 rounded ${active ? "bg-emerald-500/20 border border-emerald-500/40" : "bg-gray-800/80"}`}>
-                        {muscle}
+                      <span className={`px-2.5 py-1 rounded ${active ? "bg-emerald-500/20 border border-emerald-500/40" : "bg-gray-800/80"}`}>
+                        {properCase(muscle)}
                       </span>
                     </button>
                   );
