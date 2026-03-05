@@ -275,16 +275,27 @@ export default function DashboardPage() {
                         {formatDate(w.startedAt)} &middot; {totalReps} rep{totalReps !== 1 ? "s" : ""}
                       </p>
                     </div>
-                    {lastSets.length > 0 && (
-                      <div className="flex gap-2 shrink-0">
-                        {lastSets.map((s, i) => (
-                          <div key={i} className="text-center text-xs min-w-[32px]">
-                            <p className="text-gray-300 font-medium">{s.weightLbs ?? "BW"}</p>
-                            <p className="text-gray-300">{s.reps ?? 0}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {lastSets.length > 0 && (
+                        <div className="flex gap-2">
+                          {lastSets.map((s, i) => (
+                            <div key={i} className="text-center text-xs min-w-[32px]">
+                              <p className="text-gray-300 font-medium">{s.weightLbs ?? "BW"}</p>
+                              <p className="text-gray-300">{s.reps ?? 0}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); router.push(`/workouts/new?duplicateFrom=${w.id}`); }}
+                        className="p-1.5 rounded text-gray-500 hover:text-emerald-400 transition-colors"
+                        title="Repeat workout"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
