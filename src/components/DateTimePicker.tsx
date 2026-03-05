@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface DateTimePickerProps {
   value: Date;
-  onChange: (date: Date) => void;
+  onChange?: (date: Date) => void;
   onClose: () => void;
   onSave: (date: Date) => void;
 }
@@ -23,7 +23,7 @@ function getFirstDayOfMonth(year: number, month: number) {
   return new Date(year, month, 1).getDay();
 }
 
-export default function DateTimePicker({ value, onChange, onClose, onSave }: DateTimePickerProps) {
+export default function DateTimePicker({ value, onClose, onSave }: DateTimePickerProps) {
   const [viewYear, setViewYear] = useState(value.getFullYear());
   const [viewMonth, setViewMonth] = useState(value.getMonth());
   const [selectedYear, setSelectedYear] = useState(value.getFullYear());
@@ -33,46 +33,28 @@ export default function DateTimePicker({ value, onChange, onClose, onSave }: Dat
   const [minute, setMinute] = useState(value.getMinutes());
   const [ampm, setAmpm] = useState<"AM" | "PM">(value.getHours() >= 12 ? "PM" : "AM");
 
-  const valueTime = value.getTime();
-  useEffect(() => {
-    setViewYear(value.getFullYear());
-    setViewMonth(value.getMonth());
-    setSelectedYear(value.getFullYear());
-    setSelectedMonth(value.getMonth());
-    setSelectedDay(value.getDate());
-    setHour(value.getHours() % 12 || 12);
-    setMinute(value.getMinutes());
-    setAmpm(value.getHours() >= 12 ? "PM" : "AM");
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [valueTime]);
-
-  const buildDate = (day: number, h: number, m: number, ap: "AM" | "PM") => {
+  const buildDate = (y: number, mo: number, day: number, h: number, m: number, ap: "AM" | "PM") => {
     let hour24 = h % 12;
     if (ap === "PM") hour24 += 12;
-    return new Date(viewYear, viewMonth, day, hour24, m);
+    return new Date(y, mo, day, hour24, m);
   };
 
   const handleDayClick = (day: number) => {
     setSelectedDay(day);
     setSelectedMonth(viewMonth);
     setSelectedYear(viewYear);
-    onChange(buildDate(day, hour, minute, ampm));
   };
 
   const handleHourChange = (h: number) => {
     setHour(h);
-    onChange(buildDate(selectedDay, h, minute, ampm));
   };
 
   const handleMinuteChange = (m: number) => {
     setMinute(m);
-    onChange(buildDate(selectedDay, hour, m, ampm));
   };
 
   const handleAmpmToggle = () => {
-    const next = ampm === "AM" ? "PM" : "AM";
-    setAmpm(next);
-    onChange(buildDate(selectedDay, hour, minute, next));
+    setAmpm((prev) => (prev === "AM" ? "PM" : "AM"));
   };
 
   const prevMonth = () => {
@@ -103,7 +85,6 @@ export default function DateTimePicker({ value, onChange, onClose, onSave }: Dat
     setHour(now.getHours() % 12 || 12);
     setMinute(now.getMinutes());
     setAmpm(now.getHours() >= 12 ? "PM" : "AM");
-    onChange(now);
   };
 
   const daysInMonth = getDaysInMonth(viewYear, viewMonth);
@@ -251,7 +232,7 @@ export default function DateTimePicker({ value, onChange, onClose, onSave }: Dat
               Cancel
             </button>
             <button
-              onClick={() => onSave(buildDate(selectedDay, hour, minute, ampm))}
+              onClick={() => onSave(buildDate(selectedYear, selectedMonth, selectedDay, hour, minute, ampm))}
               className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors"
             >
               Save

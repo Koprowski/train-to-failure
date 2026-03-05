@@ -723,7 +723,6 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
       {showDatePicker && (
         <DateTimePicker
           value={editDate ? new Date(editDate) : new Date(workout.startedAt)}
-          onChange={() => {}}
           onClose={() => setShowDatePicker(false)}
           onSave={(date) => {
             const pad = (n: number) => String(n).padStart(2, "0");

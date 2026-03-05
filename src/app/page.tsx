@@ -398,7 +398,6 @@ export default function DashboardPage() {
       {editingDateId && (
         <DateTimePicker
           value={editDateVal}
-          onChange={setEditDateVal}
           onClose={() => setEditingDateId(null)}
           onSave={handleDateSave}
         />

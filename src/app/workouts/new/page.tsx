@@ -801,7 +801,6 @@ function WorkoutContent() {
           {showLauncherDate && (
             <DateTimePicker
               value={customDate ? new Date(customDate) : new Date()}
-              onChange={() => {}}
               onClose={() => setShowLauncherDate(false)}
               onSave={(date) => {
                 const pad = (n: number) => String(n).padStart(2, "0");
@@ -967,7 +966,6 @@ function WorkoutContent() {
       {showDateModal && (
         <DateTimePicker
           value={customDate ? new Date(customDate) : startTimeRef.current ?? new Date()}
-          onChange={() => {}}
           onClose={() => setShowDateModal(false)}
           onSave={(date) => {
             const pad = (n: number) => String(n).padStart(2, "0");
