@@ -259,15 +259,31 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
         body: JSON.stringify({ exerciseId, completed: true }),
       });
       if (res.ok) {
-        // Reload workout to get updated sets
+        // Reload workout but preserve existing set edits
         const updated = await (await fetch(`/api/workouts/${workout.id}`)).json();
         setWorkout(updated);
-        initEditState(updated);
       }
     } catch (err) {
       console.error("Failed to add set:", err);
     } finally {
       setAddingSet(null);
+    }
+  };
+
+  const deleteSet = async (setId: string) => {
+    if (!workout) return;
+    try {
+      const res = await fetch(`/api/workouts/${workout.id}/sets/${setId}`, { method: "DELETE" });
+      if (res.ok) {
+        setWorkout((prev) => prev ? { ...prev, sets: prev.sets.filter((s) => s.id !== setId) } : prev);
+        setSetEdits((prev) => {
+          const next = { ...prev };
+          delete next[setId];
+          return next;
+        });
+      }
+    } catch (err) {
+      console.error("Failed to delete set:", err);
     }
   };
 
@@ -472,11 +488,12 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
                     </span>
                   </th>
                   <th className="py-2 px-3 text-center">Done</th>
+                  <th className="py-2 px-1 w-8"></th>
                 </tr>
               </thead>
               <tbody>
                 {sets.map((set) => (
-                  <tr key={set.id} className={`border-b border-gray-800/50 ${(setEdits[set.id]?.completed ?? set.completed) ? "" : "opacity-60"}`}>
+                  <tr key={set.id} className={`group/row border-b border-gray-800/50 ${(setEdits[set.id]?.completed ?? set.completed) ? "" : "opacity-60"}`}>
                     <td className="py-2 px-4">
                       <span className="text-gray-300">{set.setNumber}</span>
                     </td>
@@ -527,6 +544,17 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </button>
+                    </td>
+                    <td className="py-2 px-1 text-center">
+                      <button
+                        onClick={() => deleteSet(set.id)}
+                        className="text-transparent hover:text-red-400 group-hover/row:text-gray-600 transition-colors p-0.5"
+                        title="Delete set"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                       </button>
                     </td>
