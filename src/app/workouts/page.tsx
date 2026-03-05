@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+
+const Body = dynamic(
+  () => import("react-muscle-highlighter"),
+  { ssr: false }
+);
 
 interface WorkoutSet {
   id: string;
@@ -10,7 +16,7 @@ interface WorkoutSet {
   weightLbs: number | null;
   reps: number | null;
   completed: boolean;
-  exercise: { name: string };
+  exercise: { name: string; muscleGroups?: string };
 }
 
 interface Workout {
@@ -23,6 +29,40 @@ interface Workout {
   sets: WorkoutSet[];
 }
 
+// Map react-muscle-highlighter slugs to app muscle group names
+const SLUG_TO_MUSCLE: Record<string, string[]> = {
+  abs: ["abs"],
+  adductors: ["adductors", "hip flexors"],
+  biceps: ["biceps"],
+  calves: ["calves"],
+  chest: ["chest"],
+  deltoids: ["shoulders"],
+  forearm: ["forearms"],
+  gluteal: ["glutes", "abductors"],
+  hamstring: ["hamstrings"],
+  obliques: ["obliques"],
+  quadriceps: ["quads", "hip flexors"],
+  trapezius: ["traps"],
+  triceps: ["triceps"],
+  "upper-back": ["back", "lats"],
+  "lower-back": ["back"],
+};
+
+// Reverse map: app muscle group -> highlight slugs
+const MUSCLE_TO_SLUGS: Record<string, string[]> = {};
+for (const [slug, muscles] of Object.entries(SLUG_TO_MUSCLE)) {
+  for (const m of muscles) {
+    if (!MUSCLE_TO_SLUGS[m]) MUSCLE_TO_SLUGS[m] = [];
+    if (!MUSCLE_TO_SLUGS[m].includes(slug)) MUSCLE_TO_SLUGS[m].push(slug);
+  }
+}
+
+const MUSCLE_GROUPS = [
+  "abs", "abductors", "adductors", "back", "biceps", "calves",
+  "chest", "forearms", "glutes", "hamstrings", "hip flexors",
+  "lats", "obliques", "quads", "shoulders", "traps", "triceps",
+];
+
 function SwipeableCard({
   workout,
   onDelete,
@@ -31,6 +71,8 @@ function SwipeableCard({
   formatTime,
   favoriteIds,
   toggleFavorite,
+  isWorkoutFavorited,
+  onToggleWorkoutFavorite,
 }: {
   workout: Workout;
   onDelete: () => void;
@@ -39,6 +81,8 @@ function SwipeableCard({
   formatTime: (d: string) => string;
   favoriteIds: Set<string>;
   toggleFavorite: (exerciseId: string) => void;
+  isWorkoutFavorited: boolean;
+  onToggleWorkoutFavorite: () => void;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const dragState = useRef<{
@@ -114,12 +158,10 @@ function SwipeableCard({
     const threshold = 80;
 
     if (offsetX > threshold) {
-      // Swipe right = delete
       setTransitioning(true);
       setOffsetX(300);
       setTimeout(() => onDelete(), 200);
     } else if (offsetX < -threshold) {
-      // Swipe left = edit
       setTransitioning(true);
       setOffsetX(-300);
       setTimeout(() => {
@@ -131,13 +173,11 @@ function SwipeableCard({
     }
   }, [offsetX, onDelete, workout.id, isActive]);
 
-  // Colors behind the card based on swipe direction
   const showDelete = offsetX > 20;
   const showEdit = offsetX < -20;
 
   return (
     <div className="relative overflow-hidden rounded-xl">
-      {/* Background action indicators */}
       <div className="absolute inset-0 flex items-center justify-between px-6 rounded-xl">
         <div className={`flex items-center gap-2 transition-opacity ${showDelete ? "opacity-100" : "opacity-0"}`}>
           <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -153,7 +193,6 @@ function SwipeableCard({
         </div>
       </div>
 
-      {/* Swipeable card */}
       <div
         ref={cardRef}
         onTouchStart={handleTouchStart}
@@ -190,6 +229,16 @@ function SwipeableCard({
               </p>
             </div>
             <div className="flex items-start gap-2 shrink-0 ml-4">
+              {/* Workout favorite heart */}
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleWorkoutFavorite(); }}
+                className="p-1.5 rounded transition-colors"
+                title={isWorkoutFavorited ? "Remove workout from favorites" : "Add workout to favorites"}
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill={isWorkoutFavorited ? "#ef4444" : "none"} stroke={isWorkoutFavorited ? "#ef4444" : "currentColor"} strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+                </svg>
+              </button>
               {/* Repeat button */}
               <button
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRepeat(); }}
@@ -244,6 +293,8 @@ function SwipeableCard({
   );
 }
 
+type SortMode = "date" | "favorites";
+
 export default function WorkoutsPage() {
   const router = useRouter();
   const [workouts, setWorkouts] = useState<Workout[]>([]);
@@ -252,14 +303,24 @@ export default function WorkoutsPage() {
   const [deleting, setDeleting] = useState(false);
   const [repeating, setRepeating] = useState<string | null>(null);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [favoritedWorkoutNames, setFavoritedWorkoutNames] = useState<Set<string>>(new Set());
+  const [sortMode, setSortMode] = useState<SortMode>("date");
+  const [muscleFilter, setMuscleFilter] = useState<string[]>([]);
+  const [showMusclePicker, setShowMusclePicker] = useState(false);
+  const [muscleDraft, setMuscleDraft] = useState<string[]>([]);
+  const [bodySide, setBodySide] = useState<"front" | "back">("front");
 
   useEffect(() => {
     Promise.all([
       fetch("/api/workouts").then((r) => r.ok ? r.json() : []).catch(() => []),
       fetch("/api/exercises/favorites").then((r) => r.ok ? r.json() : []).catch(() => []),
-    ]).then(([data, favIds]) => {
+      fetch("/api/workouts/favorites").then((r) => r.ok ? r.json() : []).catch(() => []),
+    ]).then(([data, favIds, favWorkouts]) => {
       setWorkouts(Array.isArray(data) ? data : []);
       if (Array.isArray(favIds)) setFavoriteIds(new Set(favIds));
+      if (Array.isArray(favWorkouts)) {
+        setFavoritedWorkoutNames(new Set(favWorkouts.map((fw: { name: string }) => fw.name)));
+      }
       setLoading(false);
     });
   }, []);
@@ -287,12 +348,27 @@ export default function WorkoutsPage() {
     }
   };
 
-  const formatDuration = (seconds: number | null) => {
-    if (!seconds) return "--";
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    if (h > 0) return `${h}h ${m}m`;
-    return `${m}m`;
+  const toggleWorkoutFavorite = async (workout: Workout) => {
+    const wasFavorited = favoritedWorkoutNames.has(workout.name);
+    setFavoritedWorkoutNames((prev) => {
+      const next = new Set(prev);
+      if (wasFavorited) next.delete(workout.name);
+      else next.add(workout.name);
+      return next;
+    });
+    try {
+      await fetch(`/api/workouts/${workout.id}/favorite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch {
+      setFavoritedWorkoutNames((prev) => {
+        const next = new Set(prev);
+        if (wasFavorited) next.add(workout.name);
+        else next.delete(workout.name);
+        return next;
+      });
+    }
   };
 
   const formatDate = (dateStr: string) => {
@@ -334,6 +410,66 @@ export default function WorkoutsPage() {
 
   const workoutToDelete = deleteId ? workouts.find((w) => w.id === deleteId) : null;
 
+  // Filter and sort workouts
+  const filteredWorkouts = useMemo(() => {
+    let list = [...workouts];
+
+    // Muscle group filter
+    if (muscleFilter.length > 0) {
+      list = list.filter((w) => {
+        const workoutMuscles = new Set<string>();
+        for (const s of w.sets) {
+          if (s.exercise.muscleGroups) {
+            s.exercise.muscleGroups.split(",").forEach((mg) => workoutMuscles.add(mg.trim().toLowerCase()));
+          }
+        }
+        return muscleFilter.some((f) => workoutMuscles.has(f.toLowerCase()));
+      });
+    }
+
+    // Sort
+    if (sortMode === "favorites") {
+      // Favorited workouts first, then by date
+      list.sort((a, b) => {
+        const aFav = favoritedWorkoutNames.has(a.name) ? 1 : 0;
+        const bFav = favoritedWorkoutNames.has(b.name) ? 1 : 0;
+        if (aFav !== bFav) return bFav - aFav;
+        return new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime();
+      });
+    } else {
+      list.sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+    }
+
+    return list;
+  }, [workouts, sortMode, muscleFilter, favoritedWorkoutNames]);
+
+  const onBodyPartPress = useCallback((part: { slug?: string }) => {
+    if (!part.slug) return;
+    const muscles = SLUG_TO_MUSCLE[part.slug];
+    if (!muscles) return;
+    const target = muscles[0];
+    setMuscleDraft((prev) =>
+      prev.includes(target) ? prev.filter((m) => m !== target) : [...prev, target]
+    );
+  }, []);
+
+  const bodyMapElement = useMemo(() => (
+    <Body
+      side={bodySide}
+      gender="male"
+      scale={1.0}
+      border="#4b5563"
+      defaultFill="#1f2937"
+      colors={["#10b981", "#34d399"]}
+      data={
+        muscleDraft.length > 0
+          ? muscleDraft.flatMap((m) => (MUSCLE_TO_SLUGS[m] || []).map((slug) => ({ slug: slug as never, intensity: 2 })))
+          : []
+      }
+      onBodyPartPress={onBodyPartPress}
+    />
+  ), [bodySide, muscleDraft, onBodyPartPress]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -343,31 +479,95 @@ export default function WorkoutsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-4">
+      {/* Title + New Workout inline */}
+      <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Workout History</h1>
         <Link
           href="/workouts/new"
-          className="inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-5 py-2.5 rounded-lg transition-colors"
+          className="inline-flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-lg text-sm transition-colors"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          New Workout
+          New
         </Link>
       </div>
 
-      {workouts.length === 0 ? (
+      {/* Slicer row */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setSortMode("date")}
+          className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+            sortMode === "date" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"
+          }`}
+        >
+          Date
+        </button>
+        <button
+          onClick={() => setSortMode("favorites")}
+          className={`px-3 py-1.5 text-sm rounded-lg transition-colors flex items-center gap-1.5 ${
+            sortMode === "favorites" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"
+          }`}
+        >
+          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill={sortMode === "favorites" ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+          </svg>
+          Favorites
+        </button>
+        <button
+          onClick={() => { setMuscleDraft([...muscleFilter]); setShowMusclePicker(true); }}
+          className={`relative px-3 py-1.5 text-sm rounded-lg transition-colors flex items-center gap-1.5 ${
+            muscleFilter.length > 0 ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40" : "bg-gray-800 text-gray-400 hover:text-white"
+          }`}
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12.409 13.017A5 5 0 0 1 22 15c0 3.866-4 7-9 7-4.077 0-8.153-.82-10.371-2.462-.426-.316-.631-.832-.62-1.362C2.118 12.723 2.627 2 10 2a3 3 0 0 1 3 3 2 2 0 0 1-2 2c-1.105 0-1.64-.444-2-1" />
+            <path d="M15 14a5 5 0 0 0-7.584 2" />
+            <path d="M9.964 6.825C8.019 7.977 9.5 13 8 15" />
+          </svg>
+          Muscle
+          {muscleFilter.length > 0 && (
+            <span className="w-4 h-4 bg-emerald-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{muscleFilter.length}</span>
+          )}
+        </button>
+      </div>
+
+      {/* Active muscle filters display */}
+      {muscleFilter.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {muscleFilter.map((m) => (
+            <button
+              key={m}
+              onClick={() => setMuscleFilter((prev) => prev.filter((x) => x !== m))}
+              className="text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center gap-1"
+            >
+              {m}
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          ))}
+          <button
+            onClick={() => setMuscleFilter([])}
+            className="text-xs text-gray-400 hover:text-white transition-colors"
+          >
+            Clear all
+          </button>
+        </div>
+      )}
+
+      {filteredWorkouts.length === 0 ? (
         <div className="text-center py-16 text-gray-500">
           <svg className="w-16 h-16 mx-auto mb-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
-          <p className="text-lg">No workouts logged yet</p>
-          <p className="text-sm mt-1">Start your first workout to track your progress</p>
+          <p className="text-lg">{workouts.length === 0 ? "No workouts logged yet" : "No workouts match filters"}</p>
+          <p className="text-sm mt-1">{workouts.length === 0 ? "Start your first workout to track your progress" : "Try adjusting your filters"}</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {workouts.map((w) => (
+          {filteredWorkouts.map((w) => (
             <SwipeableCard
               key={w.id}
               workout={w}
@@ -377,6 +577,8 @@ export default function WorkoutsPage() {
               formatTime={formatTime}
               favoriteIds={favoriteIds}
               toggleFavorite={toggleFavorite}
+              isWorkoutFavorited={favoritedWorkoutNames.has(w.name)}
+              onToggleWorkoutFavorite={() => toggleWorkoutFavorite(w)}
             />
           ))}
         </div>
@@ -400,6 +602,81 @@ export default function WorkoutsPage() {
                 className="px-4 py-2 text-sm bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors disabled:opacity-50"
               >
                 {deleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Muscle Group Picker Modal */}
+      {showMusclePicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowMusclePicker(false)}>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Filter by Muscle Group</h3>
+              <button onClick={() => setShowMusclePicker(false)} className="text-gray-400 hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Body diagram */}
+            <div className="flex flex-col items-center mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <button
+                  onClick={() => setBodySide("front")}
+                  className={`px-3 py-1 text-xs rounded-lg transition-colors ${bodySide === "front" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+                >
+                  Front
+                </button>
+                <button
+                  onClick={() => setBodySide("back")}
+                  className={`px-3 py-1 text-xs rounded-lg transition-colors ${bodySide === "back" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+                >
+                  Back
+                </button>
+              </div>
+              <div style={{ maxHeight: "220px" }}>
+                {bodyMapElement}
+              </div>
+            </div>
+
+            {/* Muscle group buttons */}
+            <div className="grid grid-cols-2 gap-2">
+              {MUSCLE_GROUPS.map((mg) => {
+                const selected = muscleDraft.includes(mg);
+                return (
+                  <button
+                    key={mg}
+                    onClick={() =>
+                      setMuscleDraft((prev) =>
+                        selected ? prev.filter((m) => m !== mg) : [...prev, mg]
+                      )
+                    }
+                    className={`px-3 py-2 rounded-lg text-sm text-left transition-colors ${
+                      selected
+                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500"
+                        : "bg-gray-800 text-gray-300 border border-gray-700 hover:border-gray-600"
+                    }`}
+                  >
+                    {mg.charAt(0).toUpperCase() + mg.slice(1)}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button
+                onClick={() => setMuscleDraft([])}
+                className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+              >
+                Clear
+              </button>
+              <button
+                onClick={() => { setMuscleFilter(muscleDraft); setShowMusclePicker(false); }}
+                className="flex-1 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-semibold transition-colors"
+              >
+                Apply{muscleDraft.length > 0 ? ` (${muscleDraft.length})` : ""}
               </button>
             </div>
           </div>
