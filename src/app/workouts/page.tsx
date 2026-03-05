@@ -209,32 +209,32 @@ function SwipeableCard({
             </div>
           </div>
           <div className="mt-3 space-y-1.5">
-            {uniqueExercises.slice(0, 5).map((ex) => {
-              const setCount = ex.sets.length;
-              const maxWeight = Math.max(...ex.sets.map((s) => s.weightLbs ?? 0));
-              const avgReps = ex.sets.reduce((sum, s) => sum + (s.reps ?? 0), 0) / (setCount || 1);
-              const hasReps = ex.sets.some((s) => s.reps);
-              const summary = maxWeight > 0
-                ? `${setCount}x${Math.round(avgReps)} @ ${maxWeight} lbs`
-                : hasReps ? `${setCount}x${Math.round(avgReps)}` : "";
-              return (
-                <div key={ex.id} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <button
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(ex.id); }}
-                      className="shrink-0"
-                      aria-label={favoriteIds.has(ex.id) ? "Remove from favorites" : "Add to favorites"}
-                    >
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill={favoriteIds.has(ex.id) ? "#ef4444" : "none"} stroke={favoriteIds.has(ex.id) ? "#ef4444" : "currentColor"} strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
-                      </svg>
-                    </button>
-                    <span className="text-gray-300 truncate">{ex.name}</span>
-                  </div>
-                  {summary && <span className="text-emerald-500 text-xs font-medium shrink-0 ml-2">{summary}</span>}
+            {uniqueExercises.slice(0, 5).map((ex) => (
+              <div key={ex.id} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2 min-w-0">
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(ex.id); }}
+                    className="shrink-0"
+                    aria-label={favoriteIds.has(ex.id) ? "Remove from favorites" : "Add to favorites"}
+                  >
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill={favoriteIds.has(ex.id) ? "#ef4444" : "none"} stroke={favoriteIds.has(ex.id) ? "#ef4444" : "currentColor"} strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+                    </svg>
+                  </button>
+                  <span className="text-gray-300 truncate">{ex.name}</span>
                 </div>
-              );
-            })}
+                {ex.sets.length > 0 && (
+                  <div className="flex gap-2 shrink-0 ml-2">
+                    {ex.sets.map((s, i) => (
+                      <div key={i} className="text-center text-xs min-w-[32px]">
+                        <p className="text-gray-300 font-medium">{s.weightLbs ?? "BW"}</p>
+                        <p className="text-gray-300">{s.reps ?? 0}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
             {uniqueExercises.length > 5 && (
               <p className="text-xs text-gray-500">+{uniqueExercises.length - 5} more exercises</p>
             )}
