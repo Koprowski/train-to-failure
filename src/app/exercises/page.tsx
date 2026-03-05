@@ -163,6 +163,35 @@ for (const [slug, muscles] of Object.entries(SLUG_TO_MUSCLE)) {
   }
 }
 
+// Muscle label positions around the body diagram (percentage from top)
+// Each entry: [side, topPercent, muscleName]
+const FRONT_LABELS: [string, number, string][] = [
+  ["left", 12, "traps"],
+  ["left", 22, "shoulders"],
+  ["left", 30, "chest"],
+  ["left", 38, "biceps"],
+  ["left", 50, "obliques"],
+  ["left", 62, "quads"],
+  ["right", 30, "abs"],
+  ["right", 38, "forearms"],
+  ["right", 50, "hip flexors"],
+  ["right", 62, "adductors"],
+  ["right", 78, "calves"],
+];
+
+const BACK_LABELS: [string, number, string][] = [
+  ["left", 12, "traps"],
+  ["left", 22, "shoulders"],
+  ["left", 30, "back"],
+  ["left", 40, "lats"],
+  ["left", 52, "glutes"],
+  ["left", 65, "hamstrings"],
+  ["right", 30, "triceps"],
+  ["right", 40, "forearms"],
+  ["right", 52, "abductors"],
+  ["right", 78, "calves"],
+];
+
 const BADGE_COLORS: Record<string, string> = {
   chest: "bg-red-500/20 text-red-400",
   back: "bg-blue-500/20 text-blue-400",
@@ -382,7 +411,7 @@ export default function ExercisesPage() {
     <Body
       side={bodySide}
       gender="male"
-      scale={1.2}
+      scale={1.0}
       border="#4b5563"
       defaultFill="#1f2937"
       colors={["#10b981", "#34d399"]}
@@ -575,26 +604,84 @@ export default function ExercisesPage() {
 
       {/* Body Map + Grid */}
       <div className="flex flex-col lg:flex-row gap-4">
-        {/* Body Map */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl px-4 flex flex-col items-center shrink-0">
-          <div
-            className="cursor-pointer relative"
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            onTouchCancel={handleTouchEnd}
-            style={{ perspective: "800px" }}
-          >
-            {/* Invisible overlay to capture touch events during drag (prevents Body from stealing them) */}
+        {/* Body Map with Slicer Labels */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl px-2 py-4 flex flex-col items-center shrink-0">
+          <div className="relative flex items-start justify-center w-full">
+            {/* Left labels */}
+            <div className="relative flex flex-col items-end shrink-0" style={{ width: "5.5rem", height: "24rem" }}>
+              {(bodySide === "front" ? FRONT_LABELS : BACK_LABELS)
+                .filter(([side]) => side === "left")
+                .map(([, top, muscle]) => {
+                  const active = muscleFilter.includes(muscle);
+                  return (
+                    <button
+                      key={muscle}
+                      onClick={() =>
+                        setMuscleFilter((prev) =>
+                          prev.includes(muscle) ? prev.filter((m) => m !== muscle) : [...prev, muscle]
+                        )
+                      }
+                      className={`absolute right-0 flex items-center gap-1 text-[10px] font-medium transition-colors whitespace-nowrap ${
+                        active ? "text-emerald-400" : "text-gray-500 hover:text-gray-300"
+                      }`}
+                      style={{ top: `${top}%`, transform: "translateY(-50%)" }}
+                    >
+                      <span className={`px-1.5 py-0.5 rounded ${active ? "bg-emerald-500/20" : "bg-gray-800"}`}>
+                        {muscle}
+                      </span>
+                      <span className={`w-3 h-px ${active ? "bg-emerald-500" : "bg-gray-600"}`} />
+                    </button>
+                  );
+                })}
+            </div>
+
+            {/* Body diagram */}
             <div
-              ref={overlayRef}
-              style={{ display: "none", position: "absolute", inset: 0, zIndex: 10 }}
-            />
-            <div
-              ref={flipContainerRef}
-              style={{ transformStyle: "preserve-3d", backfaceVisibility: "hidden" }}
+              className="cursor-pointer relative shrink-0"
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onTouchCancel={handleTouchEnd}
+              style={{ perspective: "800px" }}
             >
-            {bodyMapElement}
+              <div
+                ref={overlayRef}
+                style={{ display: "none", position: "absolute", inset: 0, zIndex: 10 }}
+              />
+              <div
+                ref={flipContainerRef}
+                style={{ transformStyle: "preserve-3d", backfaceVisibility: "hidden" }}
+              >
+                {bodyMapElement}
+              </div>
+            </div>
+
+            {/* Right labels */}
+            <div className="relative flex flex-col items-start shrink-0" style={{ width: "5.5rem", height: "24rem" }}>
+              {(bodySide === "front" ? FRONT_LABELS : BACK_LABELS)
+                .filter(([side]) => side === "right")
+                .map(([, top, muscle]) => {
+                  const active = muscleFilter.includes(muscle);
+                  return (
+                    <button
+                      key={muscle}
+                      onClick={() =>
+                        setMuscleFilter((prev) =>
+                          prev.includes(muscle) ? prev.filter((m) => m !== muscle) : [...prev, muscle]
+                        )
+                      }
+                      className={`absolute left-0 flex items-center gap-1 text-[10px] font-medium transition-colors whitespace-nowrap ${
+                        active ? "text-emerald-400" : "text-gray-500 hover:text-gray-300"
+                      }`}
+                      style={{ top: `${top}%`, transform: "translateY(-50%)" }}
+                    >
+                      <span className={`w-3 h-px ${active ? "bg-emerald-500" : "bg-gray-600"}`} />
+                      <span className={`px-1.5 py-0.5 rounded ${active ? "bg-emerald-500/20" : "bg-gray-800"}`}>
+                        {muscle}
+                      </span>
+                    </button>
+                  );
+                })}
             </div>
           </div>
           {muscleFilter.length > 0 && (
