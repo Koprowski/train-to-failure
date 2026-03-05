@@ -26,6 +26,8 @@ function getFirstDayOfMonth(year: number, month: number) {
 export default function DateTimePicker({ value, onChange, onClose, onSave }: DateTimePickerProps) {
   const [viewYear, setViewYear] = useState(value.getFullYear());
   const [viewMonth, setViewMonth] = useState(value.getMonth());
+  const [selectedYear, setSelectedYear] = useState(value.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(value.getMonth());
   const [selectedDay, setSelectedDay] = useState(value.getDate());
   const [hour, setHour] = useState(value.getHours() % 12 || 12);
   const [minute, setMinute] = useState(value.getMinutes());
@@ -34,6 +36,8 @@ export default function DateTimePicker({ value, onChange, onClose, onSave }: Dat
   useEffect(() => {
     setViewYear(value.getFullYear());
     setViewMonth(value.getMonth());
+    setSelectedYear(value.getFullYear());
+    setSelectedMonth(value.getMonth());
     setSelectedDay(value.getDate());
     setHour(value.getHours() % 12 || 12);
     setMinute(value.getMinutes());
@@ -48,6 +52,8 @@ export default function DateTimePicker({ value, onChange, onClose, onSave }: Dat
 
   const handleDayClick = (day: number) => {
     setSelectedDay(day);
+    setSelectedMonth(viewMonth);
+    setSelectedYear(viewYear);
     onChange(buildDate(day, hour, minute, ampm));
   };
 
@@ -89,6 +95,8 @@ export default function DateTimePicker({ value, onChange, onClose, onSave }: Dat
     const now = new Date();
     setViewYear(now.getFullYear());
     setViewMonth(now.getMonth());
+    setSelectedYear(now.getFullYear());
+    setSelectedMonth(now.getMonth());
     setSelectedDay(now.getDate());
     setHour(now.getHours() % 12 || 12);
     setMinute(now.getMinutes());
@@ -157,7 +165,7 @@ export default function DateTimePicker({ value, onChange, onClose, onSave }: Dat
               className={`h-9 w-full rounded-lg text-sm font-medium transition-colors ${
                 day === null
                   ? "invisible"
-                  : day === selectedDay && viewMonth === value.getMonth() && viewYear === value.getFullYear()
+                  : day === selectedDay && viewMonth === selectedMonth && viewYear === selectedYear
                     ? "bg-emerald-500 text-white"
                     : isToday(day)
                       ? "bg-gray-700 text-emerald-400"
