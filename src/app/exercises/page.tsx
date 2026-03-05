@@ -163,33 +163,33 @@ for (const [slug, muscles] of Object.entries(SLUG_TO_MUSCLE)) {
   }
 }
 
-// Muscle label positions around the body diagram (percentage from top)
-// Each entry: [side, topPercent, muscleName]
-const FRONT_LABELS: [string, number, string][] = [
-  ["left", 12, "traps"],
-  ["left", 22, "shoulders"],
-  ["left", 30, "chest"],
-  ["left", 38, "biceps"],
-  ["left", 50, "obliques"],
-  ["left", 62, "quads"],
-  ["right", 30, "abs"],
-  ["right", 38, "forearms"],
-  ["right", 50, "hip flexors"],
-  ["right", 62, "adductors"],
-  ["right", 78, "calves"],
+// Muscle label positions: [side, labelTopPercent, muscleName, muscleXPercent, muscleYPercent]
+// muscleX/Y are target points on the body diagram (% of body width/height)
+const FRONT_LABELS: [string, number, string, number, number][] = [
+  ["left", 12, "traps",       30, 15],
+  ["left", 22, "shoulders",   18, 23],
+  ["left", 30, "chest",       30, 29],
+  ["left", 38, "biceps",      14, 35],
+  ["left", 50, "obliques",    25, 42],
+  ["left", 62, "quads",       35, 62],
+  ["right", 30, "abs",        50, 36],
+  ["right", 38, "forearms",   85, 43],
+  ["right", 50, "hip flexors",60, 50],
+  ["right", 62, "adductors",  55, 58],
+  ["right", 78, "calves",     62, 78],
 ];
 
-const BACK_LABELS: [string, number, string][] = [
-  ["left", 12, "traps"],
-  ["left", 22, "shoulders"],
-  ["left", 30, "back"],
-  ["left", 40, "lats"],
-  ["left", 52, "glutes"],
-  ["left", 65, "hamstrings"],
-  ["right", 30, "triceps"],
-  ["right", 40, "forearms"],
-  ["right", 52, "abductors"],
-  ["right", 78, "calves"],
+const BACK_LABELS: [string, number, string, number, number][] = [
+  ["left", 12, "traps",       30, 15],
+  ["left", 22, "shoulders",   18, 23],
+  ["left", 30, "back",        35, 28],
+  ["left", 40, "lats",        22, 35],
+  ["left", 52, "glutes",      35, 50],
+  ["left", 65, "hamstrings",  38, 65],
+  ["right", 30, "triceps",    82, 32],
+  ["right", 40, "forearms",   85, 43],
+  ["right", 52, "abductors",  65, 50],
+  ["right", 78, "calves",     62, 78],
 ];
 
 const BADGE_COLORS: Record<string, string> = {
@@ -606,9 +606,38 @@ export default function ExercisesPage() {
       <div className="flex flex-col lg:flex-row gap-4">
         {/* Body Map with Slicer Labels */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl px-2 py-4 flex flex-col items-center shrink-0">
-          <div className="relative flex items-start justify-center w-full">
+          {/* Container: labels + body + SVG lines */}
+          <div className="relative" style={{ width: "22rem", height: "24rem" }}>
+            {/* SVG connecting lines */}
+            <svg className="absolute inset-0 w-full h-full pointer-events-none z-20">
+              {(bodySide === "front" ? FRONT_LABELS : BACK_LABELS).map(([side, labelTop, muscle, muscleX, muscleY]) => {
+                const active = muscleFilter.includes(muscle);
+                // Label edge: left labels end at ~28%, right labels start at ~72%
+                // Body area is roughly 28%-72% of container width
+                const labelEdgeX = side === "left" ? 28 : 72;
+                // Map muscle coords from body-relative to container-relative
+                const bodyLeft = 28;
+                const bodyWidth = 44; // 72-28
+                const targetX = bodyLeft + (muscleX / 100) * bodyWidth;
+                const targetY = muscleY;
+                return (
+                  <line
+                    key={`${side}-${muscle}`}
+                    x1={`${labelEdgeX}%`}
+                    y1={`${labelTop}%`}
+                    x2={`${targetX}%`}
+                    y2={`${targetY}%`}
+                    stroke={active ? "#10b981" : "#374151"}
+                    strokeWidth={active ? 1.5 : 0.75}
+                    strokeDasharray={active ? "none" : "3 2"}
+                    className="transition-all duration-200"
+                  />
+                );
+              })}
+            </svg>
+
             {/* Left labels */}
-            <div className="relative flex flex-col items-end shrink-0" style={{ width: "5.5rem", height: "24rem" }}>
+            <div className="absolute left-0 top-0 bottom-0 z-30" style={{ width: "28%" }}>
               {(bodySide === "front" ? FRONT_LABELS : BACK_LABELS)
                 .filter(([side]) => side === "left")
                 .map(([, top, muscle]) => {
@@ -621,43 +650,44 @@ export default function ExercisesPage() {
                           prev.includes(muscle) ? prev.filter((m) => m !== muscle) : [...prev, muscle]
                         )
                       }
-                      className={`absolute right-0 flex items-center gap-1 text-[10px] font-medium transition-colors whitespace-nowrap ${
-                        active ? "text-emerald-400" : "text-gray-500 hover:text-gray-300"
+                      className={`absolute right-0 text-xs font-semibold transition-colors whitespace-nowrap ${
+                        active ? "text-emerald-400" : "text-white/70 hover:text-white"
                       }`}
                       style={{ top: `${top}%`, transform: "translateY(-50%)" }}
                     >
-                      <span className={`px-1.5 py-0.5 rounded ${active ? "bg-emerald-500/20" : "bg-gray-800"}`}>
+                      <span className={`px-2 py-0.5 rounded ${active ? "bg-emerald-500/20 border border-emerald-500/40" : "bg-gray-800/80"}`}>
                         {muscle}
                       </span>
-                      <span className={`w-3 h-px ${active ? "bg-emerald-500" : "bg-gray-600"}`} />
                     </button>
                   );
                 })}
             </div>
 
-            {/* Body diagram */}
+            {/* Body diagram (centered) */}
             <div
-              className="cursor-pointer relative shrink-0"
+              className="absolute cursor-pointer"
+              style={{ left: "28%", right: "28%", top: 0, bottom: 0 }}
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
               onTouchCancel={handleTouchEnd}
-              style={{ perspective: "800px" }}
             >
-              <div
-                ref={overlayRef}
-                style={{ display: "none", position: "absolute", inset: 0, zIndex: 10 }}
-              />
-              <div
-                ref={flipContainerRef}
-                style={{ transformStyle: "preserve-3d", backfaceVisibility: "hidden" }}
-              >
-                {bodyMapElement}
+              <div style={{ perspective: "800px", display: "flex", justifyContent: "center" }}>
+                <div
+                  ref={overlayRef}
+                  style={{ display: "none", position: "absolute", inset: 0, zIndex: 10 }}
+                />
+                <div
+                  ref={flipContainerRef}
+                  style={{ transformStyle: "preserve-3d", backfaceVisibility: "hidden" }}
+                >
+                  {bodyMapElement}
+                </div>
               </div>
             </div>
 
             {/* Right labels */}
-            <div className="relative flex flex-col items-start shrink-0" style={{ width: "5.5rem", height: "24rem" }}>
+            <div className="absolute right-0 top-0 bottom-0 z-30" style={{ width: "28%" }}>
               {(bodySide === "front" ? FRONT_LABELS : BACK_LABELS)
                 .filter(([side]) => side === "right")
                 .map(([, top, muscle]) => {
@@ -670,13 +700,12 @@ export default function ExercisesPage() {
                           prev.includes(muscle) ? prev.filter((m) => m !== muscle) : [...prev, muscle]
                         )
                       }
-                      className={`absolute left-0 flex items-center gap-1 text-[10px] font-medium transition-colors whitespace-nowrap ${
-                        active ? "text-emerald-400" : "text-gray-500 hover:text-gray-300"
+                      className={`absolute left-0 text-xs font-semibold transition-colors whitespace-nowrap ${
+                        active ? "text-emerald-400" : "text-white/70 hover:text-white"
                       }`}
                       style={{ top: `${top}%`, transform: "translateY(-50%)" }}
                     >
-                      <span className={`w-3 h-px ${active ? "bg-emerald-500" : "bg-gray-600"}`} />
-                      <span className={`px-1.5 py-0.5 rounded ${active ? "bg-emerald-500/20" : "bg-gray-800"}`}>
+                      <span className={`px-2 py-0.5 rounded ${active ? "bg-emerald-500/20 border border-emerald-500/40" : "bg-gray-800/80"}`}>
                         {muscle}
                       </span>
                     </button>
