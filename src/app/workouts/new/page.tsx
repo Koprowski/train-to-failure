@@ -1077,7 +1077,31 @@ function WorkoutContent() {
                         </span>
                       </span>
                     </th>
-                    <th className="py-2 px-2 text-center w-10"></th>
+                    <th className="py-2 px-2 text-center w-10">
+                      <button
+                        onClick={() => {
+                          const allCompleted = block.sets.every((s) => s.completed);
+                          block.sets.forEach((_, si) => {
+                            const set = block.sets[si];
+                            if (allCompleted && set.completed) {
+                              completeSet(blockIndex, si);
+                            } else if (!allCompleted && !set.completed) {
+                              completeSet(blockIndex, si);
+                            }
+                          });
+                        }}
+                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors mx-auto ${
+                          block.sets.every((s) => s.completed)
+                            ? "bg-emerald-500 border-emerald-500 text-white"
+                            : "border-gray-600 text-transparent hover:border-gray-500"
+                        }`}
+                        title={block.sets.every((s) => s.completed) ? "Uncheck all sets" : "Complete all sets"}
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </button>
+                    </th>
                     <th className="py-2 px-2 text-center w-8"></th>
                   </tr>
                 </thead>
