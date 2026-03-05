@@ -57,6 +57,8 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [allExercises, setAllExercises] = useState<Exercise[]>([]);
   const [exerciseSearch, setExerciseSearch] = useState("");
+  const [favoriteExerciseIds, setFavoriteExerciseIds] = useState<Set<string>>(new Set());
+  const [favoriteWorkout, setFavoriteWorkout] = useState(false);
 
   // Inline edit state
   const [editName, setEditName] = useState("");
@@ -87,15 +89,55 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
   }, []);
 
   useEffect(() => {
-    fetch(`/api/workouts/${id}`)
-      .then((r) => r.json())
-      .then((data) => {
-        setWorkout(data);
-        initEditState(data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    Promise.all([
+      fetch(`/api/workouts/${id}`).then((r) => r.json()),
+      fetch("/api/exercises/favorites").then((r) => r.ok ? r.json() : []).catch(() => []),
+      fetch(`/api/workouts/${id}/favorite`).then((r) => r.ok ? r.json() : { favorited: false }).catch(() => ({ favorited: false })),
+    ]).then(([data, favIds, favW]) => {
+      setWorkout(data);
+      initEditState(data);
+      if (Array.isArray(favIds)) setFavoriteExerciseIds(new Set(favIds));
+      setFavoriteWorkout(favW?.favorited ?? false);
+      setLoading(false);
+    }).catch(() => setLoading(false));
   }, [id, initEditState]);
+
+  const toggleExerciseFavorite = async (exerciseId: string) => {
+    setFavoriteExerciseIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(exerciseId)) next.delete(exerciseId);
+      else next.add(exerciseId);
+      return next;
+    });
+    try {
+      await fetch("/api/exercises/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ exerciseId }),
+      });
+    } catch {
+      setFavoriteExerciseIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(exerciseId)) next.delete(exerciseId);
+        else next.add(exerciseId);
+        return next;
+      });
+    }
+  };
+
+  const toggleWorkoutFavorite = async () => {
+    if (!workout) return;
+    const newVal = !favoriteWorkout;
+    setFavoriteWorkout(newVal);
+    try {
+      await fetch(`/api/workouts/${workout.id}/favorite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch {
+      setFavoriteWorkout(!newVal);
+    }
+  };
 
   const formatDuration = (seconds: number | null) => {
     if (!seconds) return "--";
@@ -369,6 +411,15 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
             </button>
           </div>
           <div className="flex items-center gap-1 shrink-0 ml-4">
+            <button
+              onClick={toggleWorkoutFavorite}
+              className="p-1.5 rounded-lg hover:bg-gray-800 transition-colors"
+              title={favoriteWorkout ? "Remove from favorite workouts" : "Add to favorite workouts"}
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill={favoriteWorkout ? "#ef4444" : "none"} stroke={favoriteWorkout ? "#ef4444" : "currentColor"} strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+              </svg>
+            </button>
             {/* Save button -- only visible when changes exist */}
             {hasChanges && (
               <button
@@ -462,11 +513,22 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
       {/* Exercise details */}
       {exerciseGroups.map(({ exercise, sets }) => (
         <div key={exercise.id} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 bg-gray-800/50">
-            <Link href={`/exercises/${exercise.id}`} className="font-semibold text-white hover:text-emerald-500 transition-colors">
-              {exercise.name}
-            </Link>
-            <p className="text-xs text-gray-400 capitalize mt-0.5">{exercise.muscleGroups}</p>
+          <div className="px-4 py-3 bg-gray-800/50 flex items-center justify-between">
+            <div>
+              <Link href={`/exercises/${exercise.id}`} className="font-semibold text-white hover:text-emerald-500 transition-colors">
+                {exercise.name}
+              </Link>
+              <p className="text-xs text-gray-400 capitalize mt-0.5">{exercise.muscleGroups}</p>
+            </div>
+            <button
+              onClick={() => toggleExerciseFavorite(exercise.id)}
+              className="p-1.5 shrink-0"
+              aria-label={favoriteExerciseIds.has(exercise.id) ? "Remove from favorites" : "Add to favorites"}
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill={favoriteExerciseIds.has(exercise.id) ? "#ef4444" : "none"} stroke={favoriteExerciseIds.has(exercise.id) ? "#ef4444" : "currentColor"} strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+              </svg>
+            </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
