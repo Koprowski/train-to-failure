@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import DateTimePicker from "@/components/DateTimePicker";
 
 interface Exercise {
   id: string;
@@ -630,28 +631,16 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
 
       {/* Date edit modal */}
       {showDatePicker && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-sm">
-            <h2 className="text-lg font-semibold mb-4">Edit Workout Date</h2>
-            <input
-              type="datetime-local"
-              value={editDate}
-              onChange={(e) => setEditDate(e.target.value)}
-              onClick={(e) => (e.target as HTMLInputElement).showPicker?.()}
-              onFocus={(e) => { try { e.target.showPicker?.(); } catch {} }}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 [color-scheme:dark]"
-              autoFocus
-            />
-            <div className="flex justify-end mt-4">
-              <button
-                onClick={() => setShowDatePicker(false)}
-                className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
+        <DateTimePicker
+          value={editDate ? new Date(editDate) : new Date(workout.startedAt)}
+          onChange={() => {}}
+          onClose={() => setShowDatePicker(false)}
+          onSave={(date) => {
+            const pad = (n: number) => String(n).padStart(2, "0");
+            setEditDate(`${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`);
+            setShowDatePicker(false);
+          }}
+        />
       )}
 
       {/* Delete Confirmation */}

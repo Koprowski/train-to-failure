@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import DateTimePicker from "@/components/DateTimePicker";
 
 interface WorkoutSet {
   id: string;
@@ -86,27 +87,25 @@ export default function DashboardPage() {
   const [chartAnimDone, setChartAnimDone] = useState(false);
 
   const [editingDateId, setEditingDateId] = useState<string | null>(null);
-  const [editDateVal, setEditDateVal] = useState("");
+  const [editDateVal, setEditDateVal] = useState<Date>(new Date());
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
   const openDateEditor = (e: React.MouseEvent, w: Workout) => {
     e.stopPropagation();
-    const d = new Date(w.startedAt);
-    const pad = (n: number) => String(n).padStart(2, "0");
-    setEditDateVal(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+    setEditDateVal(new Date(w.startedAt));
     setEditingDateId(w.id);
   };
 
-  const handleDateSave = async () => {
-    if (!editingDateId || !editDateVal) return;
+  const handleDateSave = async (date: Date) => {
+    if (!editingDateId) return;
     try {
       const res = await fetch(`/api/workouts/${editingDateId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ startedAt: new Date(editDateVal).toISOString() }),
+        body: JSON.stringify({ startedAt: date.toISOString() }),
       });
       if (res.ok) {
-        setWorkouts((prev) => prev.map((w) => w.id === editingDateId ? { ...w, startedAt: new Date(editDateVal).toISOString() } : w));
+        setWorkouts((prev) => prev.map((w) => w.id === editingDateId ? { ...w, startedAt: date.toISOString() } : w));
       }
     } finally {
       setEditingDateId(null);
@@ -397,34 +396,12 @@ export default function DashboardPage() {
 
       {/* Date Edit Modal */}
       {editingDateId && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setEditingDateId(null)}>
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-lg font-semibold mb-4">Edit Workout Date</h2>
-            <input
-              type="datetime-local"
-              value={editDateVal}
-              onChange={(e) => setEditDateVal(e.target.value)}
-              onClick={(e) => (e.target as HTMLInputElement).showPicker?.()}
-              onFocus={(e) => { try { e.target.showPicker?.(); } catch {} }}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 [color-scheme:dark]"
-              autoFocus
-            />
-            <div className="flex justify-end gap-3 mt-4">
-              <button
-                onClick={() => setEditingDateId(null)}
-                className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDateSave}
-                className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
+        <DateTimePicker
+          value={editDateVal}
+          onChange={setEditDateVal}
+          onClose={() => setEditingDateId(null)}
+          onSave={handleDateSave}
+        />
       )}
     </div>
   );

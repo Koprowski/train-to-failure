@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import DateTimePicker from "@/components/DateTimePicker";
 
 interface Exercise {
   id: string;
@@ -79,6 +80,7 @@ function WorkoutContent() {
   const [muscleTab, setMuscleTab] = useState("recent");
   const [saving, setSaving] = useState(false);
   const [showDateModal, setShowDateModal] = useState(false);
+  const [showLauncherDate, setShowLauncherDate] = useState(false);
   const [started, setStarted] = useState(false);
   const [activeExerciseIndex, setActiveExerciseIndex] = useState<number | null>(null);
   const startTimeRef = useRef<Date | null>(null);
@@ -780,12 +782,34 @@ function WorkoutContent() {
             onKeyDown={(e) => { if (e.key === "Enter") startWorkout(); }}
           />
           <label className="block text-sm font-medium text-gray-300 mb-2">Date & Time <span className="text-gray-500 font-normal">(optional, defaults to now)</span></label>
-          <input
-            type="datetime-local"
-            value={customDate}
-            onChange={(e) => setCustomDate(e.target.value)}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-4 [color-scheme:dark]"
-          />
+          <button
+            type="button"
+            onClick={() => setShowLauncherDate(true)}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-left text-sm mb-4 transition-colors hover:border-gray-600"
+          >
+            {customDate ? (
+              <span className="text-white">
+                {(() => {
+                  const d = new Date(customDate);
+                  return d.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+                })()}
+              </span>
+            ) : (
+              <span className="text-gray-500">Select date & time...</span>
+            )}
+          </button>
+          {showLauncherDate && (
+            <DateTimePicker
+              value={customDate ? new Date(customDate) : new Date()}
+              onChange={() => {}}
+              onClose={() => setShowLauncherDate(false)}
+              onSave={(date) => {
+                const pad = (n: number) => String(n).padStart(2, "0");
+                setCustomDate(`${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`);
+                setShowLauncherDate(false);
+              }}
+            />
+          )}
           <button
             onClick={startWorkout}
             disabled={!workoutName.trim()}
@@ -941,28 +965,16 @@ function WorkoutContent() {
 
       {/* Date edit modal */}
       {showDateModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-sm">
-            <h2 className="text-lg font-semibold mb-4">Edit Workout Date</h2>
-            <input
-              type="datetime-local"
-              value={customDate}
-              onChange={(e) => setCustomDate(e.target.value)}
-              onClick={(e) => (e.target as HTMLInputElement).showPicker?.()}
-              onFocus={(e) => { try { e.target.showPicker?.(); } catch {} }}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 [color-scheme:dark]"
-              autoFocus
-            />
-            <div className="flex justify-end mt-4">
-              <button
-                onClick={() => setShowDateModal(false)}
-                className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
+        <DateTimePicker
+          value={customDate ? new Date(customDate) : startTimeRef.current ?? new Date()}
+          onChange={() => {}}
+          onClose={() => setShowDateModal(false)}
+          onSave={(date) => {
+            const pad = (n: number) => String(n).padStart(2, "0");
+            setCustomDate(`${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`);
+            setShowDateModal(false);
+          }}
+        />
       )}
 
       {/* Exercise blocks */}
