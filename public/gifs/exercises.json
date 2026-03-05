@@ -338,5 +338,15 @@
     "gifFile": "wall-sit.gif",
     "imageUrl": "/gifs/wall-sit.gif",
     "muscleGroups": "quads,glutes,calves"
+  },
+  "Reverse Curl": {
+    "gifFile": "dumbbell-reverse-curl.gif",
+    "imageUrl": "/gifs/dumbbell-reverse-curl.gif",
+    "muscleGroups": "forearms,biceps"
+  },
+  "Hammer Curl": {
+    "gifFile": "hammer-curl.gif",
+    "imageUrl": "/gifs/hammer-curl.gif",
+    "muscleGroups": "biceps,forearms"
   }
 }

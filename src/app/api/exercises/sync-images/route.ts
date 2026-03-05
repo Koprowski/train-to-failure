@@ -30,6 +30,8 @@ const seedData: Record<string, { equipment: string; type: string }> = {
   "Incline Barbell Bench Press": { equipment: "barbell,bench", type: "weight_reps" },
   "Cable Row": { equipment: "cable", type: "weight_reps" },
   "Wall Sit": { equipment: "bodyweight", type: "time" },
+  "Reverse Curl": { equipment: "dumbbell", type: "weight_reps" },
+  "Hammer Curl": { equipment: "dumbbell", type: "weight_reps" },
 };
 
 export async function POST() {
