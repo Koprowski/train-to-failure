@@ -637,34 +637,33 @@ export default function WorkoutsPage() {
       {/* Muscle Group Picker Modal */}
       {showMusclePicker && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowMusclePicker(false)}>
-          <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold text-white">Filter by Muscle Group</h3>
-              <button onClick={() => setShowMusclePicker(false)} className="text-gray-400 hover:text-white transition-colors">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Front/Back toggle */}
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <button
-                onClick={() => setBodySide("front")}
-                className={`px-3 py-1 text-xs rounded-lg transition-colors ${bodySide === "front" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
-              >
-                Front
-              </button>
-              <button
-                onClick={() => setBodySide("back")}
-                className={`px-3 py-1 text-xs rounded-lg transition-colors ${bodySide === "back" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
-              >
-                Back
-              </button>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-sm p-3" onClick={(e) => e.stopPropagation()}>
+            {/* Title + Front/Back toggle + close in one row */}
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-sm font-semibold text-white">Muscle Group</h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setBodySide("front")}
+                  className={`px-2 py-0.5 text-xs rounded transition-colors ${bodySide === "front" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+                >
+                  Front
+                </button>
+                <button
+                  onClick={() => setBodySide("back")}
+                  className={`px-2 py-0.5 text-xs rounded transition-colors ${bodySide === "back" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+                >
+                  Back
+                </button>
+                <button onClick={() => setShowMusclePicker(false)} className="text-gray-400 hover:text-white transition-colors ml-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
 
             {/* Body diagram with labeled lines */}
-            <div className="relative mx-auto" style={{ width: "100%", maxWidth: "24rem", height: "24rem" }}>
+            <div className="relative mx-auto" style={{ width: "100%", maxWidth: "22rem", height: "20rem" }}>
               {/* SVG connecting lines */}
               <svg className="absolute inset-0 w-full h-full pointer-events-none z-20">
                 {(bodySide === "front" ? FRONT_LABELS : BACK_LABELS).map(([side, labelTop, muscle, muscleX, muscleY]) => {
@@ -704,12 +703,12 @@ export default function WorkoutsPage() {
                             prev.includes(muscle) ? prev.filter((m) => m !== muscle) : [...prev, muscle]
                           )
                         }
-                        className={`absolute right-0 text-sm font-semibold transition-colors whitespace-nowrap ${
+                        className={`absolute right-0 text-xs font-semibold transition-colors whitespace-nowrap ${
                           active ? "text-emerald-400" : "text-white/70 hover:text-white"
                         }`}
                         style={{ top: `${top}%`, transform: "translateY(-50%)" }}
                       >
-                        <span className={`px-2.5 py-1 rounded ${active ? "bg-emerald-500/20 border border-emerald-500/40" : "bg-gray-800/80"}`}>
+                        <span className={`px-1.5 py-0.5 rounded ${active ? "bg-emerald-500/20 border border-emerald-500/40" : "bg-gray-800/80"}`}>
                           {properCase(muscle)}
                         </span>
                       </button>
@@ -736,12 +735,12 @@ export default function WorkoutsPage() {
                             prev.includes(muscle) ? prev.filter((m) => m !== muscle) : [...prev, muscle]
                           )
                         }
-                        className={`absolute left-0 text-sm font-semibold transition-colors whitespace-nowrap ${
+                        className={`absolute left-0 text-xs font-semibold transition-colors whitespace-nowrap ${
                           active ? "text-emerald-400" : "text-white/70 hover:text-white"
                         }`}
                         style={{ top: `${top}%`, transform: "translateY(-50%)" }}
                       >
-                        <span className={`px-2.5 py-1 rounded ${active ? "bg-emerald-500/20 border border-emerald-500/40" : "bg-gray-800/80"}`}>
+                        <span className={`px-1.5 py-0.5 rounded ${active ? "bg-emerald-500/20 border border-emerald-500/40" : "bg-gray-800/80"}`}>
                           {properCase(muscle)}
                         </span>
                       </button>
@@ -751,16 +750,16 @@ export default function WorkoutsPage() {
             </div>
 
             {/* Clear + Apply */}
-            <div className="flex gap-3 mt-4">
+            <div className="flex gap-2 mt-2">
               <button
                 onClick={() => setMuscleDraft([])}
-                className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+                className="px-3 py-1.5 text-xs text-gray-400 hover:text-white transition-colors"
               >
                 Clear
               </button>
               <button
                 onClick={() => { setMuscleFilter(muscleDraft); setShowMusclePicker(false); }}
-                className="flex-1 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-semibold transition-colors"
+                className="flex-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-semibold transition-colors"
               >
                 Apply{muscleDraft.length > 0 ? ` (${muscleDraft.length})` : ""}
               </button>
