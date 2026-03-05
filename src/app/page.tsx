@@ -92,6 +92,8 @@ export default function DashboardPage() {
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
   const [editName, setEditName] = useState("");
   const [editSaving, setEditSaving] = useState(false);
+  const [editingDateId, setEditingDateId] = useState<string | null>(null);
+  const [editDateVal, setEditDateVal] = useState("");
 
   const handleTouchStart = (id: string, e: React.TouchEvent) => {
     setTouchStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
@@ -157,6 +159,30 @@ export default function DashboardPage() {
       }
     } finally {
       setEditSaving(false);
+    }
+  };
+
+  const openDateEditor = (e: React.MouseEvent, w: Workout) => {
+    e.stopPropagation();
+    const d = new Date(w.startedAt);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    setEditDateVal(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+    setEditingDateId(w.id);
+  };
+
+  const handleDateSave = async () => {
+    if (!editingDateId || !editDateVal) return;
+    try {
+      const res = await fetch(`/api/workouts/${editingDateId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ startedAt: new Date(editDateVal).toISOString() }),
+      });
+      if (res.ok) {
+        setWorkouts((prev) => prev.map((w) => w.id === editingDateId ? { ...w, startedAt: new Date(editDateVal).toISOString() } : w));
+      }
+    } finally {
+      setEditingDateId(null);
     }
   };
 
@@ -244,7 +270,7 @@ export default function DashboardPage() {
           <div className="space-y-3">
             {recentWorkouts.map((w) => {
               const totalReps = w.sets.reduce((sum, s) => sum + (s.reps || 0), 0);
-              const lastSets = w.sets.filter((s) => s.completed).slice(-3);
+              const lastSets = w.sets.slice(-3);
               const hasIncompleteSets = w.sets.some((s) => !s.completed);
               const isActive = swipeId === w.id;
               const offset = isActive ? swipeX : 0;
@@ -261,7 +287,7 @@ export default function DashboardPage() {
                     </div>
                   )}
                   <div
-                    className={`group flex items-center justify-between p-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition-transform cursor-pointer relative z-10 ${
+                    className={`group p-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition-transform cursor-pointer relative z-10 ${
                       deleting === w.id ? "opacity-50" : ""
                     }`}
                     style={{ transform: `translateX(${offset}px)` }}
@@ -270,32 +296,18 @@ export default function DashboardPage() {
                     onTouchEnd={handleTouchEnd}
                     onClick={() => { if (!swipeId) router.push(`/workouts/${w.id}`); }}
                   >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{w.name}</p>
+                    {/* Top row: name + icons */}
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="font-medium truncate">{w.name}</p>
                         {hasIncompleteSets && (
-                          <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded-full leading-none">Needs Review</span>
+                          <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded-full leading-none shrink-0">Needs Review</span>
                         )}
                       </div>
-                      <p className="text-gray-400 text-sm">
-                        {formatDate(w.startedAt)} &middot; {totalReps} rep{totalReps !== 1 ? "s" : ""}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {lastSets.length > 0 && (
-                        <div className="flex gap-2">
-                          {lastSets.map((s, i) => (
-                            <div key={i} className="text-center text-xs min-w-[32px]">
-                              <p className="text-gray-300 font-medium">{s.weightLbs ?? "BW"}</p>
-                              <p className="text-gray-300">{s.reps ?? 0}</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 shrink-0 ml-2">
                         <button
                           onClick={(e) => { e.stopPropagation(); router.push(`/workouts/${w.id}`); }}
-                          className="p-1.5 rounded text-gray-500 hover:text-blue-400 transition-colors"
+                          className="p-1 rounded text-gray-500 hover:text-blue-400 transition-colors"
                           title="Edit workout"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -304,7 +316,7 @@ export default function DashboardPage() {
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); router.push(`/workouts/new?duplicateFrom=${w.id}`); }}
-                          className="p-1.5 rounded text-gray-500 hover:text-emerald-400 transition-colors"
+                          className="p-1 rounded text-gray-500 hover:text-emerald-400 transition-colors"
                           title="Repeat workout"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -312,6 +324,28 @@ export default function DashboardPage() {
                           </svg>
                         </button>
                       </div>
+                    </div>
+                    {/* Bottom row: date + set data */}
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-gray-400 text-sm">
+                        <button
+                          onClick={(e) => openDateEditor(e, w)}
+                          className="hover:text-emerald-400 transition-colors"
+                        >
+                          {formatDate(w.startedAt)}
+                        </button>
+                        {" "}&middot; {totalReps} rep{totalReps !== 1 ? "s" : ""}
+                      </p>
+                      {lastSets.length > 0 && (
+                        <div className="flex gap-2 shrink-0">
+                          {lastSets.map((s, i) => (
+                            <div key={i} className="text-center text-xs min-w-[32px]">
+                              <p className="text-gray-300 font-medium">{s.weightLbs ?? "BW"}</p>
+                              <p className="text-gray-300">{s.reps ?? 0}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -433,6 +467,38 @@ export default function DashboardPage() {
                   {editSaving ? "Saving..." : "Save"}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Date Edit Modal */}
+      {editingDateId && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setEditingDateId(null)}>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-semibold mb-4">Edit Workout Date</h2>
+            <input
+              type="datetime-local"
+              value={editDateVal}
+              onChange={(e) => setEditDateVal(e.target.value)}
+              onClick={(e) => (e.target as HTMLInputElement).showPicker?.()}
+              onFocus={(e) => { try { e.target.showPicker?.(); } catch {} }}
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 [color-scheme:dark]"
+              autoFocus
+            />
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                onClick={() => setEditingDateId(null)}
+                className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDateSave}
+                className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors"
+              >
+                Save
+              </button>
             </div>
           </div>
         </div>
