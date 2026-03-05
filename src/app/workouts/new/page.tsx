@@ -323,7 +323,7 @@ function WorkoutContent() {
                 weightLbs: s.weightLbs?.toString() ?? "",
                 reps: s.reps?.toString() ?? "",
                 timeSecs: s.timeSecs?.toString() ?? "",
-                rpe: s.rpe?.toString() ?? "",
+                rpe: "",
                 completed: false,
                 notes: "",
               });
