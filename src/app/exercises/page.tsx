@@ -723,7 +723,7 @@ export default function ExercisesPage() {
                     </svg>
                   </button>
                   {ex.imageUrl && (
-                    <div className="bg-white flex items-center justify-center">
+                    <div className="bg-white flex items-center justify-center overflow-hidden">
                       <img
                         src={ex.imageUrl}
                         alt={ex.name}
