@@ -166,11 +166,11 @@ for (const [slug, muscles] of Object.entries(SLUG_TO_MUSCLE)) {
 // Muscle label positions: [side, labelTopPercent, muscleName, muscleXPercent, muscleYPercent]
 // muscleX/Y are target points on the body diagram (% of body width/height)
 const FRONT_LABELS: [string, number, string, number, number][] = [
-  ["left", 10, "traps",       38, 11],
+  ["left", 10, "traps",       42, 19],
   ["left", 20, "shoulders",   18, 22],
   ["left", 30, "chest",       30, 28],
   ["left", 38, "biceps",      14, 35],
-  ["left", 46, "obliques",    25, 37],
+  ["left", 46, "obliques",    32, 43],
   ["left", 62, "quads",       35, 62],
   ["right", 30, "abs",        50, 35],
   ["right", 38, "forearms",   85, 43],
@@ -180,7 +180,7 @@ const FRONT_LABELS: [string, number, string, number, number][] = [
 ];
 
 const BACK_LABELS: [string, number, string, number, number][] = [
-  ["left", 10, "traps",       40, 12],
+  ["left", 10, "traps",       42, 19],
   ["left", 20, "shoulders",   18, 22],
   ["left", 30, "back",        45, 26],
   ["left", 40, "lats",        25, 33],
