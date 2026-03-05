@@ -753,9 +753,16 @@ function WorkoutContent() {
     return names;
   };
 
-  // Pre-start state (skip if quick exercise -- already started)
+  // Pre-start state (skip if quick exercise or duplicateFrom -- already started or loading)
   if (!started && !quickExerciseId) {
-    const showLauncher = !resumeId && !templateId && !duplicateFrom;
+    if (duplicateFrom) {
+      return (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
+        </div>
+      );
+    }
+    const showLauncher = !resumeId && !templateId;
 
     return (
       <div className="space-y-6">
