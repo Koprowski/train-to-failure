@@ -27,7 +27,6 @@ function SwipeableCard({
   workout,
   onDelete,
   onRepeat,
-  formatDuration,
   formatDate,
   formatTime,
   favoriteIds,
@@ -36,7 +35,6 @@ function SwipeableCard({
   workout: Workout;
   onDelete: () => void;
   onRepeat: () => void;
-  formatDuration: (s: number | null) => string;
   formatDate: (d: string) => string;
   formatTime: (d: string) => string;
   favoriteIds: Set<string>;
@@ -192,10 +190,6 @@ function SwipeableCard({
               </p>
             </div>
             <div className="flex items-start gap-2 shrink-0 ml-4">
-              <div className="text-right">
-                <p className="text-white font-medium">{formatDuration(workout.duration)}</p>
-                <p className="text-gray-400 text-sm">{workout.sets.length} sets</p>
-              </div>
               {/* Repeat button */}
               <button
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRepeat(); }}
@@ -379,7 +373,6 @@ export default function WorkoutsPage() {
               workout={w}
               onDelete={() => setDeleteId(w.id)}
               onRepeat={() => repeatWorkout(w)}
-              formatDuration={formatDuration}
               formatDate={formatDate}
               formatTime={formatTime}
               favoriteIds={favoriteIds}
