@@ -57,32 +57,34 @@ for (const [slug, muscles] of Object.entries(SLUG_TO_MUSCLE)) {
   }
 }
 
-// Muscle label positions: [side, labelTopPercent, muscleName, muscleXPercent, muscleYPercent]
+// Muscle label positions: [side, labelTopPercent, muscleName, bodyX%, bodyY%]
+// bodyX/bodyY are percentages of the BODY SVG itself (not the container).
+// A useEffect measures the actual SVG bounding box and maps these to container coords.
 const FRONT_LABELS: [string, number, string, number, number][] = [
-  ["left", 10, "traps",       42, 19],
-  ["left", 20, "shoulders",   18, 22],
-  ["left", 30, "chest",       30, 28],
-  ["left", 38, "biceps",      14, 35],
-  ["left", 46, "obliques",    32, 43],
-  ["left", 62, "quads",       35, 62],
+  ["left", 10, "traps",       48, 15],
+  ["left", 20, "shoulders",   20, 19],
+  ["left", 30, "chest",       35, 27],
+  ["left", 38, "biceps",      15, 34],
+  ["left", 46, "obliques",    32, 41],
+  ["left", 62, "quads",       38, 62],
   ["right", 30, "abs",        50, 35],
-  ["right", 38, "forearms",   85, 43],
-  ["right", 50, "hip flexors",60, 50],
-  ["right", 62, "adductors",  55, 58],
-  ["right", 78, "calves",     62, 78],
+  ["right", 38, "forearms",   83, 43],
+  ["right", 50, "hip flexors",58, 49],
+  ["right", 62, "adductors",  48, 57],
+  ["right", 78, "calves",     58, 79],
 ];
 
 const BACK_LABELS: [string, number, string, number, number][] = [
-  ["left", 10, "traps",       42, 19],
-  ["left", 20, "shoulders",   18, 22],
-  ["left", 30, "back",        45, 26],
-  ["left", 40, "lats",        25, 33],
-  ["left", 52, "glutes",      40, 48],
-  ["left", 65, "hamstrings",  40, 63],
-  ["right", 30, "triceps",    82, 32],
+  ["left", 10, "traps",       48, 15],
+  ["left", 20, "shoulders",   20, 19],
+  ["left", 30, "back",        50, 27],
+  ["left", 40, "lats",        30, 33],
+  ["left", 52, "glutes",      45, 48],
+  ["left", 65, "hamstrings",  42, 63],
+  ["right", 30, "triceps",    82, 31],
   ["right", 40, "forearms",   85, 43],
-  ["right", 52, "abductors",  62, 48],
-  ["right", 78, "calves",     62, 78],
+  ["right", 52, "abductors",  60, 48],
+  ["right", 78, "calves",     58, 79],
 ];
 
 function properCase(s: string) {
@@ -335,6 +337,11 @@ export default function WorkoutsPage() {
   const [showMusclePicker, setShowMusclePicker] = useState(false);
   const [muscleDraft, setMuscleDraft] = useState<string[]>([]);
   const [bodySide, setBodySide] = useState<"front" | "back">("front");
+  // Refs + state for measuring body SVG position within the diagram container
+  const diagramContainerRef = useRef<HTMLDivElement>(null);
+  const bodyDivRef = useRef<HTMLDivElement>(null);
+  // bodyPos: actual body SVG bounding box as % of the diagram container
+  const [bodyPos, setBodyPos] = useState({ left: 28, top: 0, width: 44, height: 100 });
 
   useEffect(() => {
     Promise.all([
@@ -350,6 +357,33 @@ export default function WorkoutsPage() {
       setLoading(false);
     });
   }, []);
+
+  // Measure body SVG position within the diagram container
+  useEffect(() => {
+    if (!showMusclePicker) return;
+    const measure = () => {
+      const container = diagramContainerRef.current;
+      const bodyDiv = bodyDivRef.current;
+      if (!container || !bodyDiv) return;
+      const cRect = container.getBoundingClientRect();
+      if (cRect.width === 0 || cRect.height === 0) return;
+      const svg = bodyDiv.querySelector("svg");
+      if (!svg) return;
+      const sRect = svg.getBoundingClientRect();
+      setBodyPos({
+        left: ((sRect.left - cRect.left) / cRect.width) * 100,
+        top: ((sRect.top - cRect.top) / cRect.height) * 100,
+        width: (sRect.width / cRect.width) * 100,
+        height: (sRect.height / cRect.height) * 100,
+      });
+    };
+    // Allow Body component time to render
+    const t1 = setTimeout(measure, 150);
+    const t2 = setTimeout(measure, 400);
+    const observer = new ResizeObserver(() => measure());
+    if (diagramContainerRef.current) observer.observe(diagramContainerRef.current);
+    return () => { clearTimeout(t1); clearTimeout(t2); observer.disconnect(); };
+  }, [showMusclePicker, bodySide]);
 
   const toggleFavorite = async (exerciseId: string) => {
     setFavoriteIds((prev) => {
@@ -663,16 +697,16 @@ export default function WorkoutsPage() {
             </div>
 
             {/* Body diagram with labeled lines */}
-            <div className="relative mx-auto" style={{ width: "100%", maxWidth: "22rem", height: "20rem" }}>
+            <div ref={diagramContainerRef} className="relative mx-auto" style={{ width: "100%", maxWidth: "22rem", height: "20rem" }}>
               {/* SVG connecting lines */}
               <svg className="absolute inset-0 w-full h-full pointer-events-none z-20">
                 {(bodySide === "front" ? FRONT_LABELS : BACK_LABELS).map(([side, labelTop, muscle, muscleX, muscleY]) => {
                   const active = muscleDraft.includes(muscle);
-                  const labelEdgeX = side === "left" ? 28 : 72;
-                  const bodyLeft = 28;
-                  const bodyWidth = 44;
-                  const targetX = bodyLeft + (muscleX / 100) * bodyWidth;
-                  const targetY = muscleY;
+                  // Label edge: left labels end near body left, right labels start near body right
+                  const labelEdgeX = side === "left" ? bodyPos.left : bodyPos.left + bodyPos.width;
+                  // Map muscle coords from body-SVG-relative to container-relative
+                  const targetX = bodyPos.left + (muscleX / 100) * bodyPos.width;
+                  const targetY = bodyPos.top + (muscleY / 100) * bodyPos.height;
                   return (
                     <line
                       key={`${side}-${muscle}`}
@@ -690,7 +724,7 @@ export default function WorkoutsPage() {
               </svg>
 
               {/* Left labels */}
-              <div className="absolute left-0 top-0 bottom-0 z-30" style={{ width: "28%" }}>
+              <div className="absolute left-0 top-0 bottom-0 z-30" style={{ width: `${bodyPos.left}%` }}>
                 {(bodySide === "front" ? FRONT_LABELS : BACK_LABELS)
                   .filter(([side]) => side === "left")
                   .map(([, top, muscle]) => {
@@ -717,12 +751,12 @@ export default function WorkoutsPage() {
               </div>
 
               {/* Body diagram (centered) */}
-              <div className="absolute" style={{ left: "28%", right: "28%", top: 0, bottom: 0, display: "flex", justifyContent: "center" }}>
+              <div ref={bodyDivRef} className="absolute" style={{ left: "20%", right: "20%", top: 0, bottom: 0, display: "flex", justifyContent: "center" }}>
                 {bodyMapElement}
               </div>
 
               {/* Right labels */}
-              <div className="absolute right-0 top-0 bottom-0 z-30" style={{ width: "28%" }}>
+              <div className="absolute right-0 top-0 bottom-0 z-30" style={{ width: `${100 - bodyPos.left - bodyPos.width}%` }}>
                 {(bodySide === "front" ? FRONT_LABELS : BACK_LABELS)
                   .filter(([side]) => side === "right")
                   .map(([, top, muscle]) => {
