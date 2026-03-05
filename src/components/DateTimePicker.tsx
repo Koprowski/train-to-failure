@@ -33,6 +33,7 @@ export default function DateTimePicker({ value, onChange, onClose, onSave }: Dat
   const [minute, setMinute] = useState(value.getMinutes());
   const [ampm, setAmpm] = useState<"AM" | "PM">(value.getHours() >= 12 ? "PM" : "AM");
 
+  const valueTime = value.getTime();
   useEffect(() => {
     setViewYear(value.getFullYear());
     setViewMonth(value.getMonth());
@@ -42,7 +43,8 @@ export default function DateTimePicker({ value, onChange, onClose, onSave }: Dat
     setHour(value.getHours() % 12 || 12);
     setMinute(value.getMinutes());
     setAmpm(value.getHours() >= 12 ? "PM" : "AM");
-  }, [value]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [valueTime]);
 
   const buildDate = (day: number, h: number, m: number, ap: "AM" | "PM") => {
     let hour24 = h % 12;
