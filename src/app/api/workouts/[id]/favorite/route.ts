@@ -55,7 +55,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ favorited: false });
     } else {
       // Get unique exercise IDs in order
-      const exerciseIds = [...new Set(workout.sets.map((s) => s.exerciseId))];
+      const exerciseIds = [...new Set(workout.sets.map((s: { exerciseId: string }) => s.exerciseId))];
       await prisma.favoriteWorkout.create({
         data: {
           userId: userId!,

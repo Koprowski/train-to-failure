@@ -153,20 +153,38 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
   const [muscleDraftEdit, setMuscleDraftEdit] = useState<string[]>([]);
   const [showEquipmentPickerEdit, setShowEquipmentPickerEdit] = useState(false);
   const [equipmentDraftEdit, setEquipmentDraftEdit] = useState<string[]>([]);
+  const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
     Promise.all([
       fetch(`/api/exercises/${id}`).then((r) => r.json()),
       fetch(`/api/stats?exerciseId=${id}`).then((r) => r.json()),
-    ]).then(([ex, stats]) => {
+      fetch(`/api/exercises/favorites`).then((r) => r.json()),
+    ]).then(([ex, stats, favIds]) => {
       setExercise(ex);
       const h = stats?.history ?? [];
       setHistory(h);
       const hasWeight = h.some((e: HistoryEntry) => e.maxWeight > 0);
       setChartMetric(hasWeight ? "estimated1RM" : "totalReps");
+      if (Array.isArray(favIds)) {
+        setIsFavorite(favIds.includes(id));
+      }
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [id]);
+
+  const toggleFavorite = async () => {
+    setIsFavorite((prev) => !prev);
+    try {
+      await fetch("/api/exercises/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ exerciseId: id }),
+      });
+    } catch {
+      setIsFavorite((prev) => !prev);
+    }
+  };
 
   function openEdit() {
     if (!exercise) return;
@@ -283,6 +301,15 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
         <div className="flex items-start justify-between">
           <h1 className="text-2xl font-bold">{exercise.name}</h1>
           <div className="flex items-center gap-2">
+            <button
+              onClick={toggleFavorite}
+              className="p-1.5 rounded-lg hover:bg-gray-800 transition-colors"
+              title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill={isFavorite ? "#ef4444" : "none"} stroke={isFavorite ? "#ef4444" : "currentColor"} strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+              </svg>
+            </button>
             {exercise.isCustom && (
               <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">Custom</span>
             )}

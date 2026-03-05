@@ -1,6 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/session";
+import { readFileSync } from "fs";
+import { join } from "path";
+
+let gifLookup: Record<string, string> | null = null;
+function getGifLookup(): Record<string, string> {
+  if (!gifLookup) {
+    try {
+      const data = JSON.parse(readFileSync(join(process.cwd(), "public", "gifs", "exercises.json"), "utf-8"));
+      gifLookup = {};
+      for (const [name, entry] of Object.entries(data)) {
+        const e = entry as { imageUrl?: string };
+        if (e.imageUrl) gifLookup[name] = e.imageUrl;
+      }
+    } catch {
+      gifLookup = {};
+    }
+  }
+  return gifLookup;
+}
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -10,7 +29,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     if (authError) return authError;
 
     const { id } = await params;
-    const exercise = await prisma.exercise.findUnique({
+    let exercise = await prisma.exercise.findUnique({
       where: { id },
       include: {
         workoutSets: {
@@ -23,6 +42,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     if (!exercise) {
       return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
+    }
+
+    // Auto-populate imageUrl from exercises.json if missing or outdated
+    const lookup = getGifLookup();
+    const gifUrl = lookup[exercise.name];
+    if (gifUrl && exercise.imageUrl !== gifUrl) {
+      await prisma.exercise.update({ where: { id }, data: { imageUrl: gifUrl } });
+      exercise = { ...exercise, imageUrl: gifUrl };
     }
 
     return NextResponse.json(exercise);

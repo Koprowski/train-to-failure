@@ -325,8 +325,8 @@
     "muscleGroups": "hamstrings"
   },
   "Kettlebell - One Arm Clean + Jerk": {
-    "gifFile": "by_kettlebell-one-arm-clean-and-jerk.gif",
-    "imageUrl": "/gifs/by_kettlebell-one-arm-clean-and-jerk.gif",
+    "gifFile": "kettlebell-clean-and-jerk.gif",
+    "imageUrl": "/gifs/kettlebell-clean-and-jerk.gif",
     "muscleGroups": "shoulders,glutes,quads,back"
   },
   "Back Extension": {
