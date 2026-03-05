@@ -168,30 +168,30 @@ for (const [slug, muscles] of Object.entries(SLUG_TO_MUSCLE)) {
 // bodyX/bodyY are percentages of the BODY SVG itself (not the container).
 // A useEffect measures the actual SVG bounding box and maps these to container coords.
 const FRONT_LABELS: [string, number, string, number, number][] = [
-  ["left", 10, "traps",       48, 15],
-  ["left", 20, "shoulders",   20, 19],
-  ["left", 30, "chest",       35, 27],
-  ["left", 38, "biceps",      15, 34],
-  ["left", 46, "obliques",    32, 41],
-  ["left", 62, "quads",       38, 62],
-  ["right", 30, "abs",        50, 35],
-  ["right", 38, "forearms",   83, 43],
-  ["right", 50, "hip flexors",58, 49],
-  ["right", 62, "adductors",  48, 57],
-  ["right", 78, "calves",     58, 79],
+  ["left", 10, "traps",       45, 20],
+  ["left", 20, "shoulders",   18, 23],
+  ["left", 30, "chest",       35, 30],
+  ["left", 38, "biceps",      12, 37],
+  ["left", 46, "obliques",    32, 44],
+  ["left", 62, "quads",       38, 64],
+  ["right", 30, "abs",        50, 37],
+  ["right", 38, "forearms",   83, 46],
+  ["right", 50, "hip flexors",58, 52],
+  ["right", 62, "adductors",  48, 59],
+  ["right", 78, "calves",     58, 80],
 ];
 
 const BACK_LABELS: [string, number, string, number, number][] = [
-  ["left", 10, "traps",       48, 15],
-  ["left", 20, "shoulders",   20, 19],
-  ["left", 30, "back",        50, 27],
-  ["left", 40, "lats",        30, 33],
-  ["left", 52, "glutes",      45, 48],
-  ["left", 65, "hamstrings",  42, 63],
-  ["right", 30, "triceps",    82, 31],
-  ["right", 40, "forearms",   85, 43],
-  ["right", 52, "abductors",  60, 48],
-  ["right", 78, "calves",     58, 79],
+  ["left", 10, "traps",       45, 20],
+  ["left", 20, "shoulders",   18, 23],
+  ["left", 30, "back",        50, 30],
+  ["left", 40, "lats",        28, 36],
+  ["left", 52, "glutes",      45, 50],
+  ["left", 65, "hamstrings",  42, 65],
+  ["right", 30, "triceps",    82, 34],
+  ["right", 40, "forearms",   85, 46],
+  ["right", 52, "abductors",  60, 50],
+  ["right", 78, "calves",     58, 80],
 ];
 
 function properCase(s: string) {
@@ -657,7 +657,7 @@ export default function ExercisesPage() {
                     y1={`${labelTop}%`}
                     x2={`${targetX}%`}
                     y2={`${targetY}%`}
-                    stroke={active ? "#10b981" : "#374151"}
+                    stroke={active ? "#3b82f6" : "#374151"}
                     strokeWidth={active ? 1.5 : 0.75}
                     strokeDasharray={active ? "none" : "3 2"}
                     className="transition-all duration-200"
@@ -681,11 +681,11 @@ export default function ExercisesPage() {
                         )
                       }
                       className={`absolute right-0 text-sm font-semibold transition-colors whitespace-nowrap ${
-                        active ? "text-emerald-400" : "text-white/70 hover:text-white"
+                        active ? "text-blue-400" : "text-white/70 hover:text-white"
                       }`}
                       style={{ top: `${top}%`, transform: "translateY(-50%)" }}
                     >
-                      <span className={`px-2.5 py-1 rounded ${active ? "bg-emerald-500/20 border border-emerald-500/40" : "bg-gray-800/80"}`}>
+                      <span className={`px-2.5 py-1 rounded ${active ? "bg-blue-500/20 border border-blue-500/40" : "bg-gray-800/80"}`}>
                         {properCase(muscle)}
                       </span>
                     </button>
@@ -732,11 +732,11 @@ export default function ExercisesPage() {
                         )
                       }
                       className={`absolute left-0 text-sm font-semibold transition-colors whitespace-nowrap ${
-                        active ? "text-emerald-400" : "text-white/70 hover:text-white"
+                        active ? "text-blue-400" : "text-white/70 hover:text-white"
                       }`}
                       style={{ top: `${top}%`, transform: "translateY(-50%)" }}
                     >
-                      <span className={`px-2.5 py-1 rounded ${active ? "bg-emerald-500/20 border border-emerald-500/40" : "bg-gray-800/80"}`}>
+                      <span className={`px-2.5 py-1 rounded ${active ? "bg-blue-500/20 border border-blue-500/40" : "bg-gray-800/80"}`}>
                         {properCase(muscle)}
                       </span>
                     </button>
