@@ -85,84 +85,9 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [chartAnimDone, setChartAnimDone] = useState(false);
 
-  const [swipeId, setSwipeId] = useState<string | null>(null);
-  const [swipeX, setSwipeX] = useState(0);
-  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
-  const [touchMoved, setTouchMoved] = useState(false);
-  const [deleting, setDeleting] = useState<string | null>(null);
-  const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editSaving, setEditSaving] = useState(false);
   const [editingDateId, setEditingDateId] = useState<string | null>(null);
   const [editDateVal, setEditDateVal] = useState("");
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
-
-  const handleTouchStart = (id: string, e: React.TouchEvent) => {
-    setTouchStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
-    setSwipeId(id);
-    setSwipeX(0);
-    setTouchMoved(false);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!touchStart || !swipeId) return;
-    const dx = e.touches[0].clientX - touchStart.x;
-    const dy = e.touches[0].clientY - touchStart.y;
-    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
-      setTouchMoved(true);
-    }
-    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
-      setSwipeX(dx);
-    }
-  };
-
-  const handleTouchEnd = () => {
-    if (!swipeId) return;
-    const threshold = 80;
-    if (swipeX < -threshold) {
-      handleDeleteWorkout(swipeId);
-    } else if (swipeX > threshold) {
-      const w = workouts.find((w) => w.id === swipeId);
-      if (w) { setEditingWorkout(w); setEditName(w.name); }
-    } else if (!touchMoved) {
-      router.push(`/workouts/${swipeId}`);
-    }
-    setSwipeId(null);
-    setSwipeX(0);
-    setTouchStart(null);
-    setTouchMoved(false);
-  };
-
-  const handleDeleteWorkout = async (id: string) => {
-    if (!confirm("Delete this workout?")) return;
-    setDeleting(id);
-    try {
-      const res = await fetch(`/api/workouts/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        setWorkouts((prev) => prev.filter((w) => w.id !== id));
-      }
-    } finally {
-      setDeleting(null);
-    }
-  };
-
-  const handleEditSave = async () => {
-    if (!editingWorkout) return;
-    setEditSaving(true);
-    try {
-      const res = await fetch(`/api/workouts/${editingWorkout.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: editName }),
-      });
-      if (res.ok) {
-        setWorkouts((prev) => prev.map((w) => w.id === editingWorkout.id ? { ...w, name: editName } : w));
-        setEditingWorkout(null);
-      }
-    } finally {
-      setEditSaving(false);
-    }
-  };
 
   const openDateEditor = (e: React.MouseEvent, w: Workout) => {
     e.stopPropagation();
@@ -296,9 +221,8 @@ export default function DashboardPage() {
         ) : (
           <div className="space-y-3">
             {recentWorkouts.map((w) => {
-              const hasIncompleteSets = w.sets.some((s) => !s.completed);
-              const isActive = swipeId === w.id;
-              const offset = isActive ? swipeX : 0;
+              const isActive = !w.finishedAt;
+              const hasIncompleteSets = !isActive && w.sets.some((s) => !s.completed);
               const uniqueExercises = (() => {
                 const map = new Map<string, { id: string; name: string; sets: { weightLbs: number | null; reps: number | null }[] }>();
                 for (const s of w.sets) {
@@ -314,96 +238,84 @@ export default function DashboardPage() {
                 return sum;
               }, 0);
               return (
-                <div key={w.id} className="relative overflow-hidden rounded-lg">
-                  {offset > 0 && (
-                    <div className="absolute inset-0 bg-blue-500/20 flex items-center pl-4">
-                      <span className="text-blue-400 text-sm font-medium">Edit</span>
-                    </div>
-                  )}
-                  {offset < 0 && (
-                    <div className="absolute inset-0 bg-red-500/20 flex items-center justify-end pr-4">
-                      <span className="text-red-400 text-sm font-medium">Delete</span>
-                    </div>
-                  )}
-                  <div
-                    className={`p-4 rounded-lg bg-gray-800 hover:bg-gray-700 transition-transform cursor-pointer relative z-10 ${
-                      deleting === w.id ? "opacity-50" : ""
-                    }`}
-                    style={{ transform: `translateX(${offset}px)` }}
-                    onTouchStart={(e) => handleTouchStart(w.id, e)}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleTouchEnd}
-                    onClick={() => { if (!swipeId) router.push(`/workouts/${w.id}`); }}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-white truncate">{w.name}</h3>
-                          {hasIncompleteSets && (
-                            <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full shrink-0">
-                              Needs Review
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-gray-400 text-sm mt-1">
-                          <button
-                            onClick={(e) => openDateEditor(e, w)}
-                            className="hover:text-emerald-400 transition-colors"
-                          >
-                            {formatDate(w.startedAt)} at {formatTime(w.startedAt)}
-                          </button>
-                        </p>
+                <Link
+                  key={w.id}
+                  href={isActive ? `/workouts/new?resume=${w.id}` : `/workouts/${w.id}`}
+                  className="block bg-gray-900 border border-gray-800 rounded-xl p-4 hover:border-gray-700 transition-colors"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-white truncate">{w.name}</h3>
+                        {isActive && (
+                          <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full shrink-0">
+                            In Progress
+                          </span>
+                        )}
+                        {hasIncompleteSets && (
+                          <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full shrink-0">
+                            Needs Review
+                          </span>
+                        )}
                       </div>
-                      <div className="flex items-start gap-2 shrink-0 ml-4">
+                      <p className="text-gray-400 text-sm mt-1">
                         <button
-                          onClick={(e) => { e.stopPropagation(); router.push(`/workouts/new?duplicateFrom=${w.id}`); }}
-                          className="p-1.5 rounded text-gray-500 hover:text-emerald-400 transition-colors"
-                          title="Repeat workout"
+                          onClick={(e) => { e.preventDefault(); openDateEditor(e, w); }}
+                          className="hover:text-emerald-400 transition-colors"
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                          </svg>
+                          {formatDate(w.startedAt)} at {formatTime(w.startedAt)}
                         </button>
-                      </div>
-                    </div>
-                    <div className="mt-3 space-y-1.5">
-                      {uniqueExercises.slice(0, 5).map((ex) => (
-                        <div key={ex.id} className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); toggleFavorite(ex.id); }}
-                              className="shrink-0"
-                              aria-label={favoriteIds.has(ex.id) ? "Remove from favorites" : "Add to favorites"}
-                            >
-                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill={favoriteIds.has(ex.id) ? "#ef4444" : "none"} stroke={favoriteIds.has(ex.id) ? "#ef4444" : "currentColor"} strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
-                              </svg>
-                            </button>
-                            <span className="text-gray-300 truncate">{ex.name}</span>
-                          </div>
-                          {ex.sets.length > 0 && (
-                            <div className="flex gap-2 shrink-0 ml-2">
-                              {ex.sets.map((s, i) => (
-                                <div key={i} className="text-center text-xs min-w-[32px]">
-                                  <p className="text-gray-300 font-medium">{s.weightLbs ?? "BW"}</p>
-                                  <p className="text-gray-300">{s.reps ?? 0}</p>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                      {uniqueExercises.length > 5 && (
-                        <p className="text-xs text-gray-500">+{uniqueExercises.length - 5} more exercises</p>
-                      )}
-                    </div>
-                    {totalVolume > 0 && (
-                      <p className="text-gray-500 text-xs mt-2">
-                        Total volume: {totalVolume.toLocaleString()} lbs
                       </p>
+                    </div>
+                    <div className="flex items-start gap-2 shrink-0 ml-4">
+                      <button
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push(`/workouts/new?duplicateFrom=${w.id}`); }}
+                        className="p-1.5 rounded text-gray-500 hover:text-emerald-400 transition-colors"
+                        title="Repeat workout"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-3 space-y-1.5">
+                    {uniqueExercises.slice(0, 5).map((ex) => (
+                      <div key={ex.id} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <button
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(ex.id); }}
+                            className="shrink-0"
+                            aria-label={favoriteIds.has(ex.id) ? "Remove from favorites" : "Add to favorites"}
+                          >
+                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill={favoriteIds.has(ex.id) ? "#ef4444" : "none"} stroke={favoriteIds.has(ex.id) ? "#ef4444" : "currentColor"} strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+                            </svg>
+                          </button>
+                          <span className="text-gray-300 truncate">{ex.name}</span>
+                        </div>
+                        {ex.sets.length > 0 && (
+                          <div className="flex gap-2 shrink-0 ml-2">
+                            {ex.sets.map((s, i) => (
+                              <div key={i} className="text-center text-xs min-w-[32px]">
+                                <p className="text-gray-300 font-medium">{s.weightLbs ?? "BW"}</p>
+                                <p className="text-gray-300">{s.reps ?? 0}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {uniqueExercises.length > 5 && (
+                      <p className="text-xs text-gray-500">+{uniqueExercises.length - 5} more exercises</p>
                     )}
                   </div>
-                </div>
+                  {totalVolume > 0 && (
+                    <p className="text-gray-500 text-xs mt-2">
+                      Total volume: {totalVolume.toLocaleString()} lbs
+                    </p>
+                  )}
+                </Link>
               );
             })}
           </div>
@@ -482,50 +394,6 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
-
-      {/* Edit Workout Modal */}
-      {editingWorkout && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setEditingWorkout(null)}>
-          <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Edit Workout</h2>
-              <button onClick={() => setEditingWorkout(null)} className="text-gray-400 hover:text-white">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Workout Name</label>
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setEditingWorkout(null)}
-                  className="flex-1 px-4 py-2.5 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleEditSave}
-                  disabled={editSaving}
-                  className="flex-1 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50"
-                >
-                  {editSaving ? "Saving..." : "Save"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Date Edit Modal */}
       {editingDateId && (
