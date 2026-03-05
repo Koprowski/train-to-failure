@@ -629,6 +629,8 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
               type="datetime-local"
               value={editDate}
               onChange={(e) => setEditDate(e.target.value)}
+              onClick={(e) => (e.target as HTMLInputElement).showPicker?.()}
+              onFocus={(e) => { try { e.target.showPicker?.(); } catch {} }}
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 [color-scheme:dark]"
               autoFocus
             />
