@@ -325,28 +325,10 @@ export default function WorkoutsPage() {
     }
   };
 
-  const repeatWorkout = async (workout: Workout) => {
+  const repeatWorkout = (workout: Workout) => {
     if (repeating) return;
     setRepeating(workout.id);
-    try {
-      // Create a new workout with the same name
-      const res = await fetch("/api/workouts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: workout.name }),
-      });
-      const newWorkout = await res.json();
-      if (newWorkout.id) {
-        // Get unique exercise IDs in order
-        const exerciseIds = [...new Set(workout.sets.map((s) => s.exerciseId))];
-        const exerciseParam = exerciseIds.join(",");
-        router.push(`/workouts/new?resume=${newWorkout.id}&exercises=${exerciseParam}`);
-      }
-    } catch (err) {
-      console.error("Failed to repeat workout:", err);
-    } finally {
-      setRepeating(null);
-    }
+    router.push(`/workouts/new?duplicateFrom=${workout.id}`);
   };
 
   const workoutToDelete = deleteId ? workouts.find((w) => w.id === deleteId) : null;

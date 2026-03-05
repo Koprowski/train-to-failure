@@ -313,21 +313,17 @@ function WorkoutContent() {
                   finished: false,
                 });
               }
-              const prevWeight = s.weightLbs?.toString() ?? "";
-              const prevReps = s.reps?.toString() ?? "";
               blockMap.get(s.exerciseId)!.sets.push({
                 tempId: nextTempId(),
                 exerciseId: s.exerciseId,
                 setNumber: s.setNumber,
                 setType: s.setType,
-                weightLbs: "",
-                reps: "",
-                timeSecs: "",
-                rpe: "",
+                weightLbs: s.weightLbs?.toString() ?? "",
+                reps: s.reps?.toString() ?? "",
+                timeSecs: s.timeSecs?.toString() ?? "",
+                rpe: s.rpe?.toString() ?? "",
                 completed: false,
                 notes: "",
-                previousWeight: prevWeight,
-                previousReps: prevReps,
               });
             }
             setExerciseBlocks(Array.from(blockMap.values()));
