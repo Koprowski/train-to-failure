@@ -299,7 +299,7 @@ function WorkoutContent() {
     if (duplicateFrom && !resumeId && !templateId) {
       fetch(`/api/workouts/${duplicateFrom}`)
         .then((r) => r.json())
-        .then((workout) => {
+        .then(async (workout) => {
           if (workout && workout.id) {
             setWorkoutName(workout.name);
             const blockMap = new Map<string, ExerciseBlock>();
@@ -327,6 +327,22 @@ function WorkoutContent() {
               });
             }
             setExerciseBlocks(Array.from(blockMap.values()));
+            // Auto-start the workout
+            try {
+              const res = await fetch("/api/workouts", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: workout.name }),
+              });
+              const data = await res.json();
+              if (data.id) {
+                setWorkoutId(data.id);
+                startTimeRef.current = new Date(data.startedAt);
+                setStarted(true);
+              }
+            } catch (err) {
+              console.error("Failed to auto-start duplicated workout:", err);
+            }
           }
         })
         .catch(() => {});
