@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import DateTimePicker from "@/components/DateTimePicker";
+import { slugify } from "@/lib/slugify";
 
 interface Exercise {
   id: string;
@@ -515,7 +516,7 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
         <div key={exercise.id} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
           <div className="px-4 py-3 bg-gray-800/50 flex items-center justify-between">
             <div>
-              <Link href={`/exercises/${exercise.id}`} className="font-semibold text-white hover:text-emerald-500 transition-colors">
+              <Link href={`/exercises/${slugify(exercise.name)}`} className="font-semibold text-white hover:text-emerald-500 transition-colors">
                 {exercise.name}
               </Link>
               <p className="text-xs text-gray-400 capitalize mt-0.5">{exercise.muscleGroups}</p>

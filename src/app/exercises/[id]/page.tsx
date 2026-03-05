@@ -165,30 +165,36 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
   });
 
   useEffect(() => {
-    Promise.all([
-      fetch(`/api/exercises/${id}`).then((r) => r.json()),
-      fetch(`/api/stats?exerciseId=${id}`).then((r) => r.json()),
-      fetch(`/api/exercises/favorites`).then((r) => r.json()),
-    ]).then(([ex, stats, favIds]) => {
-      setExercise(ex);
-      const h = stats?.history ?? [];
-      setHistory(h);
-      const hasWeight = h.some((e: HistoryEntry) => e.maxWeight > 0);
-      setChartMetric(hasWeight ? "estimated1RM" : "totalReps");
-      if (Array.isArray(favIds)) {
-        setIsFavorite(favIds.includes(id));
-      }
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    fetch(`/api/exercises/${id}`)
+      .then((r) => r.json())
+      .then((ex) => {
+        if (!ex || ex.error) { setLoading(false); return; }
+        setExercise(ex);
+        return Promise.all([
+          fetch(`/api/stats?exerciseId=${ex.id}`).then((r) => r.json()),
+          fetch(`/api/exercises/favorites`).then((r) => r.json()),
+        ]).then(([stats, favIds]) => {
+          const h = stats?.history ?? [];
+          setHistory(h);
+          const hasWeight = h.some((e: HistoryEntry) => e.maxWeight > 0);
+          setChartMetric(hasWeight ? "estimated1RM" : "totalReps");
+          if (Array.isArray(favIds)) {
+            setIsFavorite(favIds.includes(ex.id));
+          }
+          setLoading(false);
+        });
+      })
+      .catch(() => setLoading(false));
   }, [id]);
 
   const toggleFavorite = async () => {
+    if (!exercise) return;
     setIsFavorite((prev) => !prev);
     try {
       await fetch("/api/exercises/favorites", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ exerciseId: id }),
+        body: JSON.stringify({ exerciseId: exercise.id }),
       });
     } catch {
       setIsFavorite((prev) => !prev);
@@ -197,13 +203,14 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
 
   const handleQuickLog = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!exercise) return;
     setQuickLogSaving(true);
     try {
       const res = await fetch("/api/quick-log", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          exerciseId: id,
+          exerciseId: exercise.id,
           setType: "working",
           ...quickLogForm,
         }),
@@ -212,7 +219,7 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
         setQuickLogForm({ weightLbs: "", reps: "", timeSecs: "", rpe: "", notes: "" });
         setShowQuickLog(false);
         // Refresh history
-        fetch(`/api/stats?exerciseId=${id}`).then((r) => r.json()).then((stats) => {
+        fetch(`/api/stats?exerciseId=${exercise.id}`).then((r) => r.json()).then((stats) => {
           const h = stats?.history ?? [];
           setHistory(h);
         });

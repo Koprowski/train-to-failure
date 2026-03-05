@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { slugify } from "@/lib/slugify";
 
 interface Exercise {
   id: string;
@@ -315,7 +316,7 @@ function ActivityLogContent() {
                         )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <Link href={`/exercises/${set.exerciseId}`} className="font-medium text-white hover:text-emerald-500 transition-colors truncate">
+                            <Link href={`/exercises/${slugify(set.exercise.name)}`} className="font-medium text-white hover:text-emerald-500 transition-colors truncate">
                               {set.exercise.name}
                             </Link>
                             <span className="text-xs text-gray-500">Set {set.setNumber}</span>

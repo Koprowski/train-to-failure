@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { slugify } from "@/lib/slugify";
 
 const Body = dynamic(
   () => import("react-muscle-highlighter"),
@@ -622,7 +623,7 @@ export default function ExercisesPage() {
               {exercises.map((ex) => (
                 <Link
                   key={ex.id}
-                  href={`/exercises/${ex.id}`}
+                  href={`/exercises/${slugify(ex.name)}`}
                   className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden hover:border-gray-700 transition-colors group relative"
                 >
                   <button

@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/session";
+import { slugify } from "@/lib/slugify";
 import { readFileSync } from "fs";
 import { join } from "path";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function findExercise(idOrSlug: string) {
+  if (UUID_RE.test(idOrSlug)) {
+    return prisma.exercise.findUnique({ where: { id: idOrSlug } });
+  }
+  const all = await prisma.exercise.findMany();
+  return all.find((e: { name: string }) => slugify(e.name) === idOrSlug) ?? null;
+}
 
 let gifLookup: Record<string, string> | null = null;
 function getGifLookup(): Record<string, string> {
@@ -28,9 +39,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const { error: authError } = await requireAuth();
     if (authError) return authError;
 
-    const { id } = await params;
+    const { id: idOrSlug } = await params;
+    const found = await findExercise(idOrSlug);
+    if (!found) {
+      return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
+    }
+
     let exercise = await prisma.exercise.findUnique({
-      where: { id },
+      where: { id: found.id },
       include: {
         workoutSets: {
           include: { workout: true },
@@ -48,7 +64,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const lookup = getGifLookup();
     const gifUrl = lookup[exercise.name];
     if (gifUrl && exercise.imageUrl !== gifUrl) {
-      await prisma.exercise.update({ where: { id }, data: { imageUrl: gifUrl } });
+      await prisma.exercise.update({ where: { id: exercise.id }, data: { imageUrl: gifUrl } });
       exercise = { ...exercise, imageUrl: gifUrl };
     }
 
@@ -67,9 +83,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const { error: authError, userId } = await requireAuth();
     if (authError) return authError;
 
-    const { id } = await params;
+    const { id: idOrSlug } = await params;
 
-    const existing = await prisma.exercise.findUnique({ where: { id } });
+    const existing = await findExercise(idOrSlug);
     if (!existing) {
       return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
     }
@@ -81,7 +97,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     delete body.isCustom;
 
     const exercise = await prisma.exercise.update({
-      where: { id },
+      where: { id: existing.id },
       data: body,
     });
 
@@ -100,10 +116,10 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const { error: authError, userId } = await requireAuth();
     if (authError) return authError;
 
-    const { id } = await params;
+    const { id: idOrSlug } = await params;
 
     // Verify ownership: only allow deleting exercises the user owns
-    const existing = await prisma.exercise.findUnique({ where: { id } });
+    const existing = await findExercise(idOrSlug);
     if (!existing) {
       return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
     }
@@ -111,7 +127,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    await prisma.exercise.delete({ where: { id } });
+    await prisma.exercise.delete({ where: { id: existing.id } });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Failed to delete exercise:", error);
