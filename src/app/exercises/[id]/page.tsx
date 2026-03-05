@@ -154,6 +154,15 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
   const [showEquipmentPickerEdit, setShowEquipmentPickerEdit] = useState(false);
   const [equipmentDraftEdit, setEquipmentDraftEdit] = useState<string[]>([]);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [showQuickLog, setShowQuickLog] = useState(false);
+  const [quickLogSaving, setQuickLogSaving] = useState(false);
+  const [quickLogForm, setQuickLogForm] = useState({
+    weightLbs: "",
+    reps: "",
+    timeSecs: "",
+    rpe: "",
+    notes: "",
+  });
 
   useEffect(() => {
     Promise.all([
@@ -183,6 +192,33 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
       });
     } catch {
       setIsFavorite((prev) => !prev);
+    }
+  };
+
+  const handleQuickLog = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setQuickLogSaving(true);
+    try {
+      const res = await fetch("/api/quick-log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          exerciseId: id,
+          setType: "working",
+          ...quickLogForm,
+        }),
+      });
+      if (res.ok) {
+        setQuickLogForm({ weightLbs: "", reps: "", timeSecs: "", rpe: "", notes: "" });
+        setShowQuickLog(false);
+        // Refresh history
+        fetch(`/api/stats?exerciseId=${id}`).then((r) => r.json()).then((stats) => {
+          const h = stats?.history ?? [];
+          setHistory(h);
+        });
+      }
+    } finally {
+      setQuickLogSaving(false);
     }
   };
 
@@ -313,15 +349,15 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
             {exercise.isCustom && (
               <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">Custom</span>
             )}
-            <Link
-              href={`/activity-log?log=${exercise.id}`}
+            <button
+              onClick={() => setShowQuickLog(true)}
               className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 rounded-lg transition-colors"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
               Quick Log
-            </Link>
+            </button>
             <button
               onClick={openEdit}
               className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
@@ -729,6 +765,119 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
                 Apply{equipmentDraftEdit.length > 0 ? ` (${equipmentDraftEdit.length})` : ""}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Log Modal */}
+      {showQuickLog && exercise && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowQuickLog(false)}>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Quick Log</h2>
+              <button onClick={() => setShowQuickLog(false)} className="text-gray-400 hover:text-white">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex items-center gap-3 bg-gray-800 rounded-lg p-3 mb-4">
+              {exercise.imageUrl ? (
+                <img src={exercise.imageUrl} alt="" className="w-10 h-10 rounded object-cover" />
+              ) : (
+                <div className="w-10 h-10 rounded bg-gray-700" />
+              )}
+              <div>
+                <p className="font-medium text-white">{exercise.name}</p>
+                <p className="text-xs text-gray-500">{exercise.muscleGroups}</p>
+              </div>
+            </div>
+            <form onSubmit={handleQuickLog} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">Weight (lbs)</label>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={quickLogForm.weightLbs}
+                    onChange={(e) => setQuickLogForm({ ...quickLogForm, weightLbs: e.target.value })}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">Reps</label>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={quickLogForm.reps}
+                    onChange={(e) => setQuickLogForm({ ...quickLogForm, reps: e.target.value })}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">Time (sec)</label>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={quickLogForm.timeSecs}
+                    onChange={(e) => setQuickLogForm({ ...quickLogForm, timeSecs: e.target.value })}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">
+                    <span className="group relative inline-flex items-center gap-1 cursor-help">
+                      RPE
+                      <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      <span className="invisible group-hover:visible absolute bottom-full left-0 mb-2 w-48 px-3 py-2 text-xs font-normal text-gray-300 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10">
+                        Rate of Perceived Exertion (1-10). How hard the set felt, where 10 is max effort.
+                      </span>
+                    </span>
+                  </label>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min="1"
+                    max="10"
+                    step="0.5"
+                    value={quickLogForm.rpe}
+                    onChange={(e) => setQuickLogForm({ ...quickLogForm, rpe: e.target.value })}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Notes</label>
+                <input
+                  type="text"
+                  value={quickLogForm.notes}
+                  onChange={(e) => setQuickLogForm({ ...quickLogForm, notes: e.target.value })}
+                  placeholder="Optional notes"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 placeholder-gray-600"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowQuickLog(false)}
+                  className="flex-1 px-4 py-2.5 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={quickLogSaving}
+                  className="flex-1 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50"
+                >
+                  {quickLogSaving ? "Saving..." : "Log Set"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

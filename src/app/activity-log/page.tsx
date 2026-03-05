@@ -569,19 +569,6 @@ function ActivityLogContent() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Set Type</label>
-                    <select
-                      value={form.setType}
-                      onChange={(e) => setForm({ ...form, setType: e.target.value })}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
-                    >
-                      <option value="warmup">Warmup</option>
-                      <option value="working">Working</option>
-                      <option value="dropset">Dropset</option>
-                      <option value="failure">Failure</option>
-                    </select>
-                  </div>
-                  <div>
                     <label className="block text-sm text-gray-400 mb-1">Notes</label>
                     <input
                       type="text"
