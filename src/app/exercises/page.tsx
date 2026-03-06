@@ -241,146 +241,18 @@ export default function ExercisesPage() {
   });
   const [saving, setSaving] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [viewMode, setViewMode] = useState<"all" | "recent" | "recommended">("all");
+  const [recentExerciseIds, setRecentExerciseIds] = useState<Set<string>>(new Set());
   const diagramContainerRef = useRef<HTMLDivElement>(null);
   // bodyPos: SVG bounding box as % of diagram container.
   // Computed from known 1:2 aspect ratio (SVG is height:100%, width:auto via CSS).
   const [bodyPos, setBodyPos] = useState({ left: 20, top: 0, width: 60, height: 100 });
-  // Interactive page-turn flip via touch overlay
-  const flipContainerRef = useRef<HTMLDivElement>(null);
-  const overlayRef = useRef<HTMLDivElement>(null);
-  const dragState = useRef<{
-    startX: number;
-    startY: number;
-    locked: boolean; // true = horizontal drag confirmed
-    dismissed: boolean; // true = vertical scroll, ignore
-    containerWidth: number;
-  } | null>(null);
-  const flipBody = useCallback((animated = false) => {
-    if (animated && flipContainerRef.current) {
-      const el = flipContainerRef.current;
-      el.style.transition = "transform 0.15s ease-in";
-      el.style.transform = "rotateY(90deg)";
-      setTimeout(() => {
-        setBodySide((prev) => (prev === "front" ? "back" : "front"));
-        requestAnimationFrame(() => {
-          el.style.transition = "transform 0.15s ease-out";
-          el.style.transform = "rotateY(0deg)";
-        });
-      }, 150);
-    } else {
-      setBodySide((prev) => (prev === "front" ? "back" : "front"));
-    }
-  }, []);
-
-  // Apply rotation directly to DOM for smooth tracking
-  const setRotation = useCallback((deg: number) => {
-    if (flipContainerRef.current) {
-      flipContainerRef.current.style.transform = `rotateY(${deg}deg)`;
-    }
-  }, []);
-
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    const el = flipContainerRef.current;
-    if (!el) return;
-    dragState.current = {
-      startX: e.touches[0].clientX,
-      startY: e.touches[0].clientY,
-      locked: false,
-      dismissed: false,
-      containerWidth: el.offsetWidth,
-    };
-    el.style.transition = "none";
-  }, []);
-
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    const ds = dragState.current;
-    if (!ds || ds.dismissed) return;
-    const dx = e.touches[0].clientX - ds.startX;
-    const dy = e.touches[0].clientY - ds.startY;
-
-    // Lock direction after 10px of movement
-    if (!ds.locked) {
-      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) {
-        ds.dismissed = true; // vertical scroll, bail
-        setRotation(0);
-        return;
-      }
-      if (Math.abs(dx) > 10) {
-        ds.locked = true;
-        // Show overlay to capture all touch events (prevents Body from stealing them)
-        if (overlayRef.current) overlayRef.current.style.display = "block";
-      } else {
-        return; // not enough movement yet
-      }
-    }
-
-    e.preventDefault(); // prevent scroll during horizontal drag
-
-    // Map drag distance to rotation: full container width = 180 degrees
-    const maxDeg = 180;
-    const rotation = (dx / ds.containerWidth) * maxDeg;
-    // Clamp to [-180, 180]
-    const clamped = Math.max(-maxDeg, Math.min(maxDeg, rotation));
-    setRotation(clamped);
-
-    // Content swap happens on release, not during drag
-  }, [setRotation]);
-
-  const handleTouchEnd = useCallback(() => {
-    const ds = dragState.current;
-    dragState.current = null;
-    // Hide overlay
-    if (overlayRef.current) overlayRef.current.style.display = "none";
-
-    if (!ds || ds.dismissed || !ds.locked) {
-      // No horizontal drag -- snap back
-      if (flipContainerRef.current) {
-        flipContainerRef.current.style.transition = "transform 0.25s ease-out";
-        setRotation(0);
-      }
-      return;
-    }
-
-    const el = flipContainerRef.current;
-    if (!el) return;
-
-    // Get current rotation from the transform
-    const currentTransform = el.style.transform;
-    const match = currentTransform.match(/rotateY\(([^)]+)deg\)/);
-    const currentDeg = match ? parseFloat(match[1]) : 0;
-    const absDeg = Math.abs(currentDeg);
-
-    if (absDeg > 60) {
-      // Commit the flip: animate to 90, swap side, animate out from 90 to 0
-      const direction = currentDeg > 0 ? 1 : -1;
-      const remainingTo90 = 90 - absDeg;
-      const timeToEdge = Math.max(50, (remainingTo90 / 90) * 200);
-      el.style.transition = `transform ${timeToEdge}ms ease-in`;
-      setRotation(direction * 90);
-
-      setTimeout(() => {
-        flipBody();
-        // Keep at edge while React renders new content
-        setRotation(direction * 90);
-        requestAnimationFrame(() => {
-          el.style.transition = "transform 0.2s ease-out";
-          setRotation(0);
-        });
-      }, timeToEdge);
-    } else {
-      // Snap back to original position
-      const snapTime = Math.max(100, (absDeg / 60) * 250);
-      el.style.transition = `transform ${snapTime}ms ease-out`;
-      setRotation(0);
-    }
-  }, [flipBody, setRotation]);
-
   const onBodyPartPress = useCallback((part: { slug?: string }) => {
     if (!part.slug) return;
     const muscles = SLUG_TO_MUSCLE[part.slug];
     if (!muscles) return;
     const target = muscles[0];
-    setMuscleFilter((prev) =>
+    setMuscleDraft((prev) =>
       prev.includes(target) ? prev.filter((m) => m !== target) : [...prev, target]
     );
   }, []);
@@ -405,11 +277,17 @@ export default function ExercisesPage() {
             return equipmentFilter.some((f) => exEquip.includes(f.toLowerCase()));
           });
         }
+        if (viewMode === "recent") {
+          list = list.filter((ex: Exercise) => recentExerciseIds.has(ex.id));
+        } else if (viewMode === "recommended") {
+          // Recommended: favorited exercises + exercises not done recently
+          list = list.filter((ex: Exercise) => favoriteIds.has(ex.id) || !recentExerciseIds.has(ex.id));
+        }
         setExercises(list);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [search, muscleFilter, equipmentFilter]);
+  }, [search, muscleFilter, equipmentFilter, viewMode, recentExerciseIds, favoriteIds]);
 
   useEffect(() => {
     const timer = setTimeout(fetchExercises, 300);
@@ -425,24 +303,36 @@ export default function ExercisesPage() {
       defaultFill="#1f2937"
       colors={["#10b981", "#34d399"]}
       data={
-        muscleFilter.length > 0
-          ? muscleFilter.flatMap((m) => (MUSCLE_TO_SLUGS[m] || []).map((slug) => ({ slug: slug as never, intensity: 2 })))
+        muscleDraft.length > 0
+          ? muscleDraft.flatMap((m) => (MUSCLE_TO_SLUGS[m] || []).map((slug) => ({ slug: slug as never, intensity: 2 })))
           : []
       }
       onBodyPartPress={onBodyPartPress}
     />
-  ), [bodySide, muscleFilter, onBodyPartPress]);
+  ), [bodySide, muscleDraft, onBodyPartPress]);
 
-  // Fetch favorites on mount
+  // Fetch favorites and recent exercise IDs on mount
   useEffect(() => {
     fetch("/api/exercises/favorites")
       .then((r) => r.ok ? r.json() : [])
       .then((ids) => { if (Array.isArray(ids)) setFavoriteIds(new Set(ids)); })
       .catch(() => {});
+    fetch("/api/workouts?limit=10")
+      .then((r) => r.ok ? r.json() : [])
+      .then((workouts) => {
+        if (!Array.isArray(workouts)) return;
+        const ids = new Set<string>();
+        for (const w of workouts) {
+          if (w.sets) for (const s of w.sets) ids.add(s.exerciseId);
+        }
+        setRecentExerciseIds(ids);
+      })
+      .catch(() => {});
   }, []);
 
   // Compute bodyPos from container dims + known SVG 1:2 aspect ratio.
   useEffect(() => {
+    if (!showMusclePicker) return;
     const compute = () => {
       const el = diagramContainerRef.current;
       if (!el) return;
@@ -472,7 +362,7 @@ export default function ExercisesPage() {
     const observer = new ResizeObserver(compute);
     if (diagramContainerRef.current) observer.observe(diagramContainerRef.current);
     return () => observer.disconnect();
-  }, [bodySide]);
+  }, [showMusclePicker]);
 
   const toggleFavorite = async (exerciseId: string) => {
     // Optimistic update
@@ -563,20 +453,17 @@ export default function ExercisesPage() {
               </svg>
             </button>
           </div>
-          {/* Center: Front/Back */}
-          <div className="flex-1 flex items-center justify-center gap-2">
-            <button
-              onClick={() => { if (bodySide !== "front") flipBody(true); }}
-              className={`px-3 py-1 text-xs rounded-lg transition-colors ${bodySide === "front" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
-            >
-              Front
-            </button>
-            <button
-              onClick={() => { if (bodySide !== "back") flipBody(true); }}
-              className={`px-3 py-1 text-xs rounded-lg transition-colors ${bodySide === "back" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
-            >
-              Back
-            </button>
+          {/* Center: View mode slicers */}
+          <div className="flex-1 flex items-center justify-center gap-1">
+            {(["all", "recent", "recommended"] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                className={`px-3 py-1 text-xs rounded-lg transition-colors capitalize ${viewMode === mode ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+              >
+                {mode}
+              </button>
+            ))}
           </div>
           {/* Right: search, muscle, equipment icons */}
           <div className="flex items-center gap-1">
@@ -644,123 +531,44 @@ export default function ExercisesPage() {
         </div>
       )}
 
-      {/* Body Map + Grid */}
-      <div className="flex flex-col lg:flex-row gap-4">
-        {/* Body Map with Slicer Labels */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl px-2 py-4 flex flex-col items-center shrink-0">
-          {/* Container: labels + body + SVG lines */}
-          <div ref={diagramContainerRef} className="relative" style={{ width: "24rem", height: "24rem" }}>
-            {/* SVG connecting lines */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none z-20">
-              {(bodySide === "front" ? FRONT_LABELS : BACK_LABELS).map(([side, labelTop, muscle, muscleX, muscleY]) => {
-                const active = muscleFilter.includes(muscle);
-                const labelEdgeX = side === "left" ? bodyPos.left : bodyPos.left + bodyPos.width;
-                const targetX = bodyPos.left + (muscleX / 100) * bodyPos.width;
-                const targetY = bodyPos.top + (muscleY / 100) * bodyPos.height;
-                return (
-                  <line
-                    key={`${side}-${muscle}`}
-                    x1={`${labelEdgeX}%`}
-                    y1={`${labelTop}%`}
-                    x2={`${targetX}%`}
-                    y2={`${targetY}%`}
-                    stroke={active ? "#3b82f6" : "#374151"}
-                    strokeWidth={active ? 1.5 : 0.75}
-                    className="transition-all duration-200"
-                  />
-                );
-              })}
-            </svg>
-
-            {/* Left labels */}
-            <div className="absolute left-0 top-0 bottom-0 z-30" style={{ width: `${bodyPos.left}%` }}>
-              {(bodySide === "front" ? FRONT_LABELS : BACK_LABELS)
-                .filter(([side]) => side === "left")
-                .map(([, top, muscle]) => {
-                  const active = muscleFilter.includes(muscle);
-                  return (
-                    <button
-                      key={muscle}
-                      onClick={() =>
-                        setMuscleFilter((prev) =>
-                          prev.includes(muscle) ? prev.filter((m) => m !== muscle) : [...prev, muscle]
-                        )
-                      }
-                      className={`absolute right-0 text-sm font-semibold transition-colors whitespace-nowrap ${
-                        active ? "text-blue-400" : "text-white/70 hover:text-white"
-                      }`}
-                      style={{ top: `${top}%`, transform: "translateY(-50%)" }}
-                    >
-                      <span className={`px-2.5 py-1 rounded ${active ? "bg-blue-500/20 border border-blue-500/40" : "bg-gray-800/80"}`}>
-                        {properCase(muscle)}
-                      </span>
-                    </button>
-                  );
-                })}
-            </div>
-
-            {/* Body diagram (centered, responsive via CSS override) */}
-            <div
-              className="absolute cursor-pointer body-diagram-responsive"
-              style={{ left: "20%", right: "20%", top: 0, bottom: 0 }}
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-              onTouchCancel={handleTouchEnd}
-            >
-              <div style={{ perspective: "800px", display: "flex", justifyContent: "center" }}>
-                <div
-                  ref={overlayRef}
-                  style={{ display: "none", position: "absolute", inset: 0, zIndex: 10 }}
-                />
-                <div
-                  ref={flipContainerRef}
-                  style={{ transformStyle: "preserve-3d", backfaceVisibility: "hidden" }}
-                >
-                  {bodyMapElement}
-                </div>
-              </div>
-            </div>
-
-            {/* Right labels */}
-            <div className="absolute right-0 top-0 bottom-0 z-30" style={{ width: `${100 - bodyPos.left - bodyPos.width}%` }}>
-              {(bodySide === "front" ? FRONT_LABELS : BACK_LABELS)
-                .filter(([side]) => side === "right")
-                .map(([, top, muscle]) => {
-                  const active = muscleFilter.includes(muscle);
-                  return (
-                    <button
-                      key={muscle}
-                      onClick={() =>
-                        setMuscleFilter((prev) =>
-                          prev.includes(muscle) ? prev.filter((m) => m !== muscle) : [...prev, muscle]
-                        )
-                      }
-                      className={`absolute left-0 text-sm font-semibold transition-colors whitespace-nowrap ${
-                        active ? "text-blue-400" : "text-white/70 hover:text-white"
-                      }`}
-                      style={{ top: `${top}%`, transform: "translateY(-50%)" }}
-                    >
-                      <span className={`px-2.5 py-1 rounded ${active ? "bg-blue-500/20 border border-blue-500/40" : "bg-gray-800/80"}`}>
-                        {properCase(muscle)}
-                      </span>
-                    </button>
-                  );
-                })}
-            </div>
-          </div>
-          {muscleFilter.length > 0 && (
+      {/* Active filter chips */}
+      {(muscleFilter.length > 0 || equipmentFilter.length > 0) && (
+        <div className="flex items-center gap-2 flex-wrap mt-2">
+          {muscleFilter.map((m) => (
             <button
-              onClick={() => setMuscleFilter([])}
-              className="mt-2 text-xs text-gray-400 hover:text-white transition-colors"
+              key={m}
+              onClick={() => setMuscleFilter((prev) => prev.filter((x) => x !== m))}
+              className="text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center gap-1"
             >
-              Clear: {muscleFilter.join(", ")}
+              {m}
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
-          )}
+          ))}
+          {equipmentFilter.map((eq) => (
+            <button
+              key={eq}
+              onClick={() => setEquipmentFilter((prev) => prev.filter((x) => x !== eq))}
+              className="text-xs px-2 py-1 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/40 flex items-center gap-1"
+            >
+              {eq}
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          ))}
+          <button
+            onClick={() => { setMuscleFilter([]); setEquipmentFilter([]); }}
+            className="text-xs text-gray-400 hover:text-white transition-colors"
+          >
+            Clear all
+          </button>
         </div>
+      )}
 
-        {/* Exercise Grid */}
-        <div className="flex-1 space-y-3">
+      {/* Exercise Grid */}
+      <div className="space-y-3 mt-3">
           {loading ? (
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
@@ -828,54 +636,132 @@ export default function ExercisesPage() {
               ))}
             </div>
           )}
-        </div>
       </div>
       <div ref={bottomRef} />
 
-      {/* Muscle Group Picker Modal */}
+      {/* Muscle Group Picker Modal (Body Diagram) */}
       {showMusclePicker && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowMusclePicker(false)}>
-          <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Muscle Groups</h3>
-              <button onClick={() => setShowMusclePicker(false)} className="text-gray-400 hover:text-white transition-colors">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-sm p-3" onClick={(e) => e.stopPropagation()}>
+            {/* Title + Front/Back toggle + close in one row */}
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-sm font-semibold text-white">Muscle Group</h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setBodySide("front")}
+                  className={`px-2 py-0.5 text-xs rounded transition-colors ${bodySide === "front" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+                >
+                  Front
+                </button>
+                <button
+                  onClick={() => setBodySide("back")}
+                  className={`px-2 py-0.5 text-xs rounded transition-colors ${bodySide === "back" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+                >
+                  Back
+                </button>
+                <button onClick={() => setShowMusclePicker(false)} className="text-gray-400 hover:text-white transition-colors ml-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              {MUSCLE_GROUPS.map((mg) => {
-                const selected = muscleDraft.includes(mg);
-                return (
-                  <button
-                    key={mg}
-                    onClick={() =>
-                      setMuscleDraft((prev) =>
-                        selected ? prev.filter((m) => m !== mg) : [...prev, mg]
-                      )
-                    }
-                    className={`px-3 py-2 rounded-lg text-sm text-left transition-colors ${
-                      selected
-                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500"
-                        : "bg-gray-800 text-gray-300 border border-gray-700 hover:border-gray-600"
-                    }`}
-                  >
-                    {mg.charAt(0).toUpperCase() + mg.slice(1)}
-                  </button>
-                );
-              })}
+
+            {/* Body diagram with labeled lines */}
+            <div ref={diagramContainerRef} className="relative mx-auto" style={{ width: "100%", maxWidth: "22rem", height: "20rem" }}>
+              {/* SVG connecting lines */}
+              <svg className="absolute inset-0 w-full h-full pointer-events-none z-20">
+                {(bodySide === "front" ? FRONT_LABELS : BACK_LABELS).map(([side, labelTop, muscle, muscleX, muscleY]) => {
+                  const active = muscleDraft.includes(muscle);
+                  const labelEdgeX = side === "left" ? bodyPos.left : bodyPos.left + bodyPos.width;
+                  const targetX = bodyPos.left + (muscleX / 100) * bodyPos.width;
+                  const targetY = bodyPos.top + (muscleY / 100) * bodyPos.height;
+                  return (
+                    <line
+                      key={`${side}-${muscle}`}
+                      x1={`${labelEdgeX}%`}
+                      y1={`${labelTop}%`}
+                      x2={`${targetX}%`}
+                      y2={`${targetY}%`}
+                      stroke={active ? "#3b82f6" : "#374151"}
+                      strokeWidth={active ? 1.5 : 0.75}
+                      className="transition-all duration-200"
+                    />
+                  );
+                })}
+              </svg>
+
+              {/* Left labels */}
+              <div className="absolute left-0 top-0 bottom-0 z-30" style={{ width: `${bodyPos.left}%` }}>
+                {(bodySide === "front" ? FRONT_LABELS : BACK_LABELS)
+                  .filter(([side]) => side === "left")
+                  .map(([, top, muscle]) => {
+                    const active = muscleDraft.includes(muscle);
+                    return (
+                      <button
+                        key={muscle}
+                        onClick={() =>
+                          setMuscleDraft((prev) =>
+                            prev.includes(muscle) ? prev.filter((m) => m !== muscle) : [...prev, muscle]
+                          )
+                        }
+                        className={`absolute right-0 text-xs font-semibold transition-colors whitespace-nowrap ${
+                          active ? "text-blue-400" : "text-white/70 hover:text-white"
+                        }`}
+                        style={{ top: `${top}%`, transform: "translateY(-50%)" }}
+                      >
+                        <span className={`px-1.5 py-0.5 rounded ${active ? "bg-blue-500/20 border border-blue-500/40" : "bg-gray-800/80"}`}>
+                          {properCase(muscle)}
+                        </span>
+                      </button>
+                    );
+                  })}
+              </div>
+
+              {/* Body diagram (centered, responsive via CSS override) */}
+              <div className="absolute body-diagram-responsive" style={{ left: "20%", right: "20%", top: 0, bottom: 0, display: "flex", justifyContent: "center" }}>
+                {bodyMapElement}
+              </div>
+
+              {/* Right labels */}
+              <div className="absolute right-0 top-0 bottom-0 z-30" style={{ width: `${100 - bodyPos.left - bodyPos.width}%` }}>
+                {(bodySide === "front" ? FRONT_LABELS : BACK_LABELS)
+                  .filter(([side]) => side === "right")
+                  .map(([, top, muscle]) => {
+                    const active = muscleDraft.includes(muscle);
+                    return (
+                      <button
+                        key={muscle}
+                        onClick={() =>
+                          setMuscleDraft((prev) =>
+                            prev.includes(muscle) ? prev.filter((m) => m !== muscle) : [...prev, muscle]
+                          )
+                        }
+                        className={`absolute left-0 text-xs font-semibold transition-colors whitespace-nowrap ${
+                          active ? "text-blue-400" : "text-white/70 hover:text-white"
+                        }`}
+                        style={{ top: `${top}%`, transform: "translateY(-50%)" }}
+                      >
+                        <span className={`px-1.5 py-0.5 rounded ${active ? "bg-blue-500/20 border border-blue-500/40" : "bg-gray-800/80"}`}>
+                          {properCase(muscle)}
+                        </span>
+                      </button>
+                    );
+                  })}
+              </div>
             </div>
-            <div className="flex gap-3 mt-5">
+
+            {/* Clear + Apply */}
+            <div className="relative z-40 flex gap-2 mt-2">
               <button
-                onClick={() => { setMuscleDraft([]); }}
-                className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+                onClick={() => setMuscleDraft([])}
+                className="px-3 py-1.5 text-xs text-gray-400 hover:text-white transition-colors"
               >
                 Clear
               </button>
               <button
                 onClick={() => { setMuscleFilter(muscleDraft); setShowMusclePicker(false); }}
-                className="flex-1 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-semibold transition-colors"
+                className="flex-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-semibold transition-colors"
               >
                 Apply{muscleDraft.length > 0 ? ` (${muscleDraft.length})` : ""}
               </button>
