@@ -92,6 +92,13 @@ function WorkoutContent() {
   const [launcherLoading, setLauncherLoading] = useState(true);
   const [jsonMuscleGroups, setJsonMuscleGroups] = useState<string[]>([]);
 
+  // Drag-and-drop reordering state
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dragStartY = useRef(0);
+  const blockRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
   // Load launcher data (recent workouts + templates) when no query params
   useEffect(() => {
     if (resumeId || templateId || duplicateFrom || quickExerciseId) {
@@ -147,8 +154,41 @@ function WorkoutContent() {
             startTimeRef.current = new Date(workout.startedAt);
             setStarted(true);
 
-            // Rebuild exercise blocks from sets (if any exist already)
-            if (workout.sets && workout.sets.length > 0) {
+            // Rebuild exercise blocks preserving workoutExercise order
+            if (workout.workoutExercises?.length > 0) {
+              const setsByExercise = new Map<string, typeof workout.sets>();
+              for (const s of workout.sets || []) {
+                if (!setsByExercise.has(s.exerciseId)) setsByExercise.set(s.exerciseId, []);
+                setsByExercise.get(s.exerciseId)!.push(s);
+              }
+              const blocks: ExerciseBlock[] = [];
+              for (const we of workout.workoutExercises) {
+                const exSets = setsByExercise.get(we.exerciseId) || [];
+                blocks.push({
+                  exercise: we.exercise,
+                  sets: exSets.map((s: { id: string; exerciseId: string; setNumber: number; setType: string; weightLbs?: number | null; reps?: number | null; timeSecs?: number | null; rpe?: number | null; completed: boolean; notes?: string | null; workoutExerciseId?: string | null }) => ({
+                    tempId: nextTempId(),
+                    dbId: s.id,
+                    exerciseId: s.exerciseId,
+                    setNumber: s.setNumber,
+                    setType: s.setType as SetData["setType"],
+                    weightLbs: s.weightLbs?.toString() ?? "",
+                    reps: s.reps?.toString() ?? "",
+                    timeSecs: s.timeSecs?.toString() ?? "",
+                    rpe: s.rpe?.toString() ?? "",
+                    completed: s.completed,
+                    notes: s.notes ?? "",
+                    workoutExerciseId: s.workoutExerciseId ?? undefined,
+                  })),
+                  workoutExerciseId: we.id,
+                  elapsed: 0,
+                  paused: true,
+                  finished: false,
+                });
+              }
+              setExerciseBlocks(blocks);
+            } else if (workout.sets && workout.sets.length > 0) {
+              // Fallback for old workouts
               const blockMap = new Map<string, ExerciseBlock>();
               for (const s of workout.sets) {
                 if (!blockMap.has(s.exerciseId)) {
@@ -304,31 +344,65 @@ function WorkoutContent() {
         .then(async (workout) => {
           if (workout && workout.id) {
             setWorkoutName(workout.name);
-            const blockMap = new Map<string, ExerciseBlock>();
-            for (const s of workout.sets || []) {
-              if (!blockMap.has(s.exerciseId)) {
-                blockMap.set(s.exerciseId, {
-                  exercise: s.exercise,
-                  sets: [],
+            // Build blocks using workoutExercises order if available, fallback to sets
+            const blocks: ExerciseBlock[] = [];
+            if (workout.workoutExercises?.length > 0) {
+              // Group sets by exerciseId for lookup
+              const setsByExercise = new Map<string, typeof workout.sets>();
+              for (const s of workout.sets || []) {
+                if (!setsByExercise.has(s.exerciseId)) setsByExercise.set(s.exerciseId, []);
+                setsByExercise.get(s.exerciseId)!.push(s);
+              }
+              for (const we of workout.workoutExercises) {
+                const exSets = setsByExercise.get(we.exerciseId) || [];
+                blocks.push({
+                  exercise: we.exercise,
+                  sets: exSets.map((s: { exerciseId: string; setNumber: number; setType: string; weightLbs?: number | null; reps?: number | null; timeSecs?: number | null }) => ({
+                    tempId: nextTempId(),
+                    exerciseId: s.exerciseId,
+                    setNumber: s.setNumber,
+                    setType: s.setType as SetData["setType"],
+                    weightLbs: s.weightLbs?.toString() ?? "",
+                    reps: s.reps?.toString() ?? "",
+                    timeSecs: s.timeSecs?.toString() ?? "",
+                    rpe: "",
+                    completed: false,
+                    notes: "",
+                  })),
                   elapsed: 0,
                   paused: true,
                   finished: false,
                 });
               }
-              blockMap.get(s.exerciseId)!.sets.push({
-                tempId: nextTempId(),
-                exerciseId: s.exerciseId,
-                setNumber: s.setNumber,
-                setType: s.setType,
-                weightLbs: s.weightLbs?.toString() ?? "",
-                reps: s.reps?.toString() ?? "",
-                timeSecs: s.timeSecs?.toString() ?? "",
-                rpe: "",
-                completed: false,
-                notes: "",
-              });
+            } else {
+              // Fallback for old workouts without workoutExercises
+              const blockMap = new Map<string, ExerciseBlock>();
+              for (const s of workout.sets || []) {
+                if (!blockMap.has(s.exerciseId)) {
+                  blockMap.set(s.exerciseId, {
+                    exercise: s.exercise,
+                    sets: [],
+                    elapsed: 0,
+                    paused: true,
+                    finished: false,
+                  });
+                }
+                blockMap.get(s.exerciseId)!.sets.push({
+                  tempId: nextTempId(),
+                  exerciseId: s.exerciseId,
+                  setNumber: s.setNumber,
+                  setType: s.setType,
+                  weightLbs: s.weightLbs?.toString() ?? "",
+                  reps: s.reps?.toString() ?? "",
+                  timeSecs: s.timeSecs?.toString() ?? "",
+                  rpe: "",
+                  completed: false,
+                  notes: "",
+                });
+              }
+              blocks.push(...blockMap.values());
             }
-            setExerciseBlocks(Array.from(blockMap.values()));
+            setExerciseBlocks(blocks);
             // Auto-start the workout
             try {
               const res = await fetch("/api/workouts", {
@@ -525,6 +599,105 @@ function WorkoutContent() {
     const newIndex = exerciseBlocks.length;
     setTimeout(() => startExerciseTimer(newIndex), 0);
   };
+
+  // Drag-and-drop: reorder exercises
+  const moveExercise = useCallback(async (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    setExerciseBlocks((prev) => {
+      const updated = [...prev];
+      const [moved] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, moved);
+      return updated;
+    });
+    // Persist to API if workout exists
+    if (workoutId) {
+      // Build new order from the reordered blocks
+      setExerciseBlocks((current) => {
+        const weIds = current.map((b) => b.workoutExerciseId).filter(Boolean) as string[];
+        if (weIds.length > 0) {
+          fetch(`/api/workouts/${workoutId}/exercises/reorder`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ order: weIds }),
+          }).catch((err) => console.error("Failed to reorder:", err));
+        }
+        return current;
+      });
+    }
+  }, [workoutId]);
+
+  const handleDragHandleTouchStart = useCallback((blockIndex: number, e: React.TouchEvent) => {
+    dragStartY.current = e.touches[0].clientY;
+    longPressTimer.current = setTimeout(() => {
+      setDragIndex(blockIndex);
+      setDragOverIndex(blockIndex);
+      // Haptic feedback if available
+      if (navigator.vibrate) navigator.vibrate(30);
+    }, 300);
+  }, []);
+
+  const handleDragHandleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (dragIndex === null) {
+      // Cancel long press if moved before activation
+      if (longPressTimer.current) {
+        const dy = Math.abs(e.touches[0].clientY - dragStartY.current);
+        if (dy > 10) {
+          clearTimeout(longPressTimer.current);
+          longPressTimer.current = null;
+        }
+      }
+      return;
+    }
+    e.preventDefault();
+    const touch = e.touches[0];
+    // Find which block the touch is over
+    for (const [idx, el] of blockRefs.current.entries()) {
+      const rect = el.getBoundingClientRect();
+      if (touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+        setDragOverIndex(idx);
+        break;
+      }
+    }
+  }, [dragIndex]);
+
+  const handleDragHandleTouchEnd = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    if (dragIndex !== null && dragOverIndex !== null && dragIndex !== dragOverIndex) {
+      moveExercise(dragIndex, dragOverIndex);
+    }
+    setDragIndex(null);
+    setDragOverIndex(null);
+  }, [dragIndex, dragOverIndex, moveExercise]);
+
+  // Mouse drag support (desktop) - track mouse position and handle drop
+  useEffect(() => {
+    if (dragIndex === null) return;
+    const handleMouseMove = (e: MouseEvent) => {
+      for (const [idx, el] of blockRefs.current.entries()) {
+        const rect = el.getBoundingClientRect();
+        if (e.clientY >= rect.top && e.clientY <= rect.bottom) {
+          setDragOverIndex(idx);
+          break;
+        }
+      }
+    };
+    const handleMouseUp = () => {
+      if (dragIndex !== null && dragOverIndex !== null && dragIndex !== dragOverIndex) {
+        moveExercise(dragIndex, dragOverIndex);
+      }
+      setDragIndex(null);
+      setDragOverIndex(null);
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [dragIndex, dragOverIndex, moveExercise]);
 
   const addSet = (blockIndex: number) => {
     setExerciseBlocks((prev) => {
@@ -979,15 +1152,42 @@ function WorkoutContent() {
       {exerciseBlocks.map((block, blockIndex) => {
         const isActive = activeExerciseIndex === blockIndex && !block.paused && !block.finished;
 
+        const isDragging = dragIndex === blockIndex;
+        const isDragOver = dragOverIndex === blockIndex && dragIndex !== null && dragIndex !== blockIndex;
+
         return (
           <div
             key={`${block.exercise.id}-${blockIndex}`}
-            className={`bg-gray-900 border rounded-xl overflow-hidden ${
-              isActive ? "border-emerald-500/50" : "border-gray-800"
-            }`}
+            ref={(el) => { if (el) blockRefs.current.set(blockIndex, el); else blockRefs.current.delete(blockIndex); }}
+            className={`bg-gray-900 border rounded-xl overflow-hidden transition-all duration-150 ${
+              isActive ? "border-emerald-500/50" : isDragOver ? "border-emerald-400 border-dashed" : "border-gray-800"
+            } ${isDragging ? "opacity-50 scale-95" : ""}`}
           >
             <div className="px-4 py-3 bg-gray-800/50 flex items-center justify-between">
               <div className="flex items-center gap-3">
+                {/* Drag handle */}
+                <div
+                  className="touch-none cursor-grab active:cursor-grabbing text-gray-500 hover:text-gray-300 p-1 -ml-2"
+                  onTouchStart={(e) => handleDragHandleTouchStart(blockIndex, e)}
+                  onTouchMove={handleDragHandleTouchMove}
+                  onTouchEnd={handleDragHandleTouchEnd}
+                  onTouchCancel={handleDragHandleTouchEnd}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setDragIndex(blockIndex);
+                    setDragOverIndex(blockIndex);
+                  }}
+                  title="Drag to reorder"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="9" cy="6" r="1.5" />
+                    <circle cx="15" cy="6" r="1.5" />
+                    <circle cx="9" cy="12" r="1.5" />
+                    <circle cx="15" cy="12" r="1.5" />
+                    <circle cx="9" cy="18" r="1.5" />
+                    <circle cx="15" cy="18" r="1.5" />
+                  </svg>
+                </div>
                 <div>
                   <h3 className="font-semibold text-white">{block.exercise.name}</h3>
                   <p className="text-xs text-gray-400 capitalize">{block.exercise.muscleGroups}</p>

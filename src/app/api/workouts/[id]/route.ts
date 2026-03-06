@@ -17,6 +17,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           include: { exercise: true },
           orderBy: [{ exerciseId: "asc" }, { setNumber: "asc" }],
         },
+        workoutExercises: {
+          include: { exercise: true },
+          orderBy: { order: "asc" },
+        },
         template: true,
       },
     });
