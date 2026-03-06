@@ -470,29 +470,55 @@ export default function ExercisesPage() {
               </svg>
             </button>
           </div>
-          {/* Center: View mode slicers */}
-          <div className="flex-1 flex items-center justify-center gap-1">
-            {(["recent", "recommended"] as const).map((mode) => (
-              <button
-                key={mode}
-                onClick={() => setViewMode(mode)}
-                className={`px-3 py-1 text-xs rounded-lg transition-colors capitalize ${viewMode === mode ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
-              >
-                {mode}
-              </button>
-            ))}
-          </div>
-          {/* Right: search, muscle, equipment icons */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setShowSearch(true)}
-              className="p-2 rounded-lg text-gray-400 hover:text-white transition-colors"
-              title="Search exercises"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {/* Center: View mode slicers OR inline search */}
+          {showSearch ? (
+            <div className="flex-1 flex items-center gap-2 mx-2">
+              <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
-            </button>
+              <input
+                type="text"
+                autoFocus
+                placeholder="Search..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="flex-1 bg-transparent text-white placeholder-gray-500 focus:outline-none text-sm min-w-0"
+              />
+              <button
+                onClick={() => { setSearch(""); setShowSearch(false); }}
+                className="text-gray-400 hover:text-white shrink-0"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center gap-1">
+              {(["recent", "recommended"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  className={`px-3 py-1 text-xs rounded-lg transition-colors capitalize ${viewMode === mode ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+          )}
+          {/* Right: search, muscle, equipment icons */}
+          <div className="flex items-center gap-1">
+            {!showSearch && (
+              <button
+                onClick={() => setShowSearch(true)}
+                className="p-2 rounded-lg text-gray-400 hover:text-white transition-colors"
+                title="Search exercises"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </button>
+            )}
             <button
               onClick={() => { setMuscleDraft([...muscleFilter]); setShowMusclePicker(true); }}
               className={`relative p-2 rounded-lg transition-colors ${muscleFilter.length > 0 ? "text-emerald-400 bg-emerald-500/10" : "text-gray-400 hover:text-white"}`}
@@ -522,31 +548,6 @@ export default function ExercisesPage() {
           </div>
         </div>
       </div>
-
-      {/* Inline Search Bar */}
-      {showSearch && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-3 flex items-center gap-3">
-          <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <input
-            type="text"
-            autoFocus
-            placeholder="Search exercises..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 bg-transparent text-white placeholder-gray-500 focus:outline-none text-lg"
-          />
-          <button
-            onClick={() => { setSearch(""); setShowSearch(false); }}
-            className="text-gray-400 hover:text-white"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
 
       {/* Active filter chips */}
       {(muscleFilter.length > 0 || equipmentFilter.length > 0) && (
