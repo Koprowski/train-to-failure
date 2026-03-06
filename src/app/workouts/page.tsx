@@ -58,33 +58,33 @@ for (const [slug, muscles] of Object.entries(SLUG_TO_MUSCLE)) {
 }
 
 // Muscle label positions: [side, labelTopPercent, muscleName, bodyX%, bodyY%]
-// bodyX/bodyY are percentages of the BODY SVG itself (not the container).
-// A useEffect measures the actual SVG bounding box and maps these to container coords.
+// bodyX/bodyY are percentages within the SVG viewBox (724x1448), mapped via bodyPos.
+// Coordinates derived from actual SVG path center points in the library source.
 const FRONT_LABELS: [string, number, string, number, number][] = [
-  ["left", 10, "traps",       45, 20],
-  ["left", 20, "shoulders",   18, 23],
-  ["left", 30, "chest",       35, 30],
-  ["left", 38, "biceps",      12, 37],
-  ["left", 46, "obliques",    32, 44],
-  ["left", 62, "quads",       38, 64],
+  ["left", 10, "traps",       43, 21],
+  ["left", 20, "shoulders",   31, 25],
+  ["left", 30, "chest",       43, 29],
+  ["left", 38, "biceps",      28, 31],
+  ["left", 46, "obliques",    39, 37],
+  ["left", 62, "quads",       39, 55],
   ["right", 30, "abs",        50, 37],
-  ["right", 38, "forearms",   83, 46],
-  ["right", 50, "hip flexors",58, 52],
-  ["right", 62, "adductors",  48, 59],
-  ["right", 78, "calves",     58, 80],
+  ["right", 38, "forearms",   77, 41],
+  ["right", 50, "hip flexors",55, 48],
+  ["right", 62, "adductors",  55, 53],
+  ["right", 78, "calves",     63, 76],
 ];
 
 const BACK_LABELS: [string, number, string, number, number][] = [
-  ["left", 10, "traps",       45, 20],
-  ["left", 20, "shoulders",   18, 23],
+  ["left", 10, "traps",       43, 21],
+  ["left", 20, "shoulders",   31, 25],
   ["left", 30, "back",        50, 30],
-  ["left", 40, "lats",        28, 36],
-  ["left", 52, "glutes",      45, 50],
-  ["left", 65, "hamstrings",  42, 65],
-  ["right", 30, "triceps",    82, 34],
-  ["right", 40, "forearms",   85, 46],
+  ["left", 40, "lats",        35, 38],
+  ["left", 52, "glutes",      50, 48],
+  ["left", 65, "hamstrings",  40, 62],
+  ["right", 30, "triceps",    73, 32],
+  ["right", 40, "forearms",   77, 42],
   ["right", 52, "abductors",  60, 50],
-  ["right", 78, "calves",     58, 80],
+  ["right", 78, "calves",     60, 76],
 ];
 
 function properCase(s: string) {
@@ -337,11 +337,10 @@ export default function WorkoutsPage() {
   const [showMusclePicker, setShowMusclePicker] = useState(false);
   const [muscleDraft, setMuscleDraft] = useState<string[]>([]);
   const [bodySide, setBodySide] = useState<"front" | "back">("front");
-  // Refs + state for measuring body SVG position within the diagram container
   const diagramContainerRef = useRef<HTMLDivElement>(null);
-  const bodyDivRef = useRef<HTMLDivElement>(null);
-  // bodyPos: actual body SVG bounding box as % of the diagram container
-  const [bodyPos, setBodyPos] = useState({ left: 28, top: 0, width: 44, height: 100 });
+  // bodyPos: SVG bounding box as % of diagram container.
+  // Computed from known 1:2 aspect ratio (SVG is height:100%, width:auto via CSS).
+  const [bodyPos, setBodyPos] = useState({ left: 20, top: 0, width: 60, height: 100 });
 
   useEffect(() => {
     Promise.all([
@@ -358,32 +357,34 @@ export default function WorkoutsPage() {
     });
   }, []);
 
-  // Measure body SVG position within the diagram container
+  // Compute bodyPos from container dimensions + known SVG aspect ratio (1:2).
+  // CSS forces SVG to height:100%, width:auto, so SVG height = container height,
+  // SVG width = container height / 2. Body div is left:20% right:20% (60% of container).
   useEffect(() => {
     if (!showMusclePicker) return;
-    const measure = () => {
-      const container = diagramContainerRef.current;
-      const bodyDiv = bodyDivRef.current;
-      if (!container || !bodyDiv) return;
-      const cRect = container.getBoundingClientRect();
-      if (cRect.width === 0 || cRect.height === 0) return;
-      const svg = bodyDiv.querySelector("svg");
-      if (!svg) return;
-      const sRect = svg.getBoundingClientRect();
+    const compute = () => {
+      const el = diagramContainerRef.current;
+      if (!el) return;
+      const W = el.clientWidth;
+      const H = el.clientHeight;
+      if (W === 0 || H === 0) return;
+      const svgH = H;
+      const svgW = svgH / 2; // 1:2 aspect ratio
+      const bodyDivLeft = W * 0.2;
+      const bodyDivW = W * 0.6;
+      const svgLeft = bodyDivLeft + (bodyDivW - svgW) / 2;
       setBodyPos({
-        left: ((sRect.left - cRect.left) / cRect.width) * 100,
-        top: ((sRect.top - cRect.top) / cRect.height) * 100,
-        width: (sRect.width / cRect.width) * 100,
-        height: (sRect.height / cRect.height) * 100,
+        left: (svgLeft / W) * 100,
+        top: 0,
+        width: (svgW / W) * 100,
+        height: 100,
       });
     };
-    // Allow Body component time to render
-    const t1 = setTimeout(measure, 150);
-    const t2 = setTimeout(measure, 400);
-    const observer = new ResizeObserver(() => measure());
+    compute();
+    const observer = new ResizeObserver(compute);
     if (diagramContainerRef.current) observer.observe(diagramContainerRef.current);
-    return () => { clearTimeout(t1); clearTimeout(t2); observer.disconnect(); };
-  }, [showMusclePicker, bodySide]);
+    return () => observer.disconnect();
+  }, [showMusclePicker]);
 
   const toggleFavorite = async (exerciseId: string) => {
     setFavoriteIds((prev) => {
@@ -716,7 +717,6 @@ export default function WorkoutsPage() {
                       y2={`${targetY}%`}
                       stroke={active ? "#3b82f6" : "#374151"}
                       strokeWidth={active ? 1.5 : 0.75}
-                      strokeDasharray={active ? "none" : "3 2"}
                       className="transition-all duration-200"
                     />
                   );
@@ -750,8 +750,8 @@ export default function WorkoutsPage() {
                   })}
               </div>
 
-              {/* Body diagram (centered) */}
-              <div ref={bodyDivRef} className="absolute" style={{ left: "20%", right: "20%", top: 0, bottom: 0, display: "flex", justifyContent: "center" }}>
+              {/* Body diagram (centered, responsive via CSS override) */}
+              <div className="absolute body-diagram-responsive" style={{ left: "20%", right: "20%", top: 0, bottom: 0, display: "flex", justifyContent: "center" }}>
                 {bodyMapElement}
               </div>
 
@@ -784,7 +784,7 @@ export default function WorkoutsPage() {
             </div>
 
             {/* Clear + Apply */}
-            <div className="flex gap-2 mt-2">
+            <div className="relative z-40 flex gap-2 mt-2">
               <button
                 onClick={() => setMuscleDraft([])}
                 className="px-3 py-1.5 text-xs text-gray-400 hover:text-white transition-colors"

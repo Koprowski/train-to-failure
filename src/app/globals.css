@@ -11,6 +11,12 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Scale react-muscle-highlighter SVG to fill container height, preserve 1:2 aspect ratio */
+.body-diagram-responsive svg {
+  height: 100% !important;
+  width: auto !important;
+}
+
 /* Custom scrollbar for dark theme */
 ::-webkit-scrollbar {
   width: 8px;

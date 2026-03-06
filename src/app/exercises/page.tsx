@@ -163,35 +163,34 @@ for (const [slug, muscles] of Object.entries(SLUG_TO_MUSCLE)) {
   }
 }
 
-// Muscle label positions: [side, labelTopPercent, muscleName, muscleXPercent, muscleYPercent]
-// muscleX/Y are target points on the body diagram (% of body width/height)
-// bodyX/bodyY are percentages of the BODY SVG itself (not the container).
-// A useEffect measures the actual SVG bounding box and maps these to container coords.
+// Muscle label positions: [side, labelTopPercent, muscleName, bodyX%, bodyY%]
+// bodyX/bodyY are percentages within the SVG viewBox (724x1448), mapped via bodyPos.
+// Coordinates derived from actual SVG path center points in the library source.
 const FRONT_LABELS: [string, number, string, number, number][] = [
-  ["left", 10, "traps",       45, 20],
-  ["left", 20, "shoulders",   18, 23],
-  ["left", 30, "chest",       35, 30],
-  ["left", 38, "biceps",      12, 37],
-  ["left", 46, "obliques",    32, 44],
-  ["left", 62, "quads",       38, 64],
+  ["left", 10, "traps",       43, 21],
+  ["left", 20, "shoulders",   31, 25],
+  ["left", 30, "chest",       43, 29],
+  ["left", 38, "biceps",      28, 31],
+  ["left", 46, "obliques",    39, 37],
+  ["left", 62, "quads",       39, 55],
   ["right", 30, "abs",        50, 37],
-  ["right", 38, "forearms",   83, 46],
-  ["right", 50, "hip flexors",58, 52],
-  ["right", 62, "adductors",  48, 59],
-  ["right", 78, "calves",     58, 80],
+  ["right", 38, "forearms",   77, 41],
+  ["right", 50, "hip flexors",55, 48],
+  ["right", 62, "adductors",  55, 53],
+  ["right", 78, "calves",     63, 76],
 ];
 
 const BACK_LABELS: [string, number, string, number, number][] = [
-  ["left", 10, "traps",       45, 20],
-  ["left", 20, "shoulders",   18, 23],
+  ["left", 10, "traps",       43, 21],
+  ["left", 20, "shoulders",   31, 25],
   ["left", 30, "back",        50, 30],
-  ["left", 40, "lats",        28, 36],
-  ["left", 52, "glutes",      45, 50],
-  ["left", 65, "hamstrings",  42, 65],
-  ["right", 30, "triceps",    82, 34],
-  ["right", 40, "forearms",   85, 46],
+  ["left", 40, "lats",        35, 38],
+  ["left", 52, "glutes",      50, 48],
+  ["left", 65, "hamstrings",  40, 62],
+  ["right", 30, "triceps",    73, 32],
+  ["right", 40, "forearms",   77, 42],
   ["right", 52, "abductors",  60, 50],
-  ["right", 78, "calves",     58, 80],
+  ["right", 78, "calves",     60, 76],
 ];
 
 function properCase(s: string) {
@@ -242,10 +241,10 @@ export default function ExercisesPage() {
   });
   const [saving, setSaving] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
-  // Refs + state for measuring body SVG position within diagram container
   const diagramContainerRef = useRef<HTMLDivElement>(null);
-  const bodyDivRef = useRef<HTMLDivElement>(null);
-  const [bodyPos, setBodyPos] = useState({ left: 28, top: 0, width: 44, height: 100 });
+  // bodyPos: SVG bounding box as % of diagram container.
+  // Computed from known 1:2 aspect ratio (SVG is height:100%, width:auto via CSS).
+  const [bodyPos, setBodyPos] = useState({ left: 20, top: 0, width: 60, height: 100 });
   // Interactive page-turn flip via touch overlay
   const flipContainerRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -442,29 +441,30 @@ export default function ExercisesPage() {
       .catch(() => {});
   }, []);
 
-  // Measure body SVG position within the diagram container
+  // Compute bodyPos from container dimensions + known SVG aspect ratio (1:2).
   useEffect(() => {
-    const measure = () => {
-      const container = diagramContainerRef.current;
-      const bodyDiv = bodyDivRef.current;
-      if (!container || !bodyDiv) return;
-      const cRect = container.getBoundingClientRect();
-      if (cRect.width === 0 || cRect.height === 0) return;
-      const svg = bodyDiv.querySelector("svg");
-      if (!svg) return;
-      const sRect = svg.getBoundingClientRect();
+    const compute = () => {
+      const el = diagramContainerRef.current;
+      if (!el) return;
+      const W = el.clientWidth;
+      const H = el.clientHeight;
+      if (W === 0 || H === 0) return;
+      const svgH = H;
+      const svgW = svgH / 2;
+      const bodyDivLeft = W * 0.2;
+      const bodyDivW = W * 0.6;
+      const svgLeft = bodyDivLeft + (bodyDivW - svgW) / 2;
       setBodyPos({
-        left: ((sRect.left - cRect.left) / cRect.width) * 100,
-        top: ((sRect.top - cRect.top) / cRect.height) * 100,
-        width: (sRect.width / cRect.width) * 100,
-        height: (sRect.height / cRect.height) * 100,
+        left: (svgLeft / W) * 100,
+        top: 0,
+        width: (svgW / W) * 100,
+        height: 100,
       });
     };
-    const t1 = setTimeout(measure, 150);
-    const t2 = setTimeout(measure, 400);
-    const observer = new ResizeObserver(() => measure());
+    compute();
+    const observer = new ResizeObserver(compute);
     if (diagramContainerRef.current) observer.observe(diagramContainerRef.current);
-    return () => { clearTimeout(t1); clearTimeout(t2); observer.disconnect(); };
+    return () => observer.disconnect();
   }, [bodySide]);
 
   const toggleFavorite = async (exerciseId: string) => {
@@ -659,7 +659,6 @@ export default function ExercisesPage() {
                     y2={`${targetY}%`}
                     stroke={active ? "#3b82f6" : "#374151"}
                     strokeWidth={active ? 1.5 : 0.75}
-                    strokeDasharray={active ? "none" : "3 2"}
                     className="transition-all duration-200"
                   />
                 );
@@ -693,10 +692,9 @@ export default function ExercisesPage() {
                 })}
             </div>
 
-            {/* Body diagram (centered) */}
+            {/* Body diagram (centered, responsive via CSS override) */}
             <div
-              ref={bodyDivRef}
-              className="absolute cursor-pointer"
+              className="absolute cursor-pointer body-diagram-responsive"
               style={{ left: "20%", right: "20%", top: 0, bottom: 0 }}
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
