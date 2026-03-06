@@ -259,13 +259,20 @@ export default function ExercisesPage() {
   }, []);
 
   const fetchExercises = useCallback(() => {
-    const params = new URLSearchParams();
-    if (search) params.set("search", search);
-
-    fetch(`/api/exercises?${params}`)
+    // Always fetch all exercises; filter client-side so search covers muscle groups too
+    fetch("/api/exercises")
       .then((r) => r.json())
       .then((data) => {
         let list = Array.isArray(data) ? data : [];
+        // Text search: match name OR muscle groups
+        if (search) {
+          const q = search.toLowerCase();
+          list = list.filter((ex: Exercise) => {
+            if (ex.name.toLowerCase().includes(q)) return true;
+            const groups = ex.muscleGroups.split(",").map((g) => g.trim().toLowerCase());
+            return groups.some((g) => g.includes(q));
+          });
+        }
         if (muscleFilter.length > 0) {
           list = list.filter((ex: Exercise) => {
             const exGroups = ex.muscleGroups.split(",").map((g) => g.trim().toLowerCase());
