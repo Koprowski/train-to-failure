@@ -89,6 +89,7 @@ export default function DashboardPage() {
   const [editingDateId, setEditingDateId] = useState<string | null>(null);
   const [editDateVal, setEditDateVal] = useState<Date>(new Date());
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [favoritedWorkoutNames, setFavoritedWorkoutNames] = useState<Set<string>>(new Set());
 
   const openDateEditor = (e: React.MouseEvent, w: Workout) => {
     e.stopPropagation();
@@ -135,15 +136,42 @@ export default function DashboardPage() {
     }
   };
 
+  const toggleWorkoutFavorite = async (workout: Workout) => {
+    const wasFavorited = favoritedWorkoutNames.has(workout.name);
+    setFavoritedWorkoutNames((prev) => {
+      const next = new Set(prev);
+      if (wasFavorited) next.delete(workout.name);
+      else next.add(workout.name);
+      return next;
+    });
+    try {
+      await fetch(`/api/workouts/${workout.id}/favorite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch {
+      setFavoritedWorkoutNames((prev) => {
+        const next = new Set(prev);
+        if (wasFavorited) next.add(workout.name);
+        else next.delete(workout.name);
+        return next;
+      });
+    }
+  };
+
   useEffect(() => {
     Promise.all([
       fetch("/api/workouts").then((r) => r.json()),
       fetch("/api/stats/muscle-groups?days=30").then((r) => r.json()),
       fetch("/api/exercises/favorites").then((r) => r.ok ? r.json() : []).catch(() => []),
-    ]).then(([w, m, favIds]) => {
+      fetch("/api/workouts/favorites").then((r) => r.ok ? r.json() : []).catch(() => []),
+    ]).then(([w, m, favIds, favWorkouts]) => {
       setWorkouts(Array.isArray(w) ? w : []);
       setMuscleData(m?.data ?? []);
       if (Array.isArray(favIds)) setFavoriteIds(new Set(favIds));
+      if (Array.isArray(favWorkouts)) {
+        setFavoritedWorkoutNames(new Set(favWorkouts.map((fw: { name: string }) => fw.name)));
+      }
       setLoading(false);
       // Delay inner labels until pie animation completes
       setTimeout(() => setChartAnimDone(true), ANIM_DURATION + 100);
@@ -178,31 +206,31 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
+      <div>
+        <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-gray-400 text-sm mt-1">Track your training progress</p>
+          <div className="flex gap-2">
+            <Link
+              href="/workouts/quick"
+              className="inline-flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-3 py-1.5 rounded-lg text-sm transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Quick Log
+            </Link>
+            <Link
+              href="/workouts/new"
+              className="inline-flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-lg text-sm transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Start Workout
+            </Link>
+          </div>
         </div>
-        <div className="flex gap-3">
-          <Link
-            href="/workouts/quick"
-            className="inline-flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-5 py-3 rounded-lg transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-            Quick Log
-          </Link>
-          <Link
-            href="/workouts/new"
-            className="inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6 py-3 rounded-lg transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Start Workout
-          </Link>
-        </div>
+        <p className="text-gray-400 text-sm mt-1">Track your training progress</p>
       </div>
 
       {/* Recent Workouts */}
@@ -267,6 +295,15 @@ export default function DashboardPage() {
                       </p>
                     </div>
                     <div className="flex items-start gap-2 shrink-0 ml-4">
+                      <button
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWorkoutFavorite(w); }}
+                        className="p-1.5 rounded transition-colors"
+                        title={favoritedWorkoutNames.has(w.name) ? "Remove workout from favorites" : "Add workout to favorites"}
+                      >
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill={favoritedWorkoutNames.has(w.name) ? "#ef4444" : "none"} stroke={favoritedWorkoutNames.has(w.name) ? "#ef4444" : "currentColor"} strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+                        </svg>
+                      </button>
                       <button
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push(`/workouts/new?duplicateFrom=${w.id}`); }}
                         className="p-1.5 rounded text-gray-500 hover:text-emerald-400 transition-colors"
