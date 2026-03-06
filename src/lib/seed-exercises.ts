@@ -49,6 +49,7 @@ export const SEED_EXERCISES: SeedExercise[] = [
   { name: "Ab Wheel Rollout", muscleGroups: "abs", equipment: "ab_wheel", type: "bodyweight" },
   { name: "Russian Twist", muscleGroups: "abs,obliques", equipment: "bodyweight", type: "weight_reps" },
   { name: "Dead Bug", muscleGroups: "abs", equipment: "bodyweight", type: "bodyweight" },
+  { name: "Cable Crunch", muscleGroups: "abs,obliques", equipment: "cable", type: "weight_reps" },
   { name: "Side Plank", muscleGroups: "obliques", equipment: "bodyweight", type: "time" },
   { name: "Treadmill Run", muscleGroups: "cardio,quads,calves", equipment: "treadmill", type: "cardio" },
   { name: "Cable Row", muscleGroups: "back,biceps", equipment: "cable", type: "weight_reps" },

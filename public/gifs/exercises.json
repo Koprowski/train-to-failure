@@ -294,6 +294,11 @@
     "imageUrl": "/gifs/as_cable-kickback.gif",
     "muscleGroups": "glutes"
   },
+  "Cable Crunch": {
+    "gifFile": "by_band-kneeling-twisting-crunch.gif",
+    "imageUrl": "/gifs/by_band-kneeling-twisting-crunch.gif",
+    "muscleGroups": "abs,obliques"
+  },
   "Good Morning": {
     "gifFile": "as_barbell-good-morning.gif",
     "imageUrl": "/gifs/as_barbell-good-morning.gif",
