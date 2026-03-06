@@ -299,6 +299,11 @@
     "imageUrl": "/gifs/by_band-kneeling-twisting-crunch.gif",
     "muscleGroups": "abs,obliques"
   },
+  "Squat - Smith Machine": {
+    "gifFile": "fp_smith-machine-squat.gif",
+    "imageUrl": "/gifs/fp_smith-machine-squat.gif",
+    "muscleGroups": "quads,glutes,hamstrings"
+  },
   "Good Morning": {
     "gifFile": "as_barbell-good-morning.gif",
     "imageUrl": "/gifs/as_barbell-good-morning.gif",
