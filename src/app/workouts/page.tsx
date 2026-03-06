@@ -337,6 +337,7 @@ export default function WorkoutsPage() {
   const [showMusclePicker, setShowMusclePicker] = useState(false);
   const [muscleDraft, setMuscleDraft] = useState<string[]>([]);
   const [bodySide, setBodySide] = useState<"front" | "back">("front");
+  const [bodyReady, setBodyReady] = useState(false);
   const diagramContainerRef = useRef<HTMLDivElement>(null);
   // bodyPos: SVG bounding box as % of diagram container.
   // Computed from known 1:2 aspect ratio (SVG is height:100%, width:auto via CSS).
@@ -393,6 +394,16 @@ export default function WorkoutsPage() {
     const observer = new ResizeObserver(compute);
     if (diagramContainerRef.current) observer.observe(diagramContainerRef.current);
     return () => observer.disconnect();
+  }, [showMusclePicker]);
+
+  // Delay labels/lines until body SVG has time to render
+  useEffect(() => {
+    if (!showMusclePicker) {
+      setBodyReady(false);
+      return;
+    }
+    const timer = setTimeout(() => setBodyReady(true), 150);
+    return () => clearTimeout(timer);
   }, [showMusclePicker]);
 
   const toggleFavorite = async (exerciseId: string) => {
@@ -708,8 +719,8 @@ export default function WorkoutsPage() {
 
             {/* Body diagram with labeled lines */}
             <div ref={diagramContainerRef} className="relative mx-auto" style={{ width: "100%", maxWidth: "22rem", height: "20rem" }}>
-              {/* SVG connecting lines */}
-              <svg className="absolute inset-0 w-full h-full pointer-events-none z-20">
+              {/* SVG connecting lines - fade in after body renders */}
+              <svg className={`absolute inset-0 w-full h-full pointer-events-none z-20 transition-opacity duration-300 ${bodyReady ? "opacity-100" : "opacity-0"}`}>
                 {(bodySide === "front" ? FRONT_LABELS : BACK_LABELS).map(([side, labelTop, muscle, muscleX, muscleY]) => {
                   const active = muscleDraft.includes(muscle);
                   // Label edge: left labels end near body left, right labels start near body right
@@ -732,8 +743,8 @@ export default function WorkoutsPage() {
                 })}
               </svg>
 
-              {/* Left labels */}
-              <div className="absolute left-0 top-0 bottom-0 z-30" style={{ width: `${bodyPos.left}%` }}>
+              {/* Left labels - fade in after body renders */}
+              <div className={`absolute left-0 top-0 bottom-0 z-30 transition-opacity duration-300 ${bodyReady ? "opacity-100" : "opacity-0"}`} style={{ width: `${bodyPos.left}%` }}>
                 {(bodySide === "front" ? FRONT_LABELS : BACK_LABELS)
                   .filter(([side]) => side === "left")
                   .map(([, top, muscle]) => {
@@ -764,8 +775,8 @@ export default function WorkoutsPage() {
                 {bodyMapElement}
               </div>
 
-              {/* Right labels */}
-              <div className="absolute right-0 top-0 bottom-0 z-30" style={{ width: `${100 - bodyPos.left - bodyPos.width}%` }}>
+              {/* Right labels - fade in after body renders */}
+              <div className={`absolute right-0 top-0 bottom-0 z-30 transition-opacity duration-300 ${bodyReady ? "opacity-100" : "opacity-0"}`} style={{ width: `${100 - bodyPos.left - bodyPos.width}%` }}>
                 {(bodySide === "front" ? FRONT_LABELS : BACK_LABELS)
                   .filter(([side]) => side === "right")
                   .map(([, top, muscle]) => {

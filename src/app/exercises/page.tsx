@@ -241,7 +241,8 @@ export default function ExercisesPage() {
   });
   const [saving, setSaving] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
-  const [viewMode, setViewMode] = useState<"all" | "recent" | "recommended">("all");
+  const [viewMode, setViewMode] = useState<"recent" | "recommended">("recent");
+  const [bodyReady, setBodyReady] = useState(false);
   const [recentExerciseIds, setRecentExerciseIds] = useState<Set<string>>(new Set());
   const diagramContainerRef = useRef<HTMLDivElement>(null);
   // bodyPos: SVG bounding box as % of diagram container.
@@ -277,10 +278,16 @@ export default function ExercisesPage() {
             return equipmentFilter.some((f) => exEquip.includes(f.toLowerCase()));
           });
         }
-        if (viewMode === "recent") {
+        // When searching, show all exercises but sort recent to top
+        if (search) {
+          list.sort((a: Exercise, b: Exercise) => {
+            const aRecent = recentExerciseIds.has(a.id) ? 0 : 1;
+            const bRecent = recentExerciseIds.has(b.id) ? 0 : 1;
+            return aRecent - bRecent;
+          });
+        } else if (viewMode === "recent") {
           list = list.filter((ex: Exercise) => recentExerciseIds.has(ex.id));
         } else if (viewMode === "recommended") {
-          // Recommended: favorited exercises + exercises not done recently
           list = list.filter((ex: Exercise) => favoriteIds.has(ex.id) || !recentExerciseIds.has(ex.id));
         }
         setExercises(list);
@@ -362,6 +369,16 @@ export default function ExercisesPage() {
     const observer = new ResizeObserver(compute);
     if (diagramContainerRef.current) observer.observe(diagramContainerRef.current);
     return () => observer.disconnect();
+  }, [showMusclePicker]);
+
+  // Delay labels/lines until body SVG has time to render
+  useEffect(() => {
+    if (!showMusclePicker) {
+      setBodyReady(false);
+      return;
+    }
+    const timer = setTimeout(() => setBodyReady(true), 150);
+    return () => clearTimeout(timer);
   }, [showMusclePicker]);
 
   const toggleFavorite = async (exerciseId: string) => {
@@ -455,7 +472,7 @@ export default function ExercisesPage() {
           </div>
           {/* Center: View mode slicers */}
           <div className="flex-1 flex items-center justify-center gap-1">
-            {(["all", "recent", "recommended"] as const).map((mode) => (
+            {(["recent", "recommended"] as const).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
@@ -669,8 +686,8 @@ export default function ExercisesPage() {
 
             {/* Body diagram with labeled lines */}
             <div ref={diagramContainerRef} className="relative mx-auto" style={{ width: "100%", maxWidth: "22rem", height: "20rem" }}>
-              {/* SVG connecting lines */}
-              <svg className="absolute inset-0 w-full h-full pointer-events-none z-20">
+              {/* SVG connecting lines - fade in after body renders */}
+              <svg className={`absolute inset-0 w-full h-full pointer-events-none z-20 transition-opacity duration-300 ${bodyReady ? "opacity-100" : "opacity-0"}`}>
                 {(bodySide === "front" ? FRONT_LABELS : BACK_LABELS).map(([side, labelTop, muscle, muscleX, muscleY]) => {
                   const active = muscleDraft.includes(muscle);
                   const labelEdgeX = side === "left" ? bodyPos.left : bodyPos.left + bodyPos.width;
@@ -691,8 +708,8 @@ export default function ExercisesPage() {
                 })}
               </svg>
 
-              {/* Left labels */}
-              <div className="absolute left-0 top-0 bottom-0 z-30" style={{ width: `${bodyPos.left}%` }}>
+              {/* Left labels - fade in after body renders */}
+              <div className={`absolute left-0 top-0 bottom-0 z-30 transition-opacity duration-300 ${bodyReady ? "opacity-100" : "opacity-0"}`} style={{ width: `${bodyPos.left}%` }}>
                 {(bodySide === "front" ? FRONT_LABELS : BACK_LABELS)
                   .filter(([side]) => side === "left")
                   .map(([, top, muscle]) => {
@@ -723,8 +740,8 @@ export default function ExercisesPage() {
                 {bodyMapElement}
               </div>
 
-              {/* Right labels */}
-              <div className="absolute right-0 top-0 bottom-0 z-30" style={{ width: `${100 - bodyPos.left - bodyPos.width}%` }}>
+              {/* Right labels - fade in after body renders */}
+              <div className={`absolute right-0 top-0 bottom-0 z-30 transition-opacity duration-300 ${bodyReady ? "opacity-100" : "opacity-0"}`} style={{ width: `${100 - bodyPos.left - bodyPos.width}%` }}>
                 {(bodySide === "front" ? FRONT_LABELS : BACK_LABELS)
                   .filter(([side]) => side === "right")
                   .map(([, top, muscle]) => {
