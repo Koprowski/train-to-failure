@@ -441,7 +441,7 @@ export default function ExercisesPage() {
       .catch(() => {});
   }, []);
 
-  // Compute bodyPos from container dimensions + known SVG aspect ratio (1:2).
+  // Compute bodyPos from container dims + known SVG 1:2 aspect ratio.
   useEffect(() => {
     const compute = () => {
       const el = diagramContainerRef.current;
@@ -449,16 +449,23 @@ export default function ExercisesPage() {
       const W = el.clientWidth;
       const H = el.clientHeight;
       if (W === 0 || H === 0) return;
-      const svgH = H;
-      const svgW = svgH / 2;
-      const bodyDivLeft = W * 0.2;
       const bodyDivW = W * 0.6;
-      const svgLeft = bodyDivLeft + (bodyDivW - svgW) / 2;
+      const bodyDivH = H;
+      let svgW: number, svgH: number;
+      if (bodyDivW / bodyDivH < 0.5) {
+        svgW = bodyDivW;
+        svgH = bodyDivW * 2;
+      } else {
+        svgH = bodyDivH;
+        svgW = bodyDivH / 2;
+      }
+      const svgLeft = W * 0.2 + (bodyDivW - svgW) / 2;
+      const svgTop = (bodyDivH - svgH) / 2;
       setBodyPos({
         left: (svgLeft / W) * 100,
-        top: 0,
+        top: (svgTop / H) * 100,
         width: (svgW / W) * 100,
-        height: 100,
+        height: (svgH / H) * 100,
       });
     };
     compute();

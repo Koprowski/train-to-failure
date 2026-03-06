@@ -357,9 +357,9 @@ export default function WorkoutsPage() {
     });
   }, []);
 
-  // Compute bodyPos from container dimensions + known SVG aspect ratio (1:2).
-  // CSS forces SVG to height:100%, width:auto, so SVG height = container height,
-  // SVG width = container height / 2. Body div is left:20% right:20% (60% of container).
+  // Compute bodyPos from container dims + known SVG 1:2 aspect ratio.
+  // CSS uses max-width/max-height (contain behavior), so the SVG fits
+  // whichever dimension is tighter: width-constrained or height-constrained.
   useEffect(() => {
     if (!showMusclePicker) return;
     const compute = () => {
@@ -368,16 +368,25 @@ export default function WorkoutsPage() {
       const W = el.clientWidth;
       const H = el.clientHeight;
       if (W === 0 || H === 0) return;
-      const svgH = H;
-      const svgW = svgH / 2; // 1:2 aspect ratio
-      const bodyDivLeft = W * 0.2;
       const bodyDivW = W * 0.6;
-      const svgLeft = bodyDivLeft + (bodyDivW - svgW) / 2;
+      const bodyDivH = H;
+      let svgW: number, svgH: number;
+      if (bodyDivW / bodyDivH < 0.5) {
+        // Width-constrained: SVG fills body div width
+        svgW = bodyDivW;
+        svgH = bodyDivW * 2;
+      } else {
+        // Height-constrained: SVG fills body div height
+        svgH = bodyDivH;
+        svgW = bodyDivH / 2;
+      }
+      const svgLeft = W * 0.2 + (bodyDivW - svgW) / 2;
+      const svgTop = (bodyDivH - svgH) / 2;
       setBodyPos({
         left: (svgLeft / W) * 100,
-        top: 0,
+        top: (svgTop / H) * 100,
         width: (svgW / W) * 100,
-        height: 100,
+        height: (svgH / H) * 100,
       });
     };
     compute();
