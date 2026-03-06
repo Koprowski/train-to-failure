@@ -285,12 +285,13 @@ export default function ExercisesPage() {
             return equipmentFilter.some((f) => exEquip.includes(f.toLowerCase()));
           });
         }
-        // When searching, show all exercises but sort recent to top
+        // When searching, sort: favorites first, then alphabetical
         if (search) {
           list.sort((a: Exercise, b: Exercise) => {
-            const aRecent = recentExerciseIds.has(a.id) ? 0 : 1;
-            const bRecent = recentExerciseIds.has(b.id) ? 0 : 1;
-            return aRecent - bRecent;
+            const aFav = favoriteIds.has(a.id) ? 0 : 1;
+            const bFav = favoriteIds.has(b.id) ? 0 : 1;
+            if (aFav !== bFav) return aFav - bFav;
+            return a.name.localeCompare(b.name);
           });
         } else if (viewMode === "recent") {
           list = list.filter((ex: Exercise) => recentExerciseIds.has(ex.id));
