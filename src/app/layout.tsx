@@ -82,7 +82,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
             )}
           </svg>
         </button>
-        <Link href="/" className="text-lg font-bold text-emerald-500">Train to Failure</Link>
+        <Link href="/" className="text-lg font-bold text-emerald-500">One Foot Fitness</Link>
         <Link
           href="/workouts/quick"
           className="p-2 rounded-lg hover:bg-gray-800 transition-colors"
@@ -108,7 +108,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
         <div className="p-6 border-b border-gray-800">
           <Link href="/" className="flex items-center gap-3" onClick={() => setSidebarOpen(false)}>
             <Image src="/flamingo-icon.png" alt="Logo" width={32} height={32} className="w-8 h-8 rounded-lg" />
-            <span className="text-xl font-bold text-white">Train to Failure</span>
+            <span className="text-xl font-bold text-white">One Foot Fitness</span>
           </Link>
         </div>
         <nav className="p-4 space-y-1 flex-1">
@@ -250,7 +250,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <title>Train to Failure</title>
+        <title>One Foot Fitness</title>
         <meta name="description" content="Workout tracking app" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>

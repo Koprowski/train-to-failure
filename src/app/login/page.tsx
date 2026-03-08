@@ -7,8 +7,8 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-950">
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 max-w-sm w-full mx-4 text-center">
-        <Image src="/flamingo-icon-128.png" alt="Train to Failure" width={128} height={128} className="w-20 h-20 rounded-2xl mx-auto mb-6" />
-        <h1 className="text-2xl font-bold text-white mb-2">Train to Failure</h1>
+        <Image src="/flamingo-icon-128.png" alt="One Foot Fitness" width={128} height={128} className="w-20 h-20 rounded-2xl mx-auto mb-6" />
+        <h1 className="text-2xl font-bold text-white mb-2">One Foot Fitness</h1>
         <p className="text-gray-400 mb-8">Sign in to track your workouts</p>
         <button
           onClick={() => signIn("google", { callbackUrl: "/" })}
