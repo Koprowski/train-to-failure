@@ -119,7 +119,7 @@ model WorkoutSet {
   reps          Int?
   weightLbs     Float?
   timeSecs      Int?
-  rpe           Float?
+  rir           Float?    @map("rpe")
   restSecs      Int?
   notes         String?
   completed     Boolean @default(false)

@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     // Group by workout date
     const sessionMap = new Map<string, {
       date: string;
-      sets: { setNumber: number; weightLbs: number; reps: number; rpe: number | null }[];
+      sets: { setNumber: number; weightLbs: number; reps: number; rir: number | null }[];
       totalVolume: number;
     }>();
 
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
         setNumber: set.setNumber,
         weightLbs: weight,
         reps,
-        rpe: set.rpe,
+        rir: set.rir,
       });
       session.totalVolume += weight * reps;
     }

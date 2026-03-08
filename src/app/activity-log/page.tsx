@@ -22,7 +22,7 @@ interface SetEntry {
   weightLbs: number | null;
   reps: number | null;
   timeSecs: number | null;
-  rpe: number | null;
+  rir: number | null;
   notes: string | null;
   completed: boolean;
   createdAt: string;
@@ -34,7 +34,7 @@ interface QuickLogForm {
   weightLbs: string;
   reps: string;
   timeSecs: string;
-  rpe: string;
+  rir: string;
   notes: string;
 }
 
@@ -64,7 +64,7 @@ function ActivityLogContent() {
     weightLbs: "",
     reps: "",
     timeSecs: "",
-    rpe: "",
+    rir: "",
     notes: "",
   });
 
@@ -74,7 +74,7 @@ function ActivityLogContent() {
   const [touchMoved, setTouchMoved] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [editingSet, setEditingSet] = useState<SetEntry | null>(null);
-  const [editForm, setEditForm] = useState({ weightLbs: "", reps: "", rpe: "", notes: "" });
+  const [editForm, setEditForm] = useState({ weightLbs: "", reps: "", rir: "", notes: "" });
   const [editSaving, setEditSaving] = useState(false);
 
   const handleTouchStart = (id: string, e: React.TouchEvent) => {
@@ -129,7 +129,7 @@ function ActivityLogContent() {
     setEditForm({
       weightLbs: set.weightLbs?.toString() ?? "",
       reps: set.reps?.toString() ?? "",
-      rpe: set.rpe?.toString() ?? "",
+      rir: set.rir?.toString() ?? "",
       notes: set.notes ?? "",
     });
   };
@@ -141,7 +141,7 @@ function ActivityLogContent() {
       const body: Record<string, unknown> = {};
       if (editForm.weightLbs) body.weightLbs = parseFloat(editForm.weightLbs);
       if (editForm.reps) body.reps = parseInt(editForm.reps);
-      if (editForm.rpe) body.rpe = parseFloat(editForm.rpe);
+      if (editForm.rir) body.rir = parseFloat(editForm.rir);
       body.notes = editForm.notes || null;
 
       const res = await fetch(`/api/activity-log/${editingSet.id}`, {
@@ -200,7 +200,7 @@ function ActivityLogContent() {
         body: JSON.stringify(form),
       });
       if (res.ok) {
-        setForm({ exerciseId: "", setType: "working", weightLbs: "", reps: "", timeSecs: "", rpe: "", notes: "" });
+        setForm({ exerciseId: "", setType: "working", weightLbs: "", reps: "", timeSecs: "", rir: "", notes: "" });
         setShowQuickLog(false);
         setExerciseSearch("");
         fetchSets();
@@ -330,9 +330,9 @@ function ActivityLogContent() {
                             {set.weightLbs != null && <span>{set.weightLbs} lbs</span>}
                             {set.reps != null && <span>{set.reps} reps</span>}
                             {set.timeSecs != null && <span>{set.timeSecs}s</span>}
-                            {set.rpe != null && (
+                            {set.rir != null && (
                               <span className="group relative cursor-help">
-                                RPE {set.rpe}
+                                RIR {set.rir}
                                 <span className="invisible group-hover:visible absolute bottom-full left-0 mb-2 w-48 px-3 py-2 text-xs font-normal text-gray-300 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10">
                                   Rate of Perceived Exertion (1-10). How hard the set felt, where 10 is max effort.
                                 </span>
@@ -397,15 +397,15 @@ function ActivityLogContent() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">RPE</label>
+                <label className="block text-sm text-gray-400 mb-1">RIR</label>
                 <input
                   type="number"
                   inputMode="decimal"
                   min="1"
                   max="10"
                   step="0.5"
-                  value={editForm.rpe}
-                  onChange={(e) => setEditForm({ ...editForm, rpe: e.target.value })}
+                  value={editForm.rir}
+                  onChange={(e) => setEditForm({ ...editForm, rir: e.target.value })}
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
@@ -547,7 +547,7 @@ function ActivityLogContent() {
                     <div>
                       <label className="block text-sm text-gray-400 mb-1">
                         <span className="group relative inline-flex items-center gap-1 cursor-help">
-                          RPE
+                          RIR
                           <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -563,8 +563,8 @@ function ActivityLogContent() {
                         min="1"
                         max="10"
                         step="0.5"
-                        value={form.rpe}
-                        onChange={(e) => setForm({ ...form, rpe: e.target.value })}
+                        value={form.rir}
+                        onChange={(e) => setForm({ ...form, rir: e.target.value })}
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
                       />
                     </div>

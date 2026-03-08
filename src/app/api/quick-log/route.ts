@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     if (error) return error;
 
     const body = await request.json();
-    const { exerciseId, setType, reps, weightLbs, timeSecs, rpe, notes } = body;
+    const { exerciseId, setType, reps, weightLbs, timeSecs, rir, notes } = body;
 
     if (!exerciseId) {
       return NextResponse.json({ error: "exerciseId is required" }, { status: 400 });
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
         reps: reps ? parseInt(reps) : null,
         weightLbs: weightLbs ? parseFloat(weightLbs) : null,
         timeSecs: timeSecs ? parseInt(timeSecs) : null,
-        rpe: rpe ? parseFloat(rpe) : null,
+        rir: rir ? parseFloat(rir) : null,
         notes: notes || null,
         completed: true,
       },

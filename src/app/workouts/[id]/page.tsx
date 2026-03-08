@@ -20,7 +20,7 @@ interface WorkoutSet {
   weightLbs: number | null;
   reps: number | null;
   timeSecs: number | null;
-  rpe: number | null;
+  rir: number | null;
   completed: boolean;
   notes: string | null;
   exercise: Exercise;
@@ -40,7 +40,7 @@ interface Workout {
 interface SetEdits {
   weightLbs?: string;
   reps?: string;
-  rpe?: string;
+  rir?: string;
   completed?: boolean;
 }
 
@@ -178,7 +178,7 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
     });
   };
 
-  const getSetValue = (set: WorkoutSet, field: "weightLbs" | "reps" | "rpe"): string => {
+  const getSetValue = (set: WorkoutSet, field: "weightLbs" | "reps" | "rir"): string => {
     const edits = setEdits[set.id];
     if (edits && edits[field] !== undefined) return edits[field]!;
     const val = set[field];
@@ -211,7 +211,7 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
         const data: Record<string, number | boolean | null> = {};
         if (edits.weightLbs !== undefined) data.weightLbs = edits.weightLbs ? Number(edits.weightLbs) : null;
         if (edits.reps !== undefined) data.reps = edits.reps ? Number(edits.reps) : null;
-        if (edits.rpe !== undefined) data.rpe = edits.rpe ? Number(edits.rpe) : null;
+        if (edits.rir !== undefined) data.rir = edits.rir ? Number(edits.rir) : null;
         if (edits.completed !== undefined) data.completed = edits.completed;
         return fetch(`/api/workouts/${workout.id}/sets/${setId}`, {
           method: "PUT",
@@ -540,7 +540,7 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
                   <th className="py-2 px-3 text-right">Reps</th>
                   <th className="py-2 px-3 text-right">
                     <span className="group relative inline-flex items-center gap-1 cursor-help">
-                      RPE
+                      RIR
                       <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -587,8 +587,8 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
                         step="0.5"
                         min="1"
                         max="10"
-                        value={getSetValue(set, "rpe")}
-                        onChange={(e) => updateSetEdit(set.id, "rpe", e.target.value)}
+                        value={getSetValue(set, "rir")}
+                        onChange={(e) => updateSetEdit(set.id, "rir", e.target.value)}
                         placeholder="--"
                         className="w-12 bg-transparent border-b border-transparent focus:border-emerald-500 text-right text-gray-400 outline-none py-1 px-1 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />

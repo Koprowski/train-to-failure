@@ -23,7 +23,7 @@ interface RecentExercise {
     weightLbs: number | null;
     reps: number | null;
     timeSecs: number | null;
-    rpe: number | null;
+    rir: number | null;
   }[];
 }
 

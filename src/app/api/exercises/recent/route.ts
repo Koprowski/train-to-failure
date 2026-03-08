@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
             weightLbs: s.weightLbs,
             reps: s.reps,
             timeSecs: s.timeSecs,
-            rpe: s.rpe,
+            rir: s.rir,
           })),
         };
       });
