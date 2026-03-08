@@ -1,16 +1,13 @@
 "use client";
 
 import { signIn } from "next-auth/react";
+import Image from "next/image";
 
 export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-950">
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 max-w-sm w-full mx-4 text-center">
-        <div className="w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
-          <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-        </div>
+        <Image src="/flamingo-icon-128.png" alt="Train to Failure" width={128} height={128} className="w-20 h-20 rounded-2xl mx-auto mb-6" />
         <h1 className="text-2xl font-bold text-white mb-2">Train to Failure</h1>
         <p className="text-gray-400 mb-8">Sign in to track your workouts</p>
         <button
