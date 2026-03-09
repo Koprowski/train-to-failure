@@ -181,10 +181,10 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-950 px-4 py-10">
-      <div className="w-full max-w-md rounded-2xl border border-gray-800 bg-gray-900 p-8 text-center shadow-2xl shadow-black/20">
-        <Image src="/flamingo-logo-160.png" alt="One Foot Fitness" width={160} height={160} className="mx-auto mb-6 h-40 w-40" priority />
+      <div className="w-full max-w-md rounded-2xl border border-gray-800 bg-gray-900 p-6 text-center shadow-2xl shadow-black/20">
+        <Image src="/flamingo-logo-160.png" alt="One Foot Fitness" width={160} height={160} className="mx-auto mb-5 h-40 w-40" priority />
         <h1 className="mb-2 text-2xl font-bold text-white">One Foot Fitness</h1>
-        <p className="mb-8 text-gray-400">{title}</p>
+        <p className="mb-6 text-gray-400">{title}</p>
 
         <div className="mb-6 grid grid-cols-3 rounded-xl bg-gray-950 p-1 text-sm">
           {(["signin", "signup", "forgot"] as Mode[]).map((value) => (

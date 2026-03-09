@@ -358,5 +358,10 @@
     "gifFile": "hammer-curl.gif",
     "imageUrl": "/gifs/hammer-curl.gif",
     "muscleGroups": "biceps,forearms"
+  },
+  "Calf Raise - Seated": {
+    "gifFile": "as_dumbbell-seated-calf-raise.gif",
+    "imageUrl": "/gifs/as_dumbbell-seated-calf-raise.gif",
+    "muscleGroups": "calves"
   }
 }

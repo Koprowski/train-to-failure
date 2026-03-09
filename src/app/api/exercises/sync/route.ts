@@ -24,17 +24,20 @@ export async function POST() {
     // exercises.json may not exist in all environments
   }
 
-  // Get all existing non-custom exercise names
-  const existing = await prisma.exercise.findMany({
+  // Get all existing non-custom exercises with their IDs for updates
+  const existingExercises = await prisma.exercise.findMany({
     where: { isCustom: false },
-    select: { name: true },
+    select: { id: true, name: true, imageUrl: true },
   });
-  const existingNames = new Set(existing.map((e: { name: string }) => e.name));
+  type ExInfo = { id: string; name: string; imageUrl: string | null };
+  const existingByName = new Map<string, ExInfo>(existingExercises.map((e: ExInfo) => [e.name, e]));
 
-  // Insert missing exercises
+  // Insert missing exercises and update imageUrls for existing ones
   const added: string[] = [];
+  const updated: string[] = [];
   for (const seed of SEED_EXERCISES) {
-    if (!existingNames.has(seed.name)) {
+    const existing: ExInfo | undefined = existingByName.get(seed.name);
+    if (!existing) {
       await prisma.exercise.create({
         data: {
           name: seed.name,
@@ -47,8 +50,14 @@ export async function POST() {
         },
       });
       added.push(seed.name);
+    } else if (imageMap[seed.name] && existing.imageUrl !== imageMap[seed.name]) {
+      await prisma.exercise.update({
+        where: { id: existing.id },
+        data: { imageUrl: imageMap[seed.name] },
+      });
+      updated.push(seed.name);
     }
   }
 
-  return NextResponse.json({ added, total: SEED_EXERCISES.length });
+  return NextResponse.json({ added, updated, total: SEED_EXERCISES.length });
 }
