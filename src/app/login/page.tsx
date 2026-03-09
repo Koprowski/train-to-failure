@@ -6,10 +6,8 @@ import Image from "next/image";
 export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-950">
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 max-w-sm w-full mx-4 text-center">
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 max-w-sm w-full mx-4 text-center">
         <Image src="/flamingo-logo-160.png" alt="One Foot Fitness" width={160} height={160} className="w-40 h-40 mx-auto mb-6" />
-        <h1 className="text-2xl font-bold text-white mb-2">One Foot Fitness</h1>
-        <p className="text-gray-400 mb-8">Sign in to track your workouts</p>
         <button
           onClick={() => signIn("google", { callbackUrl: "/" })}
           className="w-full flex items-center justify-center gap-3 bg-white text-gray-900 font-medium py-3 px-4 rounded-lg hover:bg-gray-100 transition-colors"
@@ -34,6 +32,7 @@ export default function LoginPage() {
           </svg>
           Sign in with Google
         </button>
+        <h1 className="text-2xl font-bold text-white mt-6">One Foot Fitness</h1>
       </div>
     </div>
   );
