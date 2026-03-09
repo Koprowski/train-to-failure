@@ -11,7 +11,7 @@ export async function POST() {
   if (error) return error;
 
   // Load image URLs from exercises.json
-  let imageMap: Record<string, string> = {};
+  const imageMap: Record<string, string> = {};
   try {
     const jsonPath = join(process.cwd(), "public", "gifs", "exercises.json");
     const data: Record<string, { imageUrl?: string }> = JSON.parse(

@@ -28,6 +28,8 @@ const navItems = [
   { href: "/templates", label: "Templates", icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" },
 ];
 
+const publicPaths = new Set(["/login", "/verify-email", "/reset-password"]);
+
 function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -36,13 +38,13 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ updated: string[]; created: string[]; skipped: string[] } | null>(null);
   const { data: session, status } = useSession();
+  const isPublicPath = publicPaths.has(pathname);
 
-  // Redirect to login only when definitively unauthenticated
   useEffect(() => {
-    if (status === "unauthenticated" && pathname !== "/login") {
+    if (status === "unauthenticated" && !isPublicPath) {
       router.replace("/login");
     }
-  }, [status, pathname, router]);
+  }, [status, isPublicPath, router]);
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
@@ -50,8 +52,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
     return pathname.startsWith(href);
   };
 
-  // Show login page without shell
-  if (pathname === "/login") {
+  if (isPublicPath) {
     return <>{children}</>;
   }
 

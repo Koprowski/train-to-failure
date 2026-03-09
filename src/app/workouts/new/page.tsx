@@ -44,13 +44,32 @@ interface SetData {
   notes: string;
   previousWeight?: string;
   previousReps?: string;
+  previousTimeSecs?: string;
+  previousRpe?: string;
   workoutExerciseId?: string;
+}
+
+interface PreviousSessionData {
+  lastPerformed: string;
+  summary: string;
+  lastSets: {
+    setNumber: number;
+    setType: string;
+    weightLbs: number | null;
+    reps: number | null;
+    timeSecs: number | null;
+    rpe: number | null;
+  }[];
 }
 
 interface ExerciseBlock {
   exercise: Exercise;
   sets: SetData[];
   workoutExerciseId?: string;
+  previousSession?: {
+    lastPerformed: string;
+    summary: string;
+  };
   startedAt?: Date;
   elapsed: number;
   paused: boolean;
@@ -60,6 +79,10 @@ interface ExerciseBlock {
 let tempIdCounter = 0;
 function nextTempId() {
   return `temp_${++tempIdCounter}`;
+}
+
+function getElapsedSeconds(startedAt: Date, accumulated: number) {
+  return accumulated + Math.floor((Date.now() - startedAt.getTime()) / 1000);
 }
 
 function WorkoutContent() {
@@ -83,7 +106,8 @@ function WorkoutContent() {
   const [showLauncherDate, setShowLauncherDate] = useState(false);
   const [started, setStarted] = useState(false);
   const [activeExerciseIndex, setActiveExerciseIndex] = useState<number | null>(null);
-  const startTimeRef = useRef<Date | null>(null);
+  const [workoutStartTime, setWorkoutStartTime] = useState<Date | null>(null);
+  const [renderDateFallback] = useState(() => new Date());
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const exerciseTimerRefs = useRef<Map<number, { startedAt: Date; accumulated: number }>>(new Map());
   const quickExerciseLoaded = useRef(false);
@@ -91,6 +115,7 @@ function WorkoutContent() {
   const [templates, setTemplates] = useState<TemplateData[]>([]);
   const [launcherLoading, setLauncherLoading] = useState(true);
   const [jsonMuscleGroups, setJsonMuscleGroups] = useState<string[]>([]);
+  const [previousSessionsByExercise, setPreviousSessionsByExercise] = useState<Record<string, PreviousSessionData>>({});
 
   // Drag-and-drop reordering state
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -102,7 +127,6 @@ function WorkoutContent() {
   // Load launcher data (recent workouts + templates) when no query params
   useEffect(() => {
     if (resumeId || templateId || duplicateFrom || quickExerciseId) {
-      setLauncherLoading(false);
       return;
     }
 
@@ -126,6 +150,23 @@ function WorkoutContent() {
       .then((data) => setAllExercises(Array.isArray(data) ? data : []))
       .catch(() => {});
 
+    fetch("/api/exercises/recent?days=30")
+      .then((r) => r.json())
+      .then((data) => {
+        if (!Array.isArray(data)) return;
+        const mapped: Record<string, PreviousSessionData> = {};
+        for (const item of data) {
+          if (!item?.exercise?.id) continue;
+          mapped[item.exercise.id] = {
+            lastPerformed: item.lastPerformed,
+            summary: item.summary,
+            lastSets: Array.isArray(item.lastSets) ? item.lastSets : [],
+          };
+        }
+        setPreviousSessionsByExercise(mapped);
+      })
+      .catch(() => {});
+
     // Also load muscle groups from exercises.json to ensure complete list
     fetch("/gifs/exercises.json")
       .then((r) => r.json())
@@ -142,6 +183,31 @@ function WorkoutContent() {
       .catch(() => {});
   }, []);
 
+  const enrichBlockWithPreviousData = useCallback((block: ExerciseBlock): ExerciseBlock => {
+    const previousSession = previousSessionsByExercise[block.exercise.id];
+    if (!previousSession) return block;
+
+    return {
+      ...block,
+      previousSession: {
+        lastPerformed: previousSession.lastPerformed,
+        summary: previousSession.summary,
+      },
+      sets: block.sets.map((set, index) => {
+        const previousSet = previousSession.lastSets[index];
+        if (!previousSet) return set;
+        return {
+          ...set,
+          previousWeight: previousSet.weightLbs != null ? String(previousSet.weightLbs) : set.previousWeight,
+          previousReps: previousSet.reps != null ? String(previousSet.reps) : set.previousReps,
+          previousTimeSecs: previousSet.timeSecs != null ? String(previousSet.timeSecs) : set.previousTimeSecs,
+          previousRpe: previousSet.rpe != null ? String(previousSet.rpe) : set.previousRpe,
+        };
+      }),
+    };
+  }, [previousSessionsByExercise]);
+
+
   // Resume existing workout
   useEffect(() => {
     if (resumeId) {
@@ -151,7 +217,7 @@ function WorkoutContent() {
           if (workout && workout.id) {
             setWorkoutId(workout.id);
             setWorkoutName(workout.name);
-            startTimeRef.current = new Date(workout.startedAt);
+            setWorkoutStartTime(new Date(workout.startedAt));
             setStarted(true);
 
             // Rebuild exercise blocks preserving workoutExercise order
@@ -413,7 +479,7 @@ function WorkoutContent() {
               const data = await res.json();
               if (data.id) {
                 setWorkoutId(data.id);
-                startTimeRef.current = new Date(data.startedAt);
+                setWorkoutStartTime(new Date(data.startedAt));
                 setStarted(true);
               }
             } catch (err) {
@@ -436,7 +502,7 @@ function WorkoutContent() {
           if (idx === activeExerciseIndex && !block.paused && !block.finished) {
             const ref = exerciseTimerRefs.current.get(idx);
             if (ref) {
-              const newElapsed = ref.accumulated + Math.floor((Date.now() - ref.startedAt.getTime()) / 1000);
+              const newElapsed = getElapsedSeconds(ref.startedAt, ref.accumulated);
               if (newElapsed !== block.elapsed) {
                 changed = true;
                 return { ...block, elapsed: newElapsed };
@@ -478,7 +544,7 @@ function WorkoutContent() {
       const data = await res.json();
       if (data.id) {
         setWorkoutId(data.id);
-        startTimeRef.current = new Date(data.startedAt);
+        setWorkoutStartTime(new Date(data.startedAt));
         setStarted(true);
       }
     } catch (err) {
@@ -507,7 +573,7 @@ function WorkoutContent() {
   const pauseExerciseTimer = (blockIndex: number) => {
     const ref = exerciseTimerRefs.current.get(blockIndex);
     if (ref) {
-      const elapsed = ref.accumulated + Math.floor((Date.now() - ref.startedAt.getTime()) / 1000);
+      const elapsed = getElapsedSeconds(ref.startedAt, ref.accumulated);
       exerciseTimerRefs.current.set(blockIndex, { startedAt: new Date(), accumulated: elapsed });
 
       setExerciseBlocks((prev) => {
@@ -704,6 +770,7 @@ function WorkoutContent() {
       const updated = [...prev];
       const block = { ...updated[blockIndex], sets: [...updated[blockIndex].sets] };
       const lastSet = block.sets[block.sets.length - 1];
+      const previousSet = previousSessionsByExercise[block.exercise.id]?.lastSets[block.sets.length];
       block.sets.push({
         tempId: nextTempId(),
         exerciseId: block.exercise.id,
@@ -715,6 +782,10 @@ function WorkoutContent() {
         rpe: "",
         completed: false,
         notes: "",
+        previousWeight: previousSet?.weightLbs != null ? String(previousSet.weightLbs) : undefined,
+        previousReps: previousSet?.reps != null ? String(previousSet.reps) : undefined,
+        previousTimeSecs: previousSet?.timeSecs != null ? String(previousSet.timeSecs) : undefined,
+        previousRpe: previousSet?.rpe != null ? String(previousSet.rpe) : undefined,
         workoutExerciseId: block.workoutExerciseId,
       });
       updated[blockIndex] = block;
@@ -743,6 +814,53 @@ function WorkoutContent() {
       const block = { ...updated[blockIndex], sets: [...updated[blockIndex].sets] };
       block.sets[setIndex] = { ...block.sets[setIndex], [field]: value };
       updated[blockIndex] = block;
+      return updated;
+    });
+  };
+
+  const applyPreviousSetValues = (blockIndex: number, setIndex: number) => {
+    const set = visibleExerciseBlocks[blockIndex]?.sets[setIndex];
+    if (!set) return;
+    if (set.previousWeight !== undefined) updateSet(blockIndex, setIndex, "weightLbs", set.previousWeight);
+    if (set.previousReps !== undefined) updateSet(blockIndex, setIndex, "reps", set.previousReps);
+    if (set.previousTimeSecs !== undefined) updateSet(blockIndex, setIndex, "timeSecs", set.previousTimeSecs);
+    if (set.previousRpe !== undefined) updateSet(blockIndex, setIndex, "rpe", set.previousRpe);
+  };
+
+  const copyPreviousWorkingSets = (blockIndex: number) => {
+    setExerciseBlocks((prev) => {
+      const block = prev[blockIndex];
+      if (!block) return prev;
+
+      const previousSession = previousSessionsByExercise[block.exercise.id];
+      if (!previousSession) return prev;
+
+      const previousWorkingSets = previousSession.lastSets.filter((set) => set.setType !== "warmup");
+      const sourceSets = previousWorkingSets.length > 0 ? previousWorkingSets : previousSession.lastSets;
+      if (sourceSets.length === 0) return prev;
+
+      const updated = [...prev];
+      updated[blockIndex] = {
+        ...block,
+        sets: sourceSets.map((previousSet, index) => ({
+          tempId: block.sets[index]?.tempId ?? nextTempId(),
+          dbId: block.sets[index]?.dbId,
+          exerciseId: block.exercise.id,
+          setNumber: index + 1,
+          setType: (previousSet.setType as SetData["setType"]) || "working",
+          weightLbs: previousSet.weightLbs != null ? String(previousSet.weightLbs) : "",
+          reps: previousSet.reps != null ? String(previousSet.reps) : "",
+          timeSecs: previousSet.timeSecs != null ? String(previousSet.timeSecs) : "",
+          rpe: previousSet.rpe != null ? String(previousSet.rpe) : "",
+          completed: false,
+          notes: block.sets[index]?.notes ?? "",
+          previousWeight: previousSet.weightLbs != null ? String(previousSet.weightLbs) : undefined,
+          previousReps: previousSet.reps != null ? String(previousSet.reps) : undefined,
+          previousTimeSecs: previousSet.timeSecs != null ? String(previousSet.timeSecs) : undefined,
+          previousRpe: previousSet.rpe != null ? String(previousSet.rpe) : undefined,
+          workoutExerciseId: block.workoutExerciseId,
+        })),
+      };
       return updated;
     });
   };
@@ -882,6 +1000,8 @@ function WorkoutContent() {
   };
 
   // Build muscle group tabs from both DB exercises and exercises.json
+  const visibleExerciseBlocks = exerciseBlocks.map(enrichBlockWithPreviousData);
+
   const muscleGroups = (() => {
     const groups = new Set<string>(jsonMuscleGroups);
     allExercises.forEach((ex) => {
@@ -914,6 +1034,37 @@ function WorkoutContent() {
     if (diffDays === 1) return "Yesterday";
     if (diffDays < 7) return `${diffDays} days ago`;
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+
+  const formatPreviousSessionDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return "today";
+    if (diffDays === 1) return "yesterday";
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+
+  const formatPreviousSetSummary = (set: SetData, exerciseType: string) => {
+    const parts: string[] = [];
+
+    if (set.previousWeight && set.previousReps) {
+      parts.push(`${set.previousWeight} x ${set.previousReps}`);
+    } else {
+      if (set.previousWeight) parts.push(`${set.previousWeight} lb`);
+      if (set.previousReps) parts.push(`${set.previousReps} reps`);
+    }
+
+    if ((exerciseType === "time" || exerciseType === "cardio") && set.previousTimeSecs) {
+      parts.push(`${set.previousTimeSecs}s`);
+    }
+
+    if (set.previousRpe) {
+      parts.push(`RPE ${set.previousRpe}`);
+    }
+
+    return parts.join(" • ");
   };
 
   const getUniqueExercises = (sets: RecentWorkout["sets"]) => {
@@ -1112,8 +1263,8 @@ function WorkoutContent() {
           </button>
           <button
             onClick={() => {
-              if (!customDate && startTimeRef.current) {
-                const d = startTimeRef.current;
+              if (!customDate && workoutStartTime) {
+                const d = workoutStartTime;
                 const pad = (n: number) => String(n).padStart(2, "0");
                 setCustomDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
               }
@@ -1122,7 +1273,7 @@ function WorkoutContent() {
             className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
           >
             {(() => {
-              const d = customDate ? new Date(customDate) : startTimeRef.current ?? new Date();
+              const d = customDate ? new Date(customDate) : workoutStartTime ?? renderDateFallback;
               const mm = String(d.getMonth() + 1).padStart(2, "0");
               const dd = String(d.getDate()).padStart(2, "0");
               const yyyy = d.getFullYear();
@@ -1138,7 +1289,7 @@ function WorkoutContent() {
       {/* Date edit modal */}
       {showDateModal && (
         <DateTimePicker
-          value={customDate ? new Date(customDate) : startTimeRef.current ?? new Date()}
+          value={customDate ? new Date(customDate) : workoutStartTime ?? renderDateFallback}
           onClose={() => setShowDateModal(false)}
           onSave={(date) => {
             const pad = (n: number) => String(n).padStart(2, "0");
@@ -1149,7 +1300,7 @@ function WorkoutContent() {
       )}
 
       {/* Exercise blocks */}
-      {exerciseBlocks.map((block, blockIndex) => {
+      {visibleExerciseBlocks.map((block, blockIndex) => {
         const isActive = activeExerciseIndex === blockIndex && !block.paused && !block.finished;
 
         const isDragging = dragIndex === blockIndex;
@@ -1191,6 +1342,23 @@ function WorkoutContent() {
                 <div>
                   <h3 className="font-semibold text-white">{block.exercise.name}</h3>
                   <p className="text-xs text-gray-400 capitalize">{block.exercise.muscleGroups}</p>
+                  {block.previousSession && (
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-300">
+                      <div className="inline-flex flex-wrap items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-1.5">
+                        <span className="font-medium text-emerald-400">Last session</span>
+                        <span>{block.previousSession.summary}</span>
+                        <span className="text-gray-500">•</span>
+                        <span className="text-gray-400">{formatPreviousSessionDate(block.previousSession.lastPerformed)}</span>
+                      </div>
+                      <button
+                        onClick={() => copyPreviousWorkingSets(blockIndex)}
+                        className="rounded-md border border-gray-700 px-2.5 py-1 text-[11px] font-medium text-gray-300 transition-colors hover:border-emerald-500/60 hover:text-emerald-400"
+                        title="Copy the previous working sets into this exercise"
+                      >
+                        Copy Last Working Sets
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -1275,6 +1443,7 @@ function WorkoutContent() {
                         </span>
                       </span>
                     </th>
+                    <th className="py-2 px-2 text-left w-28">Last</th>
                     <th className="py-2 px-2 text-center w-10">
                       <button
                         onClick={() => {
@@ -1341,8 +1510,10 @@ function WorkoutContent() {
                             inputMode="numeric"
                             value={set.timeSecs}
                             onChange={(e) => updateSet(blockIndex, setIndex, "timeSecs", e.target.value)}
-                            placeholder="sec"
-                            className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder-gray-600"
+                            placeholder={set.previousTimeSecs || "sec"}
+                            className={`w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                              set.timeSecs ? "text-white" : set.previousTimeSecs ? "placeholder-gray-500 italic" : "placeholder-gray-600"
+                            }`}
                           />
                         </td>
                       )}
@@ -1355,9 +1526,27 @@ function WorkoutContent() {
                           max="10"
                           value={set.rpe}
                           onChange={(e) => updateSet(blockIndex, setIndex, "rpe", e.target.value)}
-                          placeholder="RPE"
-                          className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder-gray-600"
+                          placeholder={set.previousRpe || "RPE"}
+                          className={`w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                            set.rpe ? "text-white" : set.previousRpe ? "placeholder-gray-500 italic" : "placeholder-gray-600"
+                          }`}
                         />
+                      </td>
+                      <td className="py-1.5 px-2 align-middle">
+                        {formatPreviousSetSummary(set, block.exercise.type) ? (
+                          <div className="flex flex-col items-start gap-1">
+                            <span className="text-[11px] leading-tight text-gray-400">
+                              {formatPreviousSetSummary(set, block.exercise.type)}
+                            </span>
+                            <button
+                              onClick={() => applyPreviousSetValues(blockIndex, setIndex)}
+                              className="rounded-md border border-gray-700 px-2 py-1 text-[11px] font-medium text-gray-300 transition-colors hover:border-emerald-500/60 hover:text-emerald-400"
+                              title="Use previous set values"
+                            >
+                              Use Last
+                            </button>
+                          </div>
+                        ) : null}
                       </td>
                       <td className="py-1.5 px-2 text-center">
                         <button
