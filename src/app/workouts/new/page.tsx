@@ -39,13 +39,13 @@ interface SetData {
   weightLbs: string;
   reps: string;
   timeSecs: string;
-  rpe: string;
+  rir: string;
   completed: boolean;
   notes: string;
   previousWeight?: string;
   previousReps?: string;
   previousTimeSecs?: string;
-  previousRpe?: string;
+  previousRir?: string;
   workoutExerciseId?: string;
 }
 
@@ -58,7 +58,7 @@ interface PreviousSessionData {
     weightLbs: number | null;
     reps: number | null;
     timeSecs: number | null;
-    rpe: number | null;
+    rir: number | null;
   }[];
 }
 
@@ -201,7 +201,7 @@ function WorkoutContent() {
           previousWeight: previousSet.weightLbs != null ? String(previousSet.weightLbs) : set.previousWeight,
           previousReps: previousSet.reps != null ? String(previousSet.reps) : set.previousReps,
           previousTimeSecs: previousSet.timeSecs != null ? String(previousSet.timeSecs) : set.previousTimeSecs,
-          previousRpe: previousSet.rpe != null ? String(previousSet.rpe) : set.previousRpe,
+          previousRir: previousSet.rir != null ? String(previousSet.rir) : set.previousRir,
         };
       }),
     };
@@ -232,7 +232,7 @@ function WorkoutContent() {
                 const exSets = setsByExercise.get(we.exerciseId) || [];
                 blocks.push({
                   exercise: we.exercise,
-                  sets: exSets.map((s: { id: string; exerciseId: string; setNumber: number; setType: string; weightLbs?: number | null; reps?: number | null; timeSecs?: number | null; rpe?: number | null; completed: boolean; notes?: string | null; workoutExerciseId?: string | null }) => ({
+                  sets: exSets.map((s: { id: string; exerciseId: string; setNumber: number; setType: string; weightLbs?: number | null; reps?: number | null; timeSecs?: number | null; rir?: number | null; completed: boolean; notes?: string | null; workoutExerciseId?: string | null }) => ({
                     tempId: nextTempId(),
                     dbId: s.id,
                     exerciseId: s.exerciseId,
@@ -241,7 +241,7 @@ function WorkoutContent() {
                     weightLbs: s.weightLbs?.toString() ?? "",
                     reps: s.reps?.toString() ?? "",
                     timeSecs: s.timeSecs?.toString() ?? "",
-                    rpe: s.rpe?.toString() ?? "",
+                    rir: s.rir?.toString() ?? "",
                     completed: s.completed,
                     notes: s.notes ?? "",
                     workoutExerciseId: s.workoutExerciseId ?? undefined,
@@ -275,7 +275,7 @@ function WorkoutContent() {
                   weightLbs: s.weightLbs?.toString() ?? "",
                   reps: s.reps?.toString() ?? "",
                   timeSecs: s.timeSecs?.toString() ?? "",
-                  rpe: s.rpe?.toString() ?? "",
+                  rir: s.rir?.toString() ?? "",
                   completed: s.completed,
                   notes: s.notes ?? "",
                   workoutExerciseId: s.workoutExerciseId ?? undefined,
@@ -320,7 +320,7 @@ function WorkoutContent() {
 
       let sets: SetData[];
       if (recent && recent.lastSets && recent.lastSets.length > 0) {
-        sets = recent.lastSets.map((s: { setNumber: number; setType: string; weightLbs: number | null; reps: number | null; timeSecs: number | null; rpe: number | null }) => ({
+        sets = recent.lastSets.map((s: { setNumber: number; setType: string; weightLbs: number | null; reps: number | null; timeSecs: number | null; rir: number | null }) => ({
           tempId: nextTempId(),
           exerciseId: quickExerciseId,
           setNumber: s.setNumber,
@@ -328,7 +328,7 @@ function WorkoutContent() {
           weightLbs: "",
           reps: "",
           timeSecs: "",
-          rpe: "",
+          rir: "",
           completed: false,
           notes: "",
           previousWeight: s.weightLbs?.toString() ?? "",
@@ -344,7 +344,7 @@ function WorkoutContent() {
           weightLbs: "",
           reps: "",
           timeSecs: "",
-          rpe: "",
+          rir: "",
           completed: false,
           notes: "",
           workoutExerciseId: workoutExercise.id,
@@ -387,7 +387,7 @@ function WorkoutContent() {
                     weightLbs: "",
                     reps: "",
                     timeSecs: "",
-                    rpe: "",
+                    rir: "",
                     completed: false,
                     notes: "",
                   });
@@ -431,7 +431,7 @@ function WorkoutContent() {
                     weightLbs: s.weightLbs?.toString() ?? "",
                     reps: s.reps?.toString() ?? "",
                     timeSecs: s.timeSecs?.toString() ?? "",
-                    rpe: "",
+                    rir: "",
                     completed: false,
                     notes: "",
                   })),
@@ -461,7 +461,7 @@ function WorkoutContent() {
                   weightLbs: s.weightLbs?.toString() ?? "",
                   reps: s.reps?.toString() ?? "",
                   timeSecs: s.timeSecs?.toString() ?? "",
-                  rpe: "",
+                  rir: "",
                   completed: false,
                   notes: "",
                 });
@@ -642,7 +642,7 @@ function WorkoutContent() {
         weightLbs: "",
         reps: "",
         timeSecs: "",
-        rpe: "",
+        rir: "",
         completed: false,
         notes: "",
         workoutExerciseId,
@@ -779,13 +779,13 @@ function WorkoutContent() {
         weightLbs: lastSet?.weightLbs ?? "",
         reps: lastSet?.reps ?? "",
         timeSecs: lastSet?.timeSecs ?? "",
-        rpe: "",
+        rir: "",
         completed: false,
         notes: "",
         previousWeight: previousSet?.weightLbs != null ? String(previousSet.weightLbs) : undefined,
         previousReps: previousSet?.reps != null ? String(previousSet.reps) : undefined,
         previousTimeSecs: previousSet?.timeSecs != null ? String(previousSet.timeSecs) : undefined,
-        previousRpe: previousSet?.rpe != null ? String(previousSet.rpe) : undefined,
+        previousRir: previousSet?.rir != null ? String(previousSet.rir) : undefined,
         workoutExerciseId: block.workoutExerciseId,
       });
       updated[blockIndex] = block;
@@ -824,7 +824,7 @@ function WorkoutContent() {
     if (set.previousWeight !== undefined) updateSet(blockIndex, setIndex, "weightLbs", set.previousWeight);
     if (set.previousReps !== undefined) updateSet(blockIndex, setIndex, "reps", set.previousReps);
     if (set.previousTimeSecs !== undefined) updateSet(blockIndex, setIndex, "timeSecs", set.previousTimeSecs);
-    if (set.previousRpe !== undefined) updateSet(blockIndex, setIndex, "rpe", set.previousRpe);
+    if (set.previousRir !== undefined) updateSet(blockIndex, setIndex, "rir", set.previousRir);
   };
 
   const copyPreviousWorkingSets = (blockIndex: number) => {
@@ -851,13 +851,13 @@ function WorkoutContent() {
           weightLbs: previousSet.weightLbs != null ? String(previousSet.weightLbs) : "",
           reps: previousSet.reps != null ? String(previousSet.reps) : "",
           timeSecs: previousSet.timeSecs != null ? String(previousSet.timeSecs) : "",
-          rpe: previousSet.rpe != null ? String(previousSet.rpe) : "",
+          rir: previousSet.rir != null ? String(previousSet.rir) : "",
           completed: false,
           notes: block.sets[index]?.notes ?? "",
           previousWeight: previousSet.weightLbs != null ? String(previousSet.weightLbs) : undefined,
           previousReps: previousSet.reps != null ? String(previousSet.reps) : undefined,
           previousTimeSecs: previousSet.timeSecs != null ? String(previousSet.timeSecs) : undefined,
-          previousRpe: previousSet.rpe != null ? String(previousSet.rpe) : undefined,
+          previousRir: previousSet.rir != null ? String(previousSet.rir) : undefined,
           workoutExerciseId: block.workoutExerciseId,
         })),
       };
@@ -893,7 +893,7 @@ function WorkoutContent() {
       weightLbs: effectiveWeight ? parseFloat(effectiveWeight) : null,
       reps: effectiveReps ? parseInt(effectiveReps) : null,
       timeSecs: set.timeSecs ? parseInt(set.timeSecs) : null,
-      rpe: set.rpe ? parseFloat(set.rpe) : null,
+      rir: set.rir ? parseFloat(set.rir) : null,
       completed: newCompleted,
       notes: set.notes || null,
       workoutExerciseId: set.workoutExerciseId || block.workoutExerciseId || null,
@@ -965,7 +965,7 @@ function WorkoutContent() {
               weightLbs: set.weightLbs ? parseFloat(set.weightLbs) : null,
               reps: set.reps ? parseInt(set.reps) : null,
               timeSecs: set.timeSecs ? parseInt(set.timeSecs) : null,
-              rpe: set.rpe ? parseFloat(set.rpe) : null,
+              rir: set.rir ? parseFloat(set.rir) : null,
               completed: set.completed,
               notes: set.notes || null,
               workoutExerciseId: set.workoutExerciseId || block.workoutExerciseId || null,
@@ -1060,8 +1060,8 @@ function WorkoutContent() {
       parts.push(`${set.previousTimeSecs}s`);
     }
 
-    if (set.previousRpe) {
-      parts.push(`RPE ${set.previousRpe}`);
+    if (set.previousRir) {
+      parts.push(`RIR ${set.previousRir}`);
     }
 
     return parts.join(" • ");
@@ -1433,13 +1433,13 @@ function WorkoutContent() {
                     )}
                     <th className="py-2 px-2 text-right w-14">
                       <span className="group relative inline-flex items-center gap-1 cursor-help">
-                        RPE
+                        RIR
                         <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
                         <span className="invisible group-hover:visible absolute bottom-full right-0 mb-2 w-48 px-3 py-2 text-xs text-left font-normal text-gray-300 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10">
-                          Rate of Perceived Exertion (1-10). How hard the set felt, where 10 is max effort.
+                          Reps in Reserve. How many reps you could still perform before failure.
                         </span>
                       </span>
                     </th>
@@ -1524,11 +1524,11 @@ function WorkoutContent() {
                           step="0.5"
                           min="1"
                           max="10"
-                          value={set.rpe}
-                          onChange={(e) => updateSet(blockIndex, setIndex, "rpe", e.target.value)}
-                          placeholder={set.previousRpe || "RPE"}
+                          value={set.rir}
+                          onChange={(e) => updateSet(blockIndex, setIndex, "rir", e.target.value)}
+                          placeholder={set.previousRir || "RIR"}
                           className={`w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                            set.rpe ? "text-white" : set.previousRpe ? "placeholder-gray-500 italic" : "placeholder-gray-600"
+                            set.rir ? "text-white" : set.previousRir ? "placeholder-gray-500 italic" : "placeholder-gray-600"
                           }`}
                         />
                       </td>
@@ -1717,3 +1717,5 @@ export default function NewWorkoutPage() {
     </Suspense>
   );
 }
+
+

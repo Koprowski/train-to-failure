@@ -160,7 +160,7 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
     weightLbs: "",
     reps: "",
     timeSecs: "",
-    rpe: "",
+    rir: "",
     notes: "",
   });
 
@@ -216,7 +216,7 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
         }),
       });
       if (res.ok) {
-        setQuickLogForm({ weightLbs: "", reps: "", timeSecs: "", rpe: "", notes: "" });
+        setQuickLogForm({ weightLbs: "", reps: "", timeSecs: "", rir: "", notes: "" });
         setShowQuickLog(false);
         // Refresh history
         fetch(`/api/stats?exerciseId=${exercise.id}`).then((r) => r.json()).then((stats) => {
@@ -836,7 +836,7 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">
                     <span className="group relative inline-flex items-center gap-1 cursor-help">
-                      RPE
+                      RIR
                       <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -852,8 +852,8 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
                     min="1"
                     max="10"
                     step="0.5"
-                    value={quickLogForm.rpe}
-                    onChange={(e) => setQuickLogForm({ ...quickLogForm, rpe: e.target.value })}
+                    value={quickLogForm.rir}
+                    onChange={(e) => setQuickLogForm({ ...quickLogForm, rir: e.target.value })}
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
                   />
                 </div>

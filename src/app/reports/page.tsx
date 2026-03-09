@@ -20,7 +20,7 @@ interface SessionSet {
   setNumber: number;
   weightLbs: number;
   reps: number;
-  rpe: number | null;
+  rir: number | null;
 }
 
 interface Session {

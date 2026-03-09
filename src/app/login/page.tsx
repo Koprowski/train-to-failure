@@ -1,9 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
-import { getProviders, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { getProviders, signIn } from "next-auth/react";
 
 type Mode = "signin" | "signup" | "forgot";
 type NoticeTone = "success" | "error" | "info";
@@ -180,16 +181,10 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-950 px-4 py-10">
-      <div className="w-full max-w-md rounded-2xl border border-gray-800 bg-gray-900 p-8 shadow-2xl shadow-black/20">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500">
-            <svg className="h-10 w-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </div>
-          <h1 className="mb-2 text-2xl font-bold text-white">Train to Failure</h1>
-          <p className="text-gray-400">{title}</p>
-        </div>
+      <div className="w-full max-w-md rounded-2xl border border-gray-800 bg-gray-900 p-8 text-center shadow-2xl shadow-black/20">
+        <Image src="/flamingo-logo-160.png" alt="One Foot Fitness" width={160} height={160} className="mx-auto mb-6 h-40 w-40" priority />
+        <h1 className="mb-2 text-2xl font-bold text-white">One Foot Fitness</h1>
+        <p className="mb-8 text-gray-400">{title}</p>
 
         <div className="mb-6 grid grid-cols-3 rounded-xl bg-gray-950 p-1 text-sm">
           {(["signin", "signup", "forgot"] as Mode[]).map((value) => (
@@ -209,7 +204,7 @@ export default function LoginPage() {
           ))}
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 text-left">
           {mode === "signup" && (
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-300">Name</label>
@@ -288,11 +283,11 @@ export default function LoginPage() {
         </form>
 
         {mode === "signin" && (
-          <div className="mt-4 flex items-center justify-between text-sm text-gray-400 gap-4">
-            <button type="button" onClick={() => requestVerificationEmail()} className="text-emerald-400 hover:text-emerald-300 text-left">
+          <div className="mt-4 flex items-center justify-between gap-4 text-sm text-gray-400">
+            <button type="button" onClick={() => requestVerificationEmail()} className="text-left text-emerald-400 hover:text-emerald-300">
               Resend verification email
             </button>
-            <button type="button" onClick={() => setMode("forgot")} className="text-emerald-400 hover:text-emerald-300 text-right">
+            <button type="button" onClick={() => setMode("forgot")} className="text-right text-emerald-400 hover:text-emerald-300">
               Forgot password?
             </button>
           </div>

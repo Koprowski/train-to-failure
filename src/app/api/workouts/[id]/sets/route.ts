@@ -47,7 +47,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     const body = await request.json();
-    const { exerciseId, setNumber, setType, reps, weightLbs, timeSecs, rpe, restSecs, notes, completed, supersetGroup, workoutExerciseId } = body;
+    const { exerciseId, setNumber, setType, reps, weightLbs, timeSecs, rir, restSecs, notes, completed, supersetGroup, workoutExerciseId } = body;
 
     if (!exerciseId) {
       return NextResponse.json(
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         reps: reps ?? null,
         weightLbs: weightLbs ?? null,
         timeSecs: timeSecs ?? null,
-        rpe: rpe ?? null,
+        rir: rir ?? null,
         restSecs: restSecs ?? null,
         notes: notes ?? null,
         completed: completed ?? false,
