@@ -29,13 +29,14 @@ export async function POST() {
     where: { isCustom: false },
     select: { id: true, name: true, imageUrl: true },
   });
-  const existingByName = new Map(existingExercises.map((e: { id: string; name: string; imageUrl: string | null }) => [e.name, e]));
+  type ExInfo = { id: string; name: string; imageUrl: string | null };
+  const existingByName = new Map<string, ExInfo>(existingExercises.map((e: ExInfo) => [e.name, e]));
 
   // Insert missing exercises and update imageUrls for existing ones
   const added: string[] = [];
   const updated: string[] = [];
   for (const seed of SEED_EXERCISES) {
-    const existing = existingByName.get(seed.name);
+    const existing: ExInfo | undefined = existingByName.get(seed.name);
     if (!existing) {
       await prisma.exercise.create({
         data: {
