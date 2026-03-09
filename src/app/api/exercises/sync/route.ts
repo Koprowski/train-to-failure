@@ -24,13 +24,6 @@ export async function POST() {
     // exercises.json may not exist in all environments
   }
 
-  // Get all existing non-custom exercise names
-  const existing = await prisma.exercise.findMany({
-    where: { isCustom: false },
-    select: { name: true },
-  });
-  const existingNames = new Set(existing.map((e: { name: string }) => e.name));
-
   // Get all existing non-custom exercises with their IDs for updates
   const existingExercises = await prisma.exercise.findMany({
     where: { isCustom: false },
