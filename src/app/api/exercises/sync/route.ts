@@ -29,7 +29,7 @@ export async function POST() {
     where: { isCustom: false },
     select: { id: true, name: true, imageUrl: true },
   });
-  const existingByName = new Map(existingExercises.map((e) => [e.name, e]));
+  const existingByName = new Map(existingExercises.map((e: { id: string; name: string; imageUrl: string | null }) => [e.name, e]));
 
   // Insert missing exercises and update imageUrls for existing ones
   const added: string[] = [];
