@@ -92,6 +92,11 @@ function WorkoutContent() {
   const templateId = searchParams.get("templateId");
   const duplicateFrom = searchParams.get("duplicateFrom");
   const quickExerciseId = searchParams.get("quickExercise");
+  const quickWeight = searchParams.get("weight");
+  const quickReps = searchParams.get("reps");
+  const quickTime = searchParams.get("time");
+  const quickRir = searchParams.get("rir");
+  const quickNotes = searchParams.get("notes");
 
   const [workoutId, setWorkoutId] = useState<string | null>(null);
   const [workoutName, setWorkoutName] = useState("");
@@ -318,37 +323,52 @@ function WorkoutContent() {
         ? recentData.find((r: { exercise: Exercise }) => r.exercise.id === quickExerciseId)
         : null;
 
+      const hasQuickValues = quickWeight || quickReps || quickTime || quickRir;
       let sets: SetData[];
+
+      // First set: pre-filled from quick log modal if values provided
+      const set1: SetData = {
+        tempId: nextTempId(),
+        exerciseId: quickExerciseId,
+        setNumber: 1,
+        setType: "working",
+        weightLbs: quickWeight ?? "",
+        reps: quickReps ?? "",
+        timeSecs: quickTime ?? "",
+        rir: quickRir ?? "",
+        completed: !!hasQuickValues,
+        notes: quickNotes ?? "",
+        workoutExerciseId: workoutExercise.id,
+      };
+
       if (recent && recent.lastSets && recent.lastSets.length > 0) {
-        sets = recent.lastSets.map((s: { setNumber: number; setType: string; weightLbs: number | null; reps: number | null; timeSecs: number | null; rir: number | null }) => ({
-          tempId: nextTempId(),
-          exerciseId: quickExerciseId,
-          setNumber: s.setNumber,
-          setType: s.setType as SetData["setType"],
-          weightLbs: "",
-          reps: "",
-          timeSecs: "",
-          rir: "",
-          completed: false,
-          notes: "",
-          previousWeight: s.weightLbs?.toString() ?? "",
-          previousReps: s.reps?.toString() ?? "",
-          workoutExerciseId: workoutExercise.id,
-        }));
+        // Build remaining sets from previous workout data (set 2+)
+        const remainingSets = recent.lastSets
+          .filter((s: { setNumber: number }) => s.setNumber > 1)
+          .map((s: { setNumber: number; setType: string; weightLbs: number | null; reps: number | null; timeSecs: number | null; rir: number | null }) => ({
+            tempId: nextTempId(),
+            exerciseId: quickExerciseId,
+            setNumber: s.setNumber,
+            setType: s.setType as SetData["setType"],
+            weightLbs: "",
+            reps: "",
+            timeSecs: "",
+            rir: "",
+            completed: false,
+            notes: "",
+            previousWeight: s.weightLbs?.toString() ?? "",
+            previousReps: s.reps?.toString() ?? "",
+            workoutExerciseId: workoutExercise.id,
+          }));
+        // Set previous values on set 1
+        const prevSet1 = recent.lastSets.find((s: { setNumber: number }) => s.setNumber === 1);
+        if (prevSet1) {
+          set1.previousWeight = prevSet1.weightLbs?.toString() ?? "";
+          set1.previousReps = prevSet1.reps?.toString() ?? "";
+        }
+        sets = [set1, ...remainingSets];
       } else {
-        sets = [{
-          tempId: nextTempId(),
-          exerciseId: quickExerciseId,
-          setNumber: 1,
-          setType: "working",
-          weightLbs: "",
-          reps: "",
-          timeSecs: "",
-          rir: "",
-          completed: false,
-          notes: "",
-          workoutExerciseId: workoutExercise.id,
-        }];
+        sets = [set1];
       }
 
       const block: ExerciseBlock = {
@@ -364,6 +384,40 @@ function WorkoutContent() {
       setExerciseBlocks([block]);
       setActiveExerciseIndex(0);
       exerciseTimerRefs.current.set(0, { startedAt: new Date(), accumulated: 0 });
+
+      // If set 1 has pre-filled values from quick log, save it to the DB immediately
+      if (hasQuickValues) {
+        try {
+          const res = await fetch(`/api/workouts/${workoutId}/sets`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              exerciseId: quickExerciseId,
+              setNumber: 1,
+              setType: "working",
+              weightLbs: quickWeight ? parseFloat(quickWeight) : null,
+              reps: quickReps ? parseInt(quickReps) : null,
+              timeSecs: quickTime ? parseInt(quickTime) : null,
+              rir: quickRir ? parseFloat(quickRir) : null,
+              completed: true,
+              notes: quickNotes || null,
+              workoutExerciseId: workoutExercise.id,
+            }),
+          });
+          const saved = await res.json();
+          if (saved.id) {
+            setExerciseBlocks((prev) => {
+              const u = [...prev];
+              const b = { ...u[0], sets: [...u[0].sets] };
+              b.sets[0] = { ...b.sets[0], dbId: saved.id };
+              u[0] = b;
+              return u;
+            });
+          }
+        } catch (err) {
+          console.error("Failed to save quick log set:", err);
+        }
+      }
     }).catch((err) => console.error("Failed to load quick exercise:", err));
   }, [quickExerciseId, workoutId, exerciseBlocks.length]);
 

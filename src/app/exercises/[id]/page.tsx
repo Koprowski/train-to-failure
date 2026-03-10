@@ -201,32 +201,17 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
     }
   };
 
-  const handleQuickLog = async (e: React.FormEvent) => {
+  const handleQuickLog = (e: React.FormEvent) => {
     e.preventDefault();
     if (!exercise) return;
-    setQuickLogSaving(true);
-    try {
-      const res = await fetch("/api/quick-log", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          exerciseId: exercise.id,
-          setType: "working",
-          ...quickLogForm,
-        }),
-      });
-      if (res.ok) {
-        setQuickLogForm({ weightLbs: "", reps: "", timeSecs: "", rir: "", notes: "" });
-        setShowQuickLog(false);
-        // Refresh history
-        fetch(`/api/stats?exerciseId=${exercise.id}`).then((r) => r.json()).then((stats) => {
-          const h = stats?.history ?? [];
-          setHistory(h);
-        });
-      }
-    } finally {
-      setQuickLogSaving(false);
-    }
+    const params = new URLSearchParams({ quickExercise: exercise.id });
+    if (quickLogForm.weightLbs) params.set("weight", quickLogForm.weightLbs);
+    if (quickLogForm.reps) params.set("reps", quickLogForm.reps);
+    if (quickLogForm.timeSecs) params.set("time", quickLogForm.timeSecs);
+    if (quickLogForm.rir) params.set("rir", quickLogForm.rir);
+    if (quickLogForm.notes) params.set("notes", quickLogForm.notes);
+    setShowQuickLog(false);
+    router.push(`/workouts/new?${params.toString()}`);
   };
 
   function openEdit() {
