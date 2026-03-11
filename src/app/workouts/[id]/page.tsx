@@ -140,14 +140,6 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
     }
   };
 
-  const formatDuration = (seconds: number | null) => {
-    if (!seconds) return "--";
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    if (h > 0) return `${h}h ${m}m`;
-    return `${m}m`;
-  };
-
   const formatDateTime = (dateStr: string) => {
     const d = new Date(dateStr);
     const weekday = d.toLocaleDateString("en-US", { weekday: "long" });
@@ -759,3 +751,4 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
     </div>
   );
 }
+

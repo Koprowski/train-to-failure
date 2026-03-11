@@ -214,7 +214,9 @@ export default function DashboardPage() {
               href="/workouts/quick"
               className="inline-flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-3 py-1.5 rounded-lg text-sm transition-colors"
             >
-              <img src="/flamingo-icon.png" alt="" className="w-4 h-4" />
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" />
+              </svg>
               Quick Log
             </Link>
             <Link
@@ -440,3 +442,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

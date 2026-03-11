@@ -71,7 +71,6 @@ function ActivityLogContent() {
   const [swipeId, setSwipeId] = useState<string | null>(null);
   const [swipeX, setSwipeX] = useState(0);
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
-  const [touchMoved, setTouchMoved] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [editingSet, setEditingSet] = useState<SetEntry | null>(null);
   const [editForm, setEditForm] = useState({ weightLbs: "", reps: "", rir: "", notes: "" });
@@ -81,16 +80,13 @@ function ActivityLogContent() {
     setTouchStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
     setSwipeId(id);
     setSwipeX(0);
-    setTouchMoved(false);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!touchStart || !swipeId) return;
     const dx = e.touches[0].clientX - touchStart.x;
     const dy = e.touches[0].clientY - touchStart.y;
-    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
-      setTouchMoved(true);
-    }
+
     if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
       setSwipeX(dx);
     }
@@ -108,7 +104,6 @@ function ActivityLogContent() {
     setSwipeId(null);
     setSwipeX(0);
     setTouchStart(null);
-    setTouchMoved(false);
   };
 
   const handleDeleteSet = async (id: string) => {
@@ -604,3 +599,4 @@ function ActivityLogContent() {
     </div>
   );
 }
+

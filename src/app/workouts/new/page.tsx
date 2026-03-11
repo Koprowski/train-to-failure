@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback, Suspense } from "react";
+import { Fragment, useEffect, useState, useRef, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import DateTimePicker from "@/components/DateTimePicker";
@@ -85,6 +85,11 @@ function getElapsedSeconds(startedAt: Date, accumulated: number) {
   return accumulated + Math.floor((Date.now() - startedAt.getTime()) / 1000);
 }
 
+function formatQuickWorkoutName(name: string) {
+  const trimmed = name.trim();
+  return /workout$/i.test(trimmed) ? trimmed : `${trimmed} Workout`;
+}
+
 function WorkoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -113,7 +118,6 @@ function WorkoutContent() {
   const [activeExerciseIndex, setActiveExerciseIndex] = useState<number | null>(null);
   const [workoutStartTime, setWorkoutStartTime] = useState<Date | null>(null);
   const [renderDateFallback] = useState(() => new Date());
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const exerciseTimerRefs = useRef<Map<number, { startedAt: Date; accumulated: number }>>(new Map());
   const quickExerciseLoaded = useRef(false);
   const [recentWorkouts, setRecentWorkouts] = useState<RecentWorkout[]>([]);
@@ -121,6 +125,7 @@ function WorkoutContent() {
   const [launcherLoading, setLauncherLoading] = useState(true);
   const [jsonMuscleGroups, setJsonMuscleGroups] = useState<string[]>([]);
   const [previousSessionsByExercise, setPreviousSessionsByExercise] = useState<Record<string, PreviousSessionData>>({});
+  const [expandedSetNotes, setExpandedSetNotes] = useState<Record<string, boolean>>({});
 
   // Drag-and-drop reordering state
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -294,6 +299,55 @@ function WorkoutContent() {
     }
   }, [resumeId]);
 
+  // Quick log entry from an exercise page needs a workout before the block can load.
+  useEffect(() => {
+    if (!quickExerciseId || workoutId || resumeId || templateId || duplicateFrom || started) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const startQuickLogWorkout = async () => {
+      try {
+        let quickWorkoutName = "Quick Log Workout";
+
+        const exerciseRes = await fetch(`/api/exercises/${quickExerciseId}`);
+        if (exerciseRes.ok) {
+          const exercise = await exerciseRes.json();
+          if (exercise?.name) {
+            quickWorkoutName = formatQuickWorkoutName(exercise.name);
+          }
+        }
+
+        const res = await fetch("/api/workouts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: quickWorkoutName,
+            isQuickLog: true,
+            ...(customDate ? { startedAt: new Date(customDate).toISOString() } : {}),
+          }),
+        });
+        const data = await res.json();
+
+        if (!cancelled && data.id) {
+          setWorkoutId(data.id);
+          setWorkoutName(quickWorkoutName);
+          setWorkoutStartTime(new Date(data.startedAt));
+          setStarted(true);
+        }
+      } catch (err) {
+        console.error("Failed to auto-start quick log:", err);
+      }
+    };
+
+    startQuickLogWorkout();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [quickExerciseId, workoutId, resumeId, templateId, duplicateFrom, started, customDate]);
+
   // Quick exercise: load previous sets and auto-add exercise block
   useEffect(() => {
     if (!quickExerciseId || !workoutId || quickExerciseLoaded.current) return;
@@ -419,7 +473,7 @@ function WorkoutContent() {
         }
       }
     }).catch((err) => console.error("Failed to load quick exercise:", err));
-  }, [quickExerciseId, workoutId, exerciseBlocks.length]);
+  }, [quickExerciseId, workoutId, exerciseBlocks.length, quickWeight, quickReps, quickTime, quickRir, quickNotes]);
 
   // Load template exercises
   useEffect(() => {
@@ -919,6 +973,21 @@ function WorkoutContent() {
     });
   };
 
+  const persistSetNotes = useCallback(async (blockIndex: number, setIndex: number) => {
+    if (!workoutId) return;
+    const set = exerciseBlocks[blockIndex]?.sets[setIndex];
+    if (!set?.dbId) return;
+
+    try {
+      await fetch(`/api/workouts/${workoutId}/sets/${set.dbId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes: set.notes || null }),
+      });
+    } catch (err) {
+      console.error("Failed to save set notes:", err);
+    }
+  }, [workoutId, exerciseBlocks]);
   const completeSet = useCallback(async (blockIndex: number, setIndex: number) => {
     if (!workoutId) return;
     const block = exerciseBlocks[blockIndex];
@@ -1498,136 +1567,177 @@ function WorkoutContent() {
                       </span>
                     </th>
                     <th className="py-2 px-2 text-left w-28">Last</th>
-                    <th className="py-2 px-2 text-center w-10">
-                      <button
-                        onClick={() => {
-                          const allCompleted = block.sets.every((s) => s.completed);
-                          block.sets.forEach((_, si) => {
-                            const set = block.sets[si];
-                            if (allCompleted && set.completed) {
-                              completeSet(blockIndex, si);
-                            } else if (!allCompleted && !set.completed) {
-                              completeSet(blockIndex, si);
-                            }
-                          });
-                        }}
-                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors mx-auto ${
-                          block.sets.every((s) => s.completed)
-                            ? "bg-emerald-500 border-emerald-500 text-white"
-                            : "border-gray-600 text-transparent hover:border-gray-500"
-                        }`}
-                        title={block.sets.every((s) => s.completed) ? "Uncheck all sets" : "Complete all sets"}
-                      >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </button>
-                    </th>
-                    <th className="py-2 px-2 text-center w-8"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {block.sets.map((set, setIndex) => (
-                    <tr
-                      key={set.tempId}
-                      className={`border-b border-gray-800/50 ${set.completed ? "bg-emerald-500/5" : ""}`}
-                    >
-                      <td className="py-1.5 px-3 text-gray-400 font-medium">{set.setNumber}</td>
-                      <td className="py-1.5 px-2">
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          value={set.weightLbs}
-                          onChange={(e) => updateSet(blockIndex, setIndex, "weightLbs", e.target.value)}
-                          placeholder={set.previousWeight || "lbs"}
-                          className={`w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                            set.weightLbs ? "text-white" : set.previousWeight ? "placeholder-gray-500 italic" : "placeholder-gray-600"
-                          }`}
-                        />
-                      </td>
-                      <td className="py-1.5 px-2">
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          value={set.reps}
-                          onChange={(e) => updateSet(blockIndex, setIndex, "reps", e.target.value)}
-                          placeholder={set.previousReps || "reps"}
-                          className={`w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                            set.reps ? "text-white" : set.previousReps ? "placeholder-gray-500 italic" : "placeholder-gray-600"
-                          }`}
-                        />
-                      </td>
-                      {(block.exercise.type === "time" || block.exercise.type === "cardio") && (
-                        <td className="py-1.5 px-2">
-                          <input
-                            type="number"
-                            inputMode="numeric"
-                            value={set.timeSecs}
-                            onChange={(e) => updateSet(blockIndex, setIndex, "timeSecs", e.target.value)}
-                            placeholder={set.previousTimeSecs || "sec"}
-                            className={`w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                              set.timeSecs ? "text-white" : set.previousTimeSecs ? "placeholder-gray-500 italic" : "placeholder-gray-600"
-                            }`}
-                          />
-                        </td>
-                      )}
-                      <td className="py-1.5 px-2">
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          step="0.5"
-                          min="1"
-                          max="10"
-                          value={set.rir}
-                          onChange={(e) => updateSet(blockIndex, setIndex, "rir", e.target.value)}
-                          placeholder={set.previousRir || "RIR"}
-                          className={`w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                            set.rir ? "text-white" : set.previousRir ? "placeholder-gray-500 italic" : "placeholder-gray-600"
-                          }`}
-                        />
-                      </td>
-                      <td className="py-1.5 px-2 align-middle">
-                        {formatPreviousSetSummary(set, block.exercise.type) ? (
-                          <div className="flex flex-col items-start gap-1">
-                            <span className="text-[11px] leading-tight text-gray-400">
-                              {formatPreviousSetSummary(set, block.exercise.type)}
-                            </span>
-                            <button
-                              onClick={() => applyPreviousSetValues(blockIndex, setIndex)}
-                              className="rounded-md border border-gray-700 px-2 py-1 text-[11px] font-medium text-gray-300 transition-colors hover:border-emerald-500/60 hover:text-emerald-400"
-                              title="Use previous set values"
-                            >
-                              Use Last
-                            </button>
-                          </div>
-                        ) : null}
-                      </td>
-                      <td className="py-1.5 px-2 text-center">
+                    <th className="py-2 px-2 text-center w-12">
+                      <div className="flex justify-center">
                         <button
-                          onClick={() => completeSet(blockIndex, setIndex)}
+                          onClick={() => {
+                            const allCompleted = block.sets.every((s) => s.completed);
+                            block.sets.forEach((_, si) => {
+                              const set = block.sets[si];
+                              if (allCompleted && set.completed) {
+                                completeSet(blockIndex, si);
+                              } else if (!allCompleted && !set.completed) {
+                                completeSet(blockIndex, si);
+                              }
+                            });
+                          }}
                           className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-colors ${
-                            set.completed
+                            block.sets.every((s) => s.completed)
                               ? "bg-emerald-500 border-emerald-500 text-white"
                               : "border-gray-600 text-transparent hover:border-gray-500"
                           }`}
+                          title={block.sets.every((s) => s.completed) ? "Uncheck all sets" : "Complete all sets"}
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
                         </button>
-                      </td>
-                      <td className="py-1.5 px-2 text-center">
-                        <button
-                          onClick={() => removeSet(blockIndex, setIndex)}
-                          className="text-gray-600 hover:text-red-400 transition-colors"
+                      </div>
+                    </th>
+                    <th className="py-2 px-2 text-center w-8"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {block.sets.map((set, setIndex) => {
+                    const notesVisible = expandedSetNotes[set.tempId] ?? Boolean(set.notes);
+                    const noteColSpan = (block.exercise.type === "time" || block.exercise.type === "cardio") ? 8 : 7;
+
+                    return (
+                      <Fragment key={set.tempId}>
+                        <tr
+                          className={`border-b border-gray-800/50 ${set.completed ? "bg-emerald-500/5" : ""}`}
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                          <td className="py-1.5 px-3 text-gray-400 font-medium">{set.setNumber}</td>
+                          <td className="py-1.5 px-2">
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              value={set.weightLbs}
+                              onChange={(e) => updateSet(blockIndex, setIndex, "weightLbs", e.target.value)}
+                              placeholder={set.previousWeight || "lbs"}
+                              className={`w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                                set.weightLbs ? "text-white" : set.previousWeight ? "placeholder-gray-500 italic" : "placeholder-gray-600"
+                              }`}
+                            />
+                          </td>
+                          <td className="py-1.5 px-2">
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              value={set.reps}
+                              onChange={(e) => updateSet(blockIndex, setIndex, "reps", e.target.value)}
+                              placeholder={set.previousReps || "reps"}
+                              className={`w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                                set.reps ? "text-white" : set.previousReps ? "placeholder-gray-500 italic" : "placeholder-gray-600"
+                              }`}
+                            />
+                          </td>
+                          {(block.exercise.type === "time" || block.exercise.type === "cardio") && (
+                            <td className="py-1.5 px-2">
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                value={set.timeSecs}
+                                onChange={(e) => updateSet(blockIndex, setIndex, "timeSecs", e.target.value)}
+                                placeholder={set.previousTimeSecs || "sec"}
+                                className={`w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                                  set.timeSecs ? "text-white" : set.previousTimeSecs ? "placeholder-gray-500 italic" : "placeholder-gray-600"
+                                }`}
+                              />
+                            </td>
+                          )}
+                          <td className="py-1.5 px-2">
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              step="0.5"
+                              min="1"
+                              max="10"
+                              value={set.rir}
+                              onChange={(e) => updateSet(blockIndex, setIndex, "rir", e.target.value)}
+                              placeholder={set.previousRir || "RIR"}
+                              className={`w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                                set.rir ? "text-white" : set.previousRir ? "placeholder-gray-500 italic" : "placeholder-gray-600"
+                              }`}
+                            />
+                          </td>
+                          <td className="py-1.5 px-2 align-middle">
+                            <div className="flex flex-col items-start gap-1">
+                              {formatPreviousSetSummary(set, block.exercise.type) ? (
+                                <span className="text-[11px] leading-tight text-gray-400">
+                                  {formatPreviousSetSummary(set, block.exercise.type)}
+                                </span>
+                              ) : null}
+                              {formatPreviousSetSummary(set, block.exercise.type) ? (
+                                <button
+                                  onClick={() => applyPreviousSetValues(blockIndex, setIndex)}
+                                  className="rounded-md border border-gray-700 px-2 py-1 text-[11px] font-medium text-gray-300 transition-colors hover:border-emerald-500/60 hover:text-emerald-400"
+                                  title="Use previous set values"
+                                >
+                                  Use Last
+                                </button>
+                              ) : null}
+                              <button
+                                onClick={() => setExpandedSetNotes((prev) => ({
+                                  ...prev,
+                                  [set.tempId]: !(prev[set.tempId] ?? Boolean(set.notes)),
+                                }))}
+                                className={`text-[11px] font-medium transition-colors ${
+                                  set.notes ? "text-emerald-400 hover:text-emerald-300" : "text-gray-500 hover:text-gray-300"
+                                }`}
+                                title={set.notes ? "Edit set notes" : "Add set notes"}
+                              >
+                                {set.notes ? "Edit note" : "Add note"}
+                              </button>
+                            </div>
+                          </td>
+                          <td className="py-1.5 px-2 text-center w-12">
+                            <button
+                              onClick={() => completeSet(blockIndex, setIndex)}
+                              className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                set.completed
+                                  ? "bg-emerald-500 border-emerald-500 text-white"
+                                  : "border-gray-600 text-transparent hover:border-gray-500"
+                              }`}
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </button>
+                          </td>
+                          <td className="py-1.5 px-2 text-center">
+                            <button
+                              onClick={() => removeSet(blockIndex, setIndex)}
+                              className="text-gray-600 hover:text-red-400 transition-colors"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </td>
+                        </tr>
+                        {notesVisible && (
+                          <tr className={`border-b border-gray-800/50 ${set.completed ? "bg-emerald-500/5" : ""}`}>
+                            <td colSpan={noteColSpan} className="px-3 pb-3 pt-0">
+                              <div className="rounded-lg border border-gray-800 bg-gray-950/60 p-2">
+                                <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                                  Set {set.setNumber} Notes
+                                </label>
+                                <textarea
+                                  rows={2}
+                                  value={set.notes}
+                                  onChange={(e) => updateSet(blockIndex, setIndex, "notes", e.target.value)}
+                                  onBlur={() => { void persistSetNotes(blockIndex, setIndex); }}
+                                  placeholder="Add notes for this set"
+                                  className="w-full resize-none rounded-md border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1771,5 +1881,4 @@ export default function NewWorkoutPage() {
     </Suspense>
   );
 }
-
 

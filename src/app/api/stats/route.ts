@@ -66,18 +66,12 @@ export async function GET(request: NextRequest) {
       entry.sets.push(set);
     }
 
-    const history = Array.from(workoutMap.values()).map(({ sets: _sets, ...rest }) => ({
+    const history = Array.from(workoutMap.values()).map(({ ...rest }) => ({
       ...rest,
       estimated1RM: Math.round(rest.estimated1RM * 10) / 10,
     }));
-
-    // Get personal records for this exercise scoped to user
-    const personalRecords = await prisma.personalRecord.findMany({
-      where: { exerciseId, userId },
-      orderBy: { date: "desc" },
-    });
-
-    return NextResponse.json({ history, personalRecords });
+    // PersonalRecord is not user-scoped in the schema. Avoid leaking cross-user data from this endpoint until the model is corrected.
+    return NextResponse.json({ history, personalRecords: [] });
   } catch (error) {
     console.error("Failed to fetch stats:", error);
     return NextResponse.json(
@@ -86,3 +80,4 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+

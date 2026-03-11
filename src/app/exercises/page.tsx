@@ -22,12 +22,6 @@ interface Exercise {
   isCustom: boolean;
 }
 
-const MUSCLE_GROUPS = [
-  "abs", "abductors", "adductors", "back", "biceps", "calves",
-  "chest", "forearms", "glutes", "hamstrings", "hip flexors",
-  "lats", "obliques", "quads", "shoulders", "traps", "triceps",
-];
-
 const EQUIPMENT = [
   "barbell", "bench", "bodyweight", "cable", "dumbbell",
   "ez bar", "kettlebell", "machine", "pull-up bar",

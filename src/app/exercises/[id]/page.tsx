@@ -155,7 +155,6 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
   const [equipmentDraftEdit, setEquipmentDraftEdit] = useState<string[]>([]);
   const [isFavorite, setIsFavorite] = useState(false);
   const [showQuickLog, setShowQuickLog] = useState(false);
-  const [quickLogSaving, setQuickLogSaving] = useState(false);
   const [quickLogForm, setQuickLogForm] = useState({
     weightLbs: "",
     reps: "",
@@ -228,7 +227,7 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
   }
 
   async function saveEdit() {
-    if (!exercise) return;
+    if (!exercise || !exercise.isCustom || !exercise.userId) return;
     setSaving(true);
     try {
       const res = await fetch(`/api/exercises/${exercise.id}`, {
@@ -254,7 +253,7 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
   }
 
   const deleteExercise = async () => {
-    if (!exercise) return;
+    if (!exercise || !exercise.isCustom || !exercise.userId) return;
     setDeleting(true);
     try {
       const res = await fetch(`/api/exercises/${exercise.id}`, { method: "DELETE" });
@@ -290,6 +289,7 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
     );
   }
 
+  const canManageExercise = exercise.isCustom && Boolean(exercise.userId);
   const muscleGroups = exercise.muscleGroups.split(",").map((g) => g.trim()).filter(Boolean);
   const equipmentList = exercise.equipment.split(",").map((e) => e.trim()).filter(Boolean);
   const ytData = exercise.videoUrl ? parseYouTubeUrl(exercise.videoUrl) : null;
@@ -350,24 +350,28 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
               </svg>
               Quick Log
             </button>
-            <button
-              onClick={openEdit}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
-              title="Edit exercise"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
-            </button>
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-gray-800 transition-colors"
-              title="Delete exercise"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </button>
+            {canManageExercise && (
+              <>
+                <button
+                  onClick={openEdit}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+                  title="Edit exercise"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-gray-800 transition-colors"
+                  title="Delete exercise"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </>
+            )}
           </div>
         </div>
         <p className="text-gray-400 text-sm mt-1 capitalize">{exercise.type.replace("_", " ")}</p>
@@ -528,7 +532,7 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
       )}
 
       {/* Delete Confirmation */}
-      {showDeleteConfirm && (
+      {canManageExercise && showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-sm">
             <h2 className="text-lg font-semibold mb-2">Delete Exercise</h2>
@@ -552,7 +556,7 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
       )}
 
       {/* Edit Modal */}
-      {editing && (
+      {canManageExercise && editing && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setEditing(false)}>
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
@@ -863,10 +867,9 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
                 </button>
                 <button
                   type="submit"
-                  disabled={quickLogSaving}
-                  className="flex-1 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50"
+                  className="flex-1 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-semibold transition-colors"
                 >
-                  {quickLogSaving ? "Saving..." : "Log Set"}
+                  Log Set
                 </button>
               </div>
             </form>
@@ -876,3 +879,4 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
     </div>
   );
 }
+

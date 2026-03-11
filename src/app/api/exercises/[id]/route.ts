@@ -36,12 +36,15 @@ type RouteParams = { params: Promise<{ id: string }> };
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const { error: authError } = await requireAuth();
+    const { error: authError, userId } = await requireAuth();
     if (authError) return authError;
 
     const { id: idOrSlug } = await params;
     const found = await findExercise(idOrSlug);
     if (!found) {
+      return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
+    }
+    if (found.isCustom && found.userId !== userId) {
       return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
     }
 
@@ -89,6 +92,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (!existing) {
       return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
     }
+    if (!existing.isCustom || existing.userId !== userId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     const body = await request.json();
 
@@ -123,7 +129,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     if (!existing) {
       return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
     }
-    if (existing.userId !== userId) {
+    if (!existing.isCustom || existing.userId !== userId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -137,3 +143,4 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     );
   }
 }
+

@@ -29,6 +29,13 @@ interface RecentExercise {
 
 const PINNED_TABS = ["Recent", "Favorites", "All"];
 
+function formatQuickWorkoutName(name: string) {
+  const trimmed = name.trim();
+  return /workout$/i.test(trimmed) ? trimmed : `${trimmed} Workout`;
+}
+
+const REPEAT_ICON = "M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15";
+
 export default function QuickLogPage() {
   const router = useRouter();
   const [recentExercises, setRecentExercises] = useState<RecentExercise[]>([]);
@@ -52,17 +59,20 @@ export default function QuickLogPage() {
     });
   }, []);
 
+  const openExercise = (exerciseId: string) => {
+    router.push(`/exercises/${exerciseId}`);
+  };
+
   const startQuickLog = async (exercise: Exercise) => {
     if (starting) return;
     setStarting(exercise.id);
 
     try {
-      // Create a quick-log workout
       const res = await fetch("/api/workouts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: exercise.name,
+          name: formatQuickWorkoutName(exercise.name),
           isQuickLog: true,
         }),
       });
@@ -70,6 +80,8 @@ export default function QuickLogPage() {
 
       if (workout.id) {
         router.push(`/workouts/new?resume=${workout.id}&quickExercise=${exercise.id}`);
+      } else {
+        setStarting(null);
       }
     } catch (err) {
       console.error("Failed to start quick log:", err);
@@ -113,7 +125,6 @@ export default function QuickLogPage() {
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
-  // Build muscle group tabs dynamically from exercise data
   const muscleGroupTabs = (() => {
     const groups = new Set<string>();
     for (const ex of allExercises) {
@@ -127,10 +138,58 @@ export default function QuickLogPage() {
   const allTabs = [...PINNED_TABS, ...muscleGroupTabs.map((mg) => mg.charAt(0).toUpperCase() + mg.slice(1))];
 
   const searchResults = search.trim()
-    ? allExercises.filter(
-        (ex) => ex.name.toLowerCase().includes(search.toLowerCase())
-      )
+    ? allExercises.filter((ex) => ex.name.toLowerCase().includes(search.toLowerCase()))
     : [];
+
+  const renderExerciseRow = (exercise: Exercise, options?: { summary?: string; subtext?: string }) => (
+    <div key={exercise.id} className="flex items-center bg-gray-900 border border-gray-800 rounded-xl hover:bg-gray-800/50 transition-colors">
+      <button
+        onClick={() => openExercise(exercise.id)}
+        className="flex-1 text-left p-4 flex items-center gap-3"
+      >
+        {exercise.imageUrl ? (
+          <img src={exercise.imageUrl} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
+        ) : (
+          <div className="w-12 h-12 rounded-lg bg-gray-700 shrink-0 flex items-center justify-center text-gray-500">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-white">{exercise.name}</p>
+          <p className="text-xs text-gray-400 capitalize">{exercise.muscleGroups}</p>
+        </div>
+        {options?.summary ? (
+          <div className="text-right shrink-0">
+            <p className="text-sm text-emerald-500 font-medium">{options.summary}</p>
+            {options.subtext ? <p className="text-xs text-gray-500">{options.subtext}</p> : null}
+          </div>
+        ) : null}
+      </button>
+      <div className="flex items-center shrink-0 pr-2">
+        <button
+          onClick={() => startQuickLog(exercise)}
+          disabled={starting !== null}
+          className="p-3 text-gray-500 hover:text-emerald-400 transition-colors disabled:opacity-50"
+          title="Start quick log"
+        >
+          {starting === exercise.id ? (
+            <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-emerald-500" />
+          ) : (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={REPEAT_ICON} />
+            </svg>
+          )}
+        </button>
+        <button onClick={(e) => toggleFavorite(e, exercise.id)} className="p-3 shrink-0">
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill={favoriteIds.has(exercise.id) ? "#ef4444" : "none"} stroke={favoriteIds.has(exercise.id) ? "#ef4444" : "#6b7280"} strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
 
   if (loading) {
     return (
@@ -142,7 +201,6 @@ export default function QuickLogPage() {
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <button
           onClick={() => router.back()}
@@ -158,7 +216,6 @@ export default function QuickLogPage() {
         </div>
       </div>
 
-      {/* Search */}
       <div className="relative">
         <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -172,54 +229,21 @@ export default function QuickLogPage() {
         />
       </div>
 
-      {/* Search results */}
       {search.trim() && (
         <div className="space-y-1">
           <h2 className="text-sm font-medium text-gray-400 px-1">Search Results</h2>
           {searchResults.length === 0 ? (
             <p className="text-gray-500 text-sm text-center py-6">No exercises found</p>
           ) : (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden divide-y divide-gray-800">
-              {searchResults.slice(0, 10).map((ex) => (
-                <div key={ex.id} className="flex items-center hover:bg-gray-800/50 transition-colors">
-                  <button
-                    onClick={() => startQuickLog(ex)}
-                    disabled={starting !== null}
-                    className="flex-1 text-left px-4 py-3 flex items-center gap-3 disabled:opacity-50"
-                  >
-                    {ex.imageUrl ? (
-                      <img src={ex.imageUrl} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
-                    ) : (
-                      <div className="w-10 h-10 rounded bg-gray-700 shrink-0 flex items-center justify-center text-gray-500">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                    )}
-                    <div>
-                      <p className="font-medium text-white">{ex.name}</p>
-                      <p className="text-xs text-gray-400 capitalize">{ex.muscleGroups}</p>
-                    </div>
-                    {starting === ex.id && (
-                      <div className="ml-auto animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-500" />
-                    )}
-                  </button>
-                  <button onClick={(e) => toggleFavorite(e, ex.id)} className="px-3 py-3 shrink-0">
-                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill={favoriteIds.has(ex.id) ? "#ef4444" : "none"} stroke={favoriteIds.has(ex.id) ? "#ef4444" : "#6b7280"} strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
-                    </svg>
-                  </button>
-                </div>
-              ))}
+            <div className="space-y-2">
+              {searchResults.slice(0, 10).map((ex) => renderExerciseRow(ex))}
             </div>
           )}
         </div>
       )}
 
-      {/* Muscle group tabs + exercise list */}
       {!search.trim() && (
         <div className="space-y-4">
-          {/* Tab bar */}
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
             {allTabs.map((tab) => (
               <button
@@ -236,7 +260,6 @@ export default function QuickLogPage() {
             ))}
           </div>
 
-          {/* Recent tab */}
           {activeTab === "Recent" && (
             <div className="space-y-2">
               {recentExercises.length === 0 ? (
@@ -244,46 +267,14 @@ export default function QuickLogPage() {
                   <p className="text-gray-500 text-sm">No recent exercises. Try another tab or search above.</p>
                 </div>
               ) : (
-                recentExercises.map((recent) => (
-                  <div key={recent.exercise.id} className="flex items-center bg-gray-900 border border-gray-800 rounded-xl hover:bg-gray-800/50 transition-colors">
-                    <button
-                      onClick={() => startQuickLog(recent.exercise)}
-                      disabled={starting !== null}
-                      className="flex-1 text-left p-4 flex items-center gap-3 disabled:opacity-50"
-                    >
-                      {recent.exercise.imageUrl ? (
-                        <img src={recent.exercise.imageUrl} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
-                      ) : (
-                        <div className="w-12 h-12 rounded-lg bg-gray-700 shrink-0 flex items-center justify-center text-gray-500">
-                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-white">{recent.exercise.name}</p>
-                        <p className="text-xs text-gray-400 capitalize">{recent.exercise.muscleGroups}</p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-sm text-emerald-500 font-medium">{recent.summary}</p>
-                        <p className="text-xs text-gray-500">{formatDate(recent.lastPerformed)}</p>
-                      </div>
-                      {starting === recent.exercise.id && (
-                        <div className="ml-2 animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-500" />
-                      )}
-                    </button>
-                    <button onClick={(e) => toggleFavorite(e, recent.exercise.id)} className="px-3 py-3 shrink-0">
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill={favoriteIds.has(recent.exercise.id) ? "#ef4444" : "none"} stroke={favoriteIds.has(recent.exercise.id) ? "#ef4444" : "#6b7280"} strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
-                      </svg>
-                    </button>
-                  </div>
-                ))
+                recentExercises.map((recent) => renderExerciseRow(recent.exercise, {
+                  summary: recent.summary,
+                  subtext: formatDate(recent.lastPerformed),
+                }))
               )}
             </div>
           )}
 
-          {/* Favorites tab */}
           {activeTab === "Favorites" && (() => {
             const favorites = allExercises.filter((ex) => favoriteIds.has(ex.id));
             return favorites.length === 0 ? (
@@ -291,43 +282,12 @@ export default function QuickLogPage() {
                 <p className="text-gray-500 text-sm">No favorites yet. Tap the heart icon on exercises in the library to add them.</p>
               </div>
             ) : (
-              <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden divide-y divide-gray-800">
-                {favorites.map((ex) => (
-                  <div key={ex.id} className="flex items-center hover:bg-gray-800/50 transition-colors">
-                    <button
-                      onClick={() => startQuickLog(ex)}
-                      disabled={starting !== null}
-                      className="flex-1 text-left px-4 py-3 flex items-center gap-3 disabled:opacity-50"
-                    >
-                      {ex.imageUrl ? (
-                        <img src={ex.imageUrl} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
-                      ) : (
-                        <div className="w-10 h-10 rounded bg-gray-700 shrink-0 flex items-center justify-center text-gray-500">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-white">{ex.name}</p>
-                        <p className="text-xs text-gray-400 capitalize">{ex.muscleGroups}</p>
-                      </div>
-                      {starting === ex.id && (
-                        <div className="ml-auto animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-500" />
-                      )}
-                    </button>
-                    <button onClick={(e) => toggleFavorite(e, ex.id)} className="px-3 py-3 shrink-0">
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill={favoriteIds.has(ex.id) ? "#ef4444" : "none"} stroke={favoriteIds.has(ex.id) ? "#ef4444" : "#6b7280"} strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
+              <div className="space-y-2">
+                {favorites.map((ex) => renderExerciseRow(ex))}
               </div>
             );
           })()}
 
-          {/* All / Muscle group tabs */}
           {activeTab !== "Recent" && activeTab !== "Favorites" && (() => {
             const filterGroup = activeTab === "All" ? null : activeTab.toLowerCase();
             const filtered = filterGroup
@@ -340,38 +300,8 @@ export default function QuickLogPage() {
                 <p className="text-gray-500 text-sm">No exercises found in this category.</p>
               </div>
             ) : (
-              <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden divide-y divide-gray-800">
-                {filtered.map((ex) => (
-                  <div key={ex.id} className="flex items-center hover:bg-gray-800/50 transition-colors">
-                    <button
-                      onClick={() => startQuickLog(ex)}
-                      disabled={starting !== null}
-                      className="flex-1 text-left px-4 py-3 flex items-center gap-3 disabled:opacity-50"
-                    >
-                      {ex.imageUrl ? (
-                        <img src={ex.imageUrl} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
-                      ) : (
-                        <div className="w-10 h-10 rounded bg-gray-700 shrink-0 flex items-center justify-center text-gray-500">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-white">{ex.name}</p>
-                        <p className="text-xs text-gray-400 capitalize">{ex.muscleGroups}</p>
-                      </div>
-                      {starting === ex.id && (
-                        <div className="ml-auto animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-500" />
-                      )}
-                    </button>
-                    <button onClick={(e) => toggleFavorite(e, ex.id)} className="px-3 py-3 shrink-0">
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill={favoriteIds.has(ex.id) ? "#ef4444" : "none"} stroke={favoriteIds.has(ex.id) ? "#ef4444" : "#6b7280"} strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
+              <div className="space-y-2">
+                {filtered.map((ex) => renderExerciseRow(ex))}
               </div>
             );
           })()}
