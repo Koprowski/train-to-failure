@@ -8,7 +8,10 @@
     "postinstall": "prisma generate",
     "start": "next start",
     "lint": "eslint",
-    "seed:test-user": "tsx scripts/seed-test-user.ts"
+    "seed:test-user": "tsx scripts/seed-test-user.ts",
+    "sync:exercise-library": "python scripts/sync_exercise_library.py --dry-run",
+    "sync:exercise-library:apply": "python scripts/sync_exercise_library.py --apply",
+    "sync:exercise-library:prune": "python scripts/sync_exercise_library.py --apply --remove all"
   },
   "dependencies": {
     "@next-auth/prisma-adapter": "^1.0.7",
