@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/session";
+import { isAdminSessionUser } from "@/lib/access";
+import { hasUploadedExerciseImage } from "@/lib/exercise-images";
 import { slugify } from "@/lib/slugify";
 import { readFileSync } from "fs";
 import { join } from "path";
@@ -63,10 +65,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
     }
 
-    // Auto-populate imageUrl from exercises.json if missing or outdated
     const lookup = getGifLookup();
     const gifUrl = lookup[exercise.name];
-    if (gifUrl && exercise.imageUrl !== gifUrl) {
+    const hasManualImageOverride = hasUploadedExerciseImage(exercise.imageUrl);
+    if (gifUrl && !hasManualImageOverride && exercise.imageUrl !== gifUrl) {
       await prisma.exercise.update({ where: { id: exercise.id }, data: { imageUrl: gifUrl } });
       exercise = { ...exercise, imageUrl: gifUrl };
     }
@@ -83,22 +85,24 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
-    const { error: authError, userId } = await requireAuth();
+    const { error: authError, userId, session } = await requireAuth();
     if (authError) return authError;
 
     const { id: idOrSlug } = await params;
-
     const existing = await findExercise(idOrSlug);
     if (!existing) {
       return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
     }
-    if (!existing.isCustom || existing.userId !== userId) {
+
+    const isAdmin = isAdminSessionUser(session?.user);
+    const ownsCustomExercise = existing.isCustom && existing.userId === userId;
+    const canAdministerLibraryExercise = isAdmin && !existing.isCustom;
+
+    if (!ownsCustomExercise && !canAdministerLibraryExercise) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
-
-    // Prevent non-owners from changing ownership fields
     delete body.userId;
     delete body.isCustom;
 
@@ -119,17 +123,20 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const { error: authError, userId } = await requireAuth();
+    const { error: authError, userId, session } = await requireAuth();
     if (authError) return authError;
 
     const { id: idOrSlug } = await params;
-
-    // Verify ownership: only allow deleting exercises the user owns
     const existing = await findExercise(idOrSlug);
     if (!existing) {
       return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
     }
-    if (!existing.isCustom || existing.userId !== userId) {
+
+    const isAdmin = isAdminSessionUser(session?.user);
+    const ownsCustomExercise = existing.isCustom && existing.userId === userId;
+    const canAdministerLibraryExercise = isAdmin && !existing.isCustom;
+
+    if (!ownsCustomExercise && !canAdministerLibraryExercise) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -143,4 +150,3 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     );
   }
 }
-

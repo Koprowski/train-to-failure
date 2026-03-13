@@ -4,6 +4,8 @@ import React, { useEffect, useState, useCallback, useRef, useMemo } from "react"
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { slugify } from "@/lib/slugify";
+import { useSession } from "next-auth/react";
+import { isAdminSessionUser } from "@/lib/access";
 
 const Body = dynamic(
   () => import("react-muscle-highlighter"),
@@ -224,7 +226,11 @@ export default function ExercisesPage() {
   const [equipmentDraft, setEquipmentDraft] = useState<string[]>([]);
   const [bodySide, setBodySide] = useState<"front" | "back">("front");
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const { data: session } = useSession();
+  const isAdmin = isAdminSessionUser(session?.user);
   const [showModal, setShowModal] = useState(false);
+  const [showPaidFeatureModal, setShowPaidFeatureModal] = useState(false);
+  const [joinedExerciseWaitlist, setJoinedExerciseWaitlist] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     muscleGroups: "",
@@ -235,7 +241,7 @@ export default function ExercisesPage() {
   });
   const [saving, setSaving] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
-  const [viewMode, setViewMode] = useState<"recent" | "recommended">("recent");
+  const [viewMode, setViewMode] = useState<"recent" | "recommended" | "all">("recent");
   const [bodyReady, setBodyReady] = useState(false);
   const [recentExerciseIds, setRecentExerciseIds] = useState<Set<string>>(new Set());
   const diagramContainerRef = useRef<HTMLDivElement>(null);
@@ -415,10 +421,7 @@ export default function ExercisesPage() {
       const res = await fetch("/api/exercises", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          isCustom: true,
-        }),
+        body: JSON.stringify(formData),
       });
       if (res.ok) {
         setShowModal(false);
@@ -438,13 +441,13 @@ export default function ExercisesPage() {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">Exercise Library</h1>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => (isAdmin ? setShowModal(true) : setShowPaidFeatureModal(true))}
           className="inline-flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-lg text-sm transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          New
+          + Custom
         </button>
       </div>
 
@@ -497,7 +500,7 @@ export default function ExercisesPage() {
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center gap-1">
-              {(["recent", "recommended"] as const).map((mode) => (
+              {(["recent", "recommended", "all"] as const).map((mode) => (
                 <button
                   key={mode}
                   onClick={() => setViewMode(mode)}
@@ -608,10 +611,10 @@ export default function ExercisesPage() {
                 >
                   <button
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(ex.id); }}
-                    className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-black/40 hover:bg-black/60 transition-colors"
+                    className="absolute top-2 right-2 z-10 p-1.5 text-gray-400 hover:text-white transition-colors"
                     aria-label={favoriteIds.has(ex.id) ? "Remove from favorites" : "Add to favorites"}
                   >
-                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill={favoriteIds.has(ex.id) ? "#ef4444" : "none"} stroke={favoriteIds.has(ex.id) ? "#ef4444" : "currentColor"} strokeWidth={2}>
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill={favoriteIds.has(ex.id) ? "#ef4444" : "none"} stroke={favoriteIds.has(ex.id) ? "#ef4444" : "#9ca3af"} strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
                     </svg>
                   </button>
@@ -630,8 +633,10 @@ export default function ExercisesPage() {
                       <h3 className="font-semibold text-white group-hover:text-emerald-500 transition-colors">
                         {ex.name}
                       </h3>
-                      {ex.isCustom && (
-                        <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">Custom</span>
+                      {ex.isCustom ? (
+                        <span className="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">Custom</span>
+                      ) : (
+                        <span className="text-xs bg-sky-500/15 text-sky-300 px-2 py-0.5 rounded-full">Library</span>
                       )}
                     </div>
                     <div className="flex items-start justify-between gap-2 mt-3">
@@ -844,12 +849,52 @@ export default function ExercisesPage() {
       )}
 
 
+      {/* Custom Exercise Placeholder Modal */}
+      {showPaidFeatureModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowPaidFeatureModal(false)}>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Custom Exercises</h2>
+              <button onClick={() => setShowPaidFeatureModal(false)} className="text-gray-400 hover:text-white">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <p className="text-sm text-gray-300">Creating custom exercises will be part of the paid plan.</p>
+            <p className="text-sm text-gray-400 mt-2">For now, the exercise library is curated by administrators and this button is a placeholder for the future paid flow.</p>
+            <div className="mt-4 rounded-lg border border-gray-800 bg-gray-800/80 p-3 text-sm text-gray-300">
+              {joinedExerciseWaitlist
+                ? "Placeholder saved. We will use this flow for release updates later."
+                : "Click below to sign up for updates when custom exercises are released."}
+            </div>
+            <div className="flex gap-3 pt-5">
+              <button
+                type="button"
+                onClick={() => setShowPaidFeatureModal(false)}
+                className="flex-1 px-4 py-2.5 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => setJoinedExerciseWaitlist(true)}
+                disabled={joinedExerciseWaitlist}
+                className="flex-1 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-60"
+              >
+                {joinedExerciseWaitlist ? "Signed Up" : "Sign Up for Updates"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add Exercise Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowModal(false)}>
           <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold">Add Exercise</h2>
+              <h2 className="text-xl font-bold">Add Library Exercise</h2>
               <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-white">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -934,7 +979,7 @@ export default function ExercisesPage() {
                   disabled={saving}
                   className="flex-1 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50"
                 >
-                  {saving ? "Saving..." : "Add Exercise"}
+                  {saving ? "Saving..." : "Add Library Exercise"}
                 </button>
               </div>
             </form>
@@ -944,3 +989,6 @@ export default function ExercisesPage() {
     </div>
   );
 }
+
+
+

@@ -28,13 +28,13 @@ export async function GET(request: NextRequest) {
       include: {
         workout: { select: { startedAt: true, name: true } },
       },
-      orderBy: { workout: { startedAt: "asc" } },
+      orderBy: [{ workout: { startedAt: "asc" } }, { setNumber: "asc" }],
     });
 
     // Group sets by workout date and compute stats
     const workoutMap = new Map<
       string,
-      { date: string; workoutName: string; maxWeight: number; totalVolume: number; estimated1RM: number; totalReps: number; sets: typeof sets }
+      { date: string; workoutName: string; maxWeight: number; totalVolume: number; estimated1RM: number; totalReps: number; sets: { setNumber: number; weightLbs: number | null; reps: number | null }[] }
     >();
 
     for (const set of sets) {
@@ -63,12 +63,13 @@ export async function GET(request: NextRequest) {
       entry.totalReps += reps;
       if (weight > entry.maxWeight) entry.maxWeight = weight;
       if (e1rm > entry.estimated1RM) entry.estimated1RM = e1rm;
-      entry.sets.push(set);
+      entry.sets.push({ setNumber: set.setNumber, weightLbs: set.weightLbs, reps: set.reps });
     }
 
     const history = Array.from(workoutMap.values()).map(({ ...rest }) => ({
       ...rest,
       estimated1RM: Math.round(rest.estimated1RM * 10) / 10,
+      sets: rest.sets.sort((a, b) => a.setNumber - b.setNumber),
     }));
     // PersonalRecord is not user-scoped in the schema. Avoid leaking cross-user data from this endpoint until the model is corrected.
     return NextResponse.json({ history, personalRecords: [] });
@@ -80,4 +81,5 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
 

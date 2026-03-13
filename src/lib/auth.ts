@@ -4,6 +4,7 @@ import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prismaBase } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/password";
+import { getAccessProfile } from "@/lib/access";
 
 const providers: NextAuthOptions["providers"] = [
   CredentialsProvider({
@@ -69,15 +70,81 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
+    async signIn({ user, account }) {
+      if (!user.id) return true;
+
+      const googleAccountId = account?.provider === "google" ? account.providerAccountId : null;
+      const profile = getAccessProfile({
+        email: user.email,
+        googleAccountId,
+      });
+
+      await prismaBase.user.update({
+        where: { id: user.id },
+        data: {
+          role: profile.role,
+          accountType: profile.accountType,
+        },
+      });
+
+      return true;
+    },
+    async jwt({ token, user, account }) {
+      if (user?.id) {
         token.id = user.id;
       }
+      if (account?.provider === "google") {
+        token.googleAccountId = account.providerAccountId;
+      }
+
+      if (token.id) {
+        const dbUser = await prismaBase.user.findUnique({
+          where: { id: token.id },
+          select: {
+            email: true,
+            role: true,
+            accountType: true,
+            accounts: {
+              where: { provider: "google" },
+              select: { providerAccountId: true },
+              take: 1,
+            },
+          },
+        });
+
+        const googleAccountId = dbUser?.accounts[0]?.providerAccountId ?? token.googleAccountId ?? null;
+        const profile = getAccessProfile({
+          email: dbUser?.email ?? token.email,
+          role: dbUser?.role,
+          accountType: dbUser?.accountType,
+          googleAccountId,
+        });
+
+        token.role = profile.role;
+        token.accountType = profile.accountType;
+        token.isAdmin = profile.isAdmin;
+        token.googleAccountId = googleAccountId;
+
+        if (dbUser && (dbUser.role !== profile.role || dbUser.accountType !== profile.accountType)) {
+          await prismaBase.user.update({
+            where: { id: token.id },
+            data: {
+              role: profile.role,
+              accountType: profile.accountType,
+            },
+          });
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as { id?: string }).id = token.id as string;
+        session.user.id = token.id as string;
+        session.user.role = (token.role as "USER" | "ADMIN" | undefined) ?? "USER";
+        session.user.accountType = (token.accountType as "FREE" | "PAID" | undefined) ?? "FREE";
+        session.user.isAdmin = Boolean(token.isAdmin);
+        session.user.googleAccountId = (token.googleAccountId as string | undefined) ?? null;
       }
       return session;
     },

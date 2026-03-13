@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { use, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { canUploadExerciseImageSessionUser, isAdminSessionUser } from "@/lib/access";
 
 const MUSCLE_GROUPS = [
   "abs", "abductors", "adductors", "back", "biceps", "calves",
@@ -38,6 +40,7 @@ interface HistoryEntry {
   totalVolume: number;
   estimated1RM: number;
   totalReps: number;
+  sets: { setNumber: number; weightLbs: number | null; reps: number | null }[];
 }
 
 const BADGE_COLORS: Record<string, string> = {
@@ -51,7 +54,6 @@ const BADGE_COLORS: Record<string, string> = {
   glutes: "bg-orange-500/20 text-orange-400",
   calves: "bg-cyan-500/20 text-cyan-400",
   abs: "bg-indigo-500/20 text-indigo-400",
-  core: "bg-indigo-500/20 text-indigo-400",
   lats: "bg-blue-500/20 text-blue-400",
   traps: "bg-amber-500/20 text-amber-400",
   forearms: "bg-lime-500/20 text-lime-400",
@@ -133,6 +135,9 @@ function YouTubeLite({ videoId, startSeconds, title }: { videoId: string; startS
 export default function ExerciseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { data: session } = useSession();
+  const isAdmin = isAdminSessionUser(session?.user);
+  const canUploadExerciseImage = canUploadExerciseImageSessionUser(session?.user);
   const [exercise, setExercise] = useState<Exercise | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -153,6 +158,9 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
   const [muscleDraftEdit, setMuscleDraftEdit] = useState<string[]>([]);
   const [showEquipmentPickerEdit, setShowEquipmentPickerEdit] = useState(false);
   const [equipmentDraftEdit, setEquipmentDraftEdit] = useState<string[]>([]);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [selectedImageName, setSelectedImageName] = useState("");
+  const [imageUploadError, setImageUploadError] = useState("");
   const [isFavorite, setIsFavorite] = useState(false);
   const [showQuickLog, setShowQuickLog] = useState(false);
   const [quickLogForm, setQuickLogForm] = useState({
@@ -162,6 +170,7 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
     rir: "",
     notes: "",
   });
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     fetch(`/api/exercises/${id}`)
@@ -200,7 +209,7 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
     }
   };
 
-  const handleQuickLog = (e: React.FormEvent) => {
+  const handleQuickLog = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!exercise) return;
     const params = new URLSearchParams({ quickExercise: exercise.id });
@@ -223,12 +232,21 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
       instructions: exercise.instructions ?? "",
       videoUrl: exercise.videoUrl ?? "",
     });
+    setSelectedImageFile(null);
+    setSelectedImageName("");
+    setImageUploadError("");
+    if (imageInputRef.current) {
+      imageInputRef.current.value = "";
+    }
     setEditing(true);
   }
 
   async function saveEdit() {
-    if (!exercise || !exercise.isCustom || !exercise.userId) return;
+    if (!exercise) return;
+    const canManageCurrentExercise = (exercise.isCustom && exercise.userId) || (isAdmin && !exercise.isCustom);
+    if (!canManageCurrentExercise) return;
     setSaving(true);
+    setImageUploadError("");
     try {
       const res = await fetch(`/api/exercises/${exercise.id}`, {
         method: "PUT",
@@ -242,18 +260,63 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
           videoUrl: editForm.videoUrl || null,
         }),
       });
-      if (res.ok) {
-        const updated = await res.json();
-        setExercise(updated);
-        setEditing(false);
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        alert(data?.error || "Failed to save exercise");
+        return;
       }
+
+      let updatedExercise = await res.json();
+
+      if (selectedImageFile) {
+        if (!canUploadExerciseImage) {
+          setExercise(updatedExercise);
+          setImageUploadError("Image uploads are currently available to admins and paid accounts.");
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", selectedImageFile);
+
+        const uploadRes = await fetch(`/api/exercises/${exercise.id}/image`, {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!uploadRes.ok) {
+          const data = await uploadRes.json().catch(() => null);
+          setExercise(updatedExercise);
+          setImageUploadError(data?.error || "Failed to upload exercise image");
+          return;
+        }
+
+        updatedExercise = await uploadRes.json();
+      }
+
+      setExercise(updatedExercise);
+      setSelectedImageFile(null);
+      setSelectedImageName("");
+      setImageUploadError("");
+      if (imageInputRef.current) {
+        imageInputRef.current.value = "";
+      }
+      setEditing(false);
     } finally {
       setSaving(false);
     }
   }
 
+  function handleImageFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    setSelectedImageFile(file);
+    setSelectedImageName(file?.name ?? "");
+    setImageUploadError("");
+  }
+
   const deleteExercise = async () => {
-    if (!exercise || !exercise.isCustom || !exercise.userId) return;
+    if (!exercise) return;
+    const canManageCurrentExercise = (exercise.isCustom && exercise.userId) || (isAdmin && !exercise.isCustom);
+    if (!canManageCurrentExercise) return;
     setDeleting(true);
     try {
       const res = await fetch(`/api/exercises/${exercise.id}`, { method: "DELETE" });
@@ -289,8 +352,9 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
     );
   }
 
-  const canManageExercise = exercise.isCustom && Boolean(exercise.userId);
-  const muscleGroups = exercise.muscleGroups.split(",").map((g) => g.trim()).filter(Boolean);
+  const canManageExercise = (exercise.isCustom && Boolean(exercise.userId)) || (isAdmin && !exercise.isCustom);
+  const canEditExerciseImage = canManageExercise && canUploadExerciseImage;
+  const muscleGroups = exercise.muscleGroups.split(",").map((g) => g.trim()).filter((g) => g && g.toLowerCase() !== "core");
   const equipmentList = exercise.equipment.split(",").map((e) => e.trim()).filter(Boolean);
   const ytData = exercise.videoUrl ? parseYouTubeUrl(exercise.videoUrl) : null;
   let parsedLinks: { title: string; url: string }[] = [];
@@ -339,7 +403,7 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
               </svg>
             </button>
             {exercise.isCustom && (
-              <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">Custom</span>
+              <span className="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">Custom</span>
             )}
             <button
               onClick={() => setShowQuickLog(true)}
@@ -351,26 +415,15 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
               Quick Log
             </button>
             {canManageExercise && (
-              <>
-                <button
-                  onClick={openEdit}
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
-                  title="Edit exercise"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-gray-800 transition-colors"
-                  title="Delete exercise"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
-              </>
+              <button
+                onClick={openEdit}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+                title="Edit exercise"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </button>
             )}
           </div>
         </div>
@@ -508,6 +561,7 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
                 <tr className="text-gray-400 border-b border-gray-800">
                   <th className="text-left py-2 pr-4">Date</th>
                   <th className="text-left py-2 pr-4">Workout</th>
+                  <th className="text-right py-2 pr-4">Sets</th>
                   <th className="text-right py-2 pr-4">Reps</th>
                   {hasWeightData && <th className="text-right py-2 pr-4">Max Weight</th>}
                   {hasWeightData && <th className="text-right py-2 pr-4">Volume</th>}
@@ -519,6 +573,16 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
                   <tr key={h.date} className="border-b border-gray-800/50">
                     <td className="py-2.5 pr-4 text-gray-300">{h.date}</td>
                     <td className="py-2.5 pr-4 text-gray-300">{h.workoutName}</td>
+                    <td className="py-2.5 pr-4">
+                      <div className="flex justify-end gap-2">
+                        {h.sets.map((set) => (
+                          <div key={set.setNumber} className="min-w-[32px] text-center text-xs">
+                            <p className="font-medium text-gray-300">{set.weightLbs ?? "BW"}</p>
+                            <p className="text-gray-400">{set.reps ?? 0}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
                     <td className="py-2.5 pr-4 text-right">{h.totalReps}</td>
                     {hasWeightData && <td className="py-2.5 pr-4 text-right">{h.maxWeight} lbs</td>}
                     {hasWeightData && <td className="py-2.5 pr-4 text-right">{h.totalVolume.toLocaleString()} lbs</td>}
@@ -635,21 +699,103 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Exercise GIF / Image</label>
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/gif,image/png,image/jpeg,image/webp,image/avif"
+                  onChange={handleImageFileChange}
+                  className="hidden"
+                />
+                <div className="rounded-lg border border-gray-700 bg-gray-800/70 p-3">
+                  <div className="flex items-start gap-3">
+                    {exercise.imageUrl ? (
+                      <img
+                        src={exercise.imageUrl}
+                        alt={`${exercise.name} preview`}
+                        className="h-16 w-16 rounded-lg border border-gray-700 bg-gray-900 object-contain"
+                      />
+                    ) : (
+                      <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-gray-700 bg-gray-900 text-[11px] text-gray-500">
+                        No image
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-gray-200">
+                        {selectedImageName || "Choose a new GIF or image to replace the current asset."}
+                      </p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        GIF, PNG, JPG, WEBP, and AVIF are supported.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => imageInputRef.current?.click()}
+                      disabled={!canEditExerciseImage}
+                      className="rounded-lg border border-gray-600 px-3 py-2 text-sm text-white transition-colors hover:border-gray-500 hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {exercise.imageUrl ? "Replace File" : "Choose File"}
+                    </button>
+                    {selectedImageFile && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedImageFile(null);
+                          setSelectedImageName("");
+                          setImageUploadError("");
+                          if (imageInputRef.current) {
+                            imageInputRef.current.value = "";
+                          }
+                        }}
+                        className="rounded-lg px-3 py-2 text-sm text-gray-400 transition-colors hover:text-white"
+                      >
+                        Clear Selection
+                      </button>
+                    )}
+                  </div>
+                  {!canEditExerciseImage && (
+                    <p className="mt-3 text-xs text-amber-300">
+                      Image uploads are reserved for admins now and paid accounts once that access is unlocked.
+                    </p>
+                  )}
+                  {imageUploadError && (
+                    <p className="mt-3 text-sm text-red-400">{imageUploadError}</p>
+                  )}
+                </div>
+              </div>
             </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => setEditing(false)}
-                className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={saveEdit}
-                disabled={saving || !editForm.name.trim()}
-                className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors disabled:opacity-50"
-              >
-                {saving ? "Saving..." : "Save"}
-              </button>
+            <div className="flex items-center justify-between gap-3 mt-6">
+              <div>
+                {canManageExercise && (
+                  <button
+                    onClick={() => {
+                      setEditing(false);
+                      setShowDeleteConfirm(true);
+                    }}
+                    className="px-4 py-2 text-sm text-red-400 hover:text-red-300 transition-colors"
+                  >
+                    Delete Exercise
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setEditing(false)}
+                  className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveEdit}
+                  disabled={saving || !editForm.name.trim()}
+                  className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {saving ? "Saving..." : "Save"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -879,4 +1025,9 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
     </div>
   );
 }
+
+
+
+
+
 

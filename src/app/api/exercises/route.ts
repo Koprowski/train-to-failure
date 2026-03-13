@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/session";
+import { requireAdmin, requireAuth } from "@/lib/session";
 
 export async function GET(request: NextRequest) {
   try {
@@ -46,11 +46,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { error: authError, userId } = await requireAuth();
+    const { error: authError } = await requireAdmin();
     if (authError) return authError;
 
     const body = await request.json();
-    const { name, muscleGroups, equipment, type, instructions, videoUrl, links, isCustom } = body;
+    const { name, muscleGroups, equipment, type, instructions, videoUrl, links } = body;
 
     if (!name || !muscleGroups || !equipment) {
       return NextResponse.json(
@@ -68,8 +68,8 @@ export async function POST(request: NextRequest) {
         instructions: instructions ?? null,
         videoUrl: videoUrl ?? null,
         links: links ?? null,
-        isCustom: isCustom ?? true,
-        userId,
+        isCustom: false,
+        userId: null,
       },
     });
 

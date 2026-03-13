@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { hasUploadedExerciseImage } from "@/lib/exercise-images";
 import { readFileSync } from "fs";
 import { join } from "path";
 
@@ -10,19 +11,15 @@ interface ExerciseEntry {
 }
 
 const seedData: Record<string, { equipment: string; type: string }> = {
-  "Situps - Decline": { equipment: "bench", type: "weight_reps" },
   "Situps": { equipment: "bodyweight", type: "weight_reps" },
   "Situps - Decline Weighted": { equipment: "bench", type: "weight_reps" },
   "Leg Press - 45 Sled": { equipment: "machine", type: "weight_reps" },
-  "Leg Press - Machine": { equipment: "machine", type: "weight_reps" },
   "Hip Abduction": { equipment: "machine", type: "weight_reps" },
   "Hip Adduction": { equipment: "machine", type: "weight_reps" },
   "Hip Abductor - Machine": { equipment: "machine", type: "weight_reps" },
-  "Hip Adductor - Machine": { equipment: "machine", type: "weight_reps" },
   "Hamstring - Leg Curl Machine": { equipment: "machine", type: "weight_reps" },
   "Dip": { equipment: "bodyweight,dip_station", type: "weight_reps" },
   "Barbell Shrug": { equipment: "barbell", type: "weight_reps" },
-  "Cable Lateral Raise": { equipment: "cable", type: "weight_reps" },
   "Cable Crunch": { equipment: "cable", type: "weight_reps" },
   "Squat - Smith Machine": { equipment: "smith machine", type: "weight_reps" },
   "Wrist Curl": { equipment: "barbell", type: "weight_reps" },
@@ -30,8 +27,10 @@ const seedData: Record<string, { equipment: string; type: string }> = {
   "Good Morning": { equipment: "barbell", type: "weight_reps" },
   "Farmer's Walk": { equipment: "dumbbell", type: "time" },
   "Incline Barbell Bench Press": { equipment: "barbell,bench", type: "weight_reps" },
-  "Cable Row": { equipment: "cable", type: "weight_reps" },
-  "Wall Sit": { equipment: "bodyweight", type: "time" },
+  "Wall Sit - Weighted": { equipment: "dumbbell", type: "time" },
+  "Dead Bug - Weighted": { equipment: "kettlebell", type: "weight_reps" },
+  "Plank Jack": { equipment: "bodyweight", type: "time" },
+  "Wall Sit - Calf Raise": { equipment: "bodyweight", type: "time" },
   "Reverse Curl": { equipment: "dumbbell", type: "weight_reps" },
   "Hammer Curl": { equipment: "dumbbell", type: "weight_reps" },
 };
@@ -43,10 +42,7 @@ export async function POST() {
       readFileSync(jsonPath, "utf-8")
     );
 
-    // Rename legacy exercise names
-    const renames: Record<string, string> = {
-      "Decline Sit-Up": "Situps - Decline",
-    };
+    const renames: Record<string, string> = {};
     for (const [oldName, newName] of Object.entries(renames)) {
       await prisma.exercise.updateMany({
         where: { name: oldName },
@@ -69,6 +65,11 @@ export async function POST() {
       const existing = await prisma.exercise.findFirst({ where: { name } });
 
       if (existing) {
+        if (hasUploadedExerciseImage(existing.imageUrl)) {
+          results.skipped.push(`${name} (custom image preserved)`);
+          continue;
+        }
+
         await prisma.exercise.updateMany({
           where: { name },
           data: { imageUrl: entry.imageUrl },
