@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import DateTimePicker from "@/components/DateTimePicker";
 import { slugify } from "@/lib/slugify";
 
@@ -36,6 +37,129 @@ interface Workout {
   sets: WorkoutSet[];
 }
 
+interface HistoryEntry {
+  date: string;
+  workoutName: string;
+  maxWeight: number;
+  totalVolume: number;
+  estimated1RM: number;
+  totalReps: number;
+  sets: { setNumber: number; weightLbs: number | null; reps: number | null }[];
+}
+
+function ExerciseProgress({ exerciseId }: { exerciseId: string }) {
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [chartMetric, setChartMetric] = useState<"estimated1RM" | "maxWeight" | "totalVolume" | "totalReps">("estimated1RM");
+
+  useEffect(() => {
+    fetch(`/api/stats?exerciseId=${exerciseId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        const h = data?.history ?? [];
+        setHistory(h);
+        const hasWeight = h.some((e: HistoryEntry) => e.maxWeight > 0);
+        setChartMetric(hasWeight ? "estimated1RM" : "totalReps");
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [exerciseId]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-6">
+        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-500" />
+      </div>
+    );
+  }
+
+  if (history.length === 0) {
+    return <p className="text-gray-500 text-xs py-4 text-center">No previous sessions to show.</p>;
+  }
+
+  const hasWeightData = history.some((h) => h.maxWeight > 0);
+  const chartLabel = chartMetric === "maxWeight" ? "Max Weight (lbs)" : chartMetric === "estimated1RM" ? "Est. 1RM (lbs)" : chartMetric === "totalVolume" ? "Total Volume (lbs)" : "Total Reps";
+  const recent = history.slice().reverse().slice(0, 5);
+
+  return (
+    <div className="space-y-3">
+      {/* Mini chart */}
+      {history.length >= 2 && (
+        <div>
+          <div className="flex gap-1.5 mb-2">
+            {(["estimated1RM", "maxWeight", "totalVolume", "totalReps"] as const).map((metric) => {
+              const isWeightMetric = metric !== "totalReps";
+              const disabled = isWeightMetric && !hasWeightData;
+              return (
+                <button
+                  key={metric}
+                  onClick={() => !disabled && setChartMetric(metric)}
+                  disabled={disabled}
+                  className={`text-[10px] px-2 py-1 rounded transition-colors ${
+                    chartMetric === metric
+                      ? "bg-emerald-500 text-white"
+                      : disabled
+                        ? "bg-gray-800 text-gray-600 cursor-not-allowed"
+                        : "bg-gray-800 text-gray-400 hover:text-white"
+                  }`}
+                >
+                  {metric === "maxWeight" ? "Weight" : metric === "estimated1RM" ? "1RM" : metric === "totalVolume" ? "Vol" : "Reps"}
+                </button>
+              );
+            })}
+          </div>
+          <ResponsiveContainer width="100%" height={150}>
+            <LineChart data={history}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis
+                dataKey="date"
+                stroke="#6b7280"
+                fontSize={10}
+                tickFormatter={(d) => {
+                  const date = new Date(d + "T00:00:00");
+                  return `${date.getMonth() + 1}/${date.getDate()}`;
+                }}
+              />
+              <YAxis stroke="#6b7280" fontSize={10} width={40} domain={[(min: number) => Math.max(0, Math.floor(min * 0.9)), (max: number) => Math.ceil(max * 1.05)]} />
+              <Tooltip
+                contentStyle={{ backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: "8px", fontSize: "12px" }}
+                labelStyle={{ color: "#fff" }}
+                itemStyle={{ color: "#d1d5db" }}
+                formatter={(value: number | undefined) => [value ?? 0, chartLabel]}
+              />
+              <Line
+                type="monotone"
+                dataKey={chartMetric}
+                stroke="#10b981"
+                strokeWidth={2}
+                dot={{ fill: "#10b981", r: 3 }}
+                activeDot={{ r: 5 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Recent sessions */}
+      <div>
+        <p className="text-[10px] uppercase tracking-wide text-gray-500 mb-1.5">Recent Sessions</p>
+        <div className="space-y-1.5">
+          {recent.map((h) => (
+            <div key={h.date} className="flex items-center justify-between text-xs">
+              <span className="text-gray-400">{h.date}</span>
+              <div className="flex items-center gap-3">
+                <span className="text-gray-300">{h.sets.length} sets</span>
+                <span className="text-gray-300">{h.totalReps} reps</span>
+                {hasWeightData && <span className="text-emerald-500">{h.estimated1RM} 1RM</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Track edits to sets
 interface SetEdits {
   weightLbs?: string;
@@ -60,6 +184,7 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [favoriteExerciseIds, setFavoriteExerciseIds] = useState<Set<string>>(new Set());
   const [favoriteWorkout, setFavoriteWorkout] = useState(false);
+  const [expandedProgress, setExpandedProgress] = useState<Set<string>>(new Set());
 
   // Inline edit state
   const [editName, setEditName] = useState("");
@@ -538,7 +663,7 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                       </svg>
                       <span className="invisible group-hover:visible absolute bottom-full right-0 mb-2 w-48 px-3 py-2 text-xs text-left font-normal text-gray-300 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10">
-                        Rate of Perceived Exertion (1-10). How hard the set felt, where 10 is max effort.
+                        Reps in Reserve (0-10). How many more reps you could do. 0 = failure.
                       </span>
                     </span>
                   </th>
@@ -618,13 +743,34 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
               </tbody>
             </table>
           </div>
-          <button
-            onClick={() => addSet(exercise.id)}
-            disabled={addingSet === exercise.id}
-            className="w-full py-2 text-xs text-gray-500 hover:text-emerald-400 hover:bg-gray-800/50 transition-colors disabled:opacity-50 border-t border-gray-800/50"
-          >
-            {addingSet === exercise.id ? "Adding..." : "+ Add Set"}
-          </button>
+          <div className="flex border-t border-gray-800/50">
+            <button
+              onClick={() => addSet(exercise.id)}
+              disabled={addingSet === exercise.id}
+              className="flex-1 py-2 text-xs text-gray-500 hover:text-emerald-400 hover:bg-gray-800/50 transition-colors disabled:opacity-50"
+            >
+              {addingSet === exercise.id ? "Adding..." : "+ Add Set"}
+            </button>
+            <button
+              onClick={() => setExpandedProgress((prev) => {
+                const next = new Set(prev);
+                if (next.has(exercise.id)) next.delete(exercise.id);
+                else next.add(exercise.id);
+                return next;
+              })}
+              className="px-3 py-2 text-xs text-gray-500 hover:text-emerald-400 hover:bg-gray-800/50 transition-colors border-l border-gray-800/50 flex items-center gap-1"
+            >
+              <svg className={`w-3 h-3 transition-transform ${expandedProgress.has(exercise.id) ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+              Progress
+            </button>
+          </div>
+          {expandedProgress.has(exercise.id) && (
+            <div className="px-4 py-3 border-t border-gray-800/50 bg-gray-800/20">
+              <ExerciseProgress exerciseId={exercise.id} />
+            </div>
+          )}
         </div>
       ))}
 

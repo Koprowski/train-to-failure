@@ -329,7 +329,7 @@ function ActivityLogContent() {
                               <span className="group relative cursor-help">
                                 RIR {set.rir}
                                 <span className="invisible group-hover:visible absolute bottom-full left-0 mb-2 w-48 px-3 py-2 text-xs font-normal text-gray-300 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10">
-                                  Rate of Perceived Exertion (1-10). How hard the set felt, where 10 is max effort.
+                                  Reps in Reserve (0-10). How many more reps you could do. 0 = failure.
                                 </span>
                               </span>
                             )}
@@ -548,7 +548,7 @@ function ActivityLogContent() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                           </svg>
                           <span className="invisible group-hover:visible absolute bottom-full left-0 mb-2 w-48 px-3 py-2 text-xs font-normal text-gray-300 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10">
-                            Rate of Perceived Exertion (1-10). How hard the set felt, where 10 is max effort.
+                            Reps in Reserve (0-10). How many more reps you could do. 0 = failure.
                           </span>
                         </span>
                       </label>
