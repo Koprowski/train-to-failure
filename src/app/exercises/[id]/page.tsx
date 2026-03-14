@@ -1004,7 +1004,7 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
                   <input
                     type="number"
                     inputMode="decimal"
-                    min="1"
+                    min="0"
                     max="10"
                     step="0.5"
                     value={quickLogForm.rir}

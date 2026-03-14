@@ -577,7 +577,7 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
                         type="number"
                         inputMode="decimal"
                         step="0.5"
-                        min="1"
+                        min="0"
                         max="10"
                         value={getSetValue(set, "rir")}
                         onChange={(e) => updateSetEdit(set.id, "rir", e.target.value)}

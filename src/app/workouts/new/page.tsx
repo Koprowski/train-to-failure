@@ -1653,7 +1653,7 @@ function WorkoutContent() {
                               type="number"
                               inputMode="decimal"
                               step="0.5"
-                              min="1"
+                              min="0"
                               max="10"
                               value={set.rir}
                               onChange={(e) => updateSet(blockIndex, setIndex, "rir", e.target.value)}

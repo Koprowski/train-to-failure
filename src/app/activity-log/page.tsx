@@ -396,7 +396,7 @@ function ActivityLogContent() {
                 <input
                   type="number"
                   inputMode="decimal"
-                  min="1"
+                  min="0"
                   max="10"
                   step="0.5"
                   value={editForm.rir}
@@ -555,7 +555,7 @@ function ActivityLogContent() {
                       <input
                         type="number"
                         inputMode="decimal"
-                        min="1"
+                        min="0"
                         max="10"
                         step="0.5"
                         value={form.rir}
