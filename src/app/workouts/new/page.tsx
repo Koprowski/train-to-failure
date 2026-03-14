@@ -1393,7 +1393,7 @@ function WorkoutContent() {
               }
               setShowDateModal(true);
             }}
-            className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            className="text-xs text-white hover:text-white/80 transition-colors"
           >
             {(() => {
               const d = customDate ? new Date(customDate) : workoutStartTime ?? renderDateFallback;
@@ -1567,8 +1567,9 @@ function WorkoutContent() {
                       </span>
                     </th>
                     <th className="py-2 px-2 text-left w-28">Last</th>
-                    <th className="py-2 px-2 text-center w-12">
-                      <div className="flex justify-center">
+                    <th className="py-2 px-2 text-center w-20" colSpan={2}>
+                      <div className="grid grid-cols-[3rem_2rem] items-center">
+                        <div className="flex justify-center">
                         <button
                           onClick={() => {
                             const allCompleted = block.sets.every((s) => s.completed);
@@ -1592,9 +1593,10 @@ function WorkoutContent() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
                         </button>
+                        </div>
+                        <div />
                       </div>
                     </th>
-                    <th className="py-2 px-2 text-center w-8"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1705,7 +1707,7 @@ function WorkoutContent() {
                               </svg>
                             </button>
                           </td>
-                          <td className="py-1.5 px-2 text-center">
+                          <td className="py-1.5 px-2 text-center w-8">
                             <button
                               onClick={() => removeSet(blockIndex, setIndex)}
                               className="text-gray-600 hover:text-red-400 transition-colors"

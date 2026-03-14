@@ -925,8 +925,18 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
       {showQuickLog && exercise && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowQuickLog(false)}>
           <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Quick Log</h2>
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-bold">Quick Log</h2>
+                  <span className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-emerald-300">
+                    Set 1 only
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-gray-400">
+                  Enter the first set here. You can add the rest in the workout screen.
+                </p>
+              </div>
               <button onClick={() => setShowQuickLog(false)} className="text-gray-400 hover:text-white">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
