@@ -3,10 +3,15 @@
 Sync the exercise library from OneFootExerciseList.xlsx.
 
 Workbook columns:
-- E: target canonical exercise name
-- I: target GIF filename or source asset path
-- J: current app/library name, if renaming from an old record
-- K: update notes written back by this script on apply
+- C: body part
+- D: equipment
+- F: target canonical exercise name
+- H: remove flag
+- I: add flag
+- J: change flag
+- K: target GIF filename or source asset path
+- L: current app/library name, if renaming from an old record
+- M: update notes written back by this script on apply
 
 By default the script runs in dry-run mode and prints the planned changes.
 Use --apply to write changes. Removals require explicit selection via
@@ -32,17 +37,49 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 WORKBOOK_PATH = REPO_ROOT / "OneFootExerciseList.xlsx"
 MANIFEST_PATH = REPO_ROOT / "public" / "gifs" / "exercises.json"
 GIF_DIR = REPO_ROOT / "public" / "gifs"
+ARCHIVE_DIR = GIF_DIR / "_deleted"
 DEFAULT_SOURCE_DIR = Path(r"E:\OneDrive\Apps\train-to-failure\gifs")
+
+BODY_PART_TO_MUSCLE_GROUPS: dict[str, str] = {
+    "back": "back",
+    "calves": "calves",
+    "chest": "chest",
+    "hips": "glutes",
+    "hips, thighs": "glutes,quads",
+    "shoulders": "shoulders",
+    "thighs": "quads",
+    "upper arms": "biceps,triceps",
+    "waist": "abs,obliques",
+}
+
+WORKBOOK_EQUIPMENT_MAP: dict[str, str] = {
+    "band": "resistance band",
+    "barbell": "barbell",
+    "body weight": "bodyweight",
+    "cable": "cable",
+    "dumbbell": "dumbbell",
+    "kettlebell": "kettlebell",
+    "leverage machine": "machine",
+    "resistance band": "resistance band",
+    "rope": "battle_ropes",
+    "sled machine": "machine",
+    "smith machine": "smith machine",
+    "weighted": "bodyweight",
+    "wheel roller": "ab_wheel",
+}
 
 
 @dataclass
 class WorkbookRow:
     row_num: int
     target_name: str
+    body_part: str | None
+    equipment_label: str | None
     source_value: str
     source_path: Path | None
     current_name: str | None
     add_flag: bool
+    change_flag: bool
     note: str | None = None
 
 
@@ -192,31 +229,63 @@ def resolve_source_path(source_value: str, workbook_path: Path) -> Path | None:
     return None
 
 
+def infer_type_from_equipment(equipment: str) -> str:
+    normalized = equipment.strip().lower()
+    if normalized == "bodyweight":
+        return "bodyweight"
+    return "weight_reps"
+
+
+def workbook_metadata(row: WorkbookRow) -> dict[str, Any] | None:
+    if not row.body_part or not row.equipment_label:
+        return None
+
+    muscle_groups = BODY_PART_TO_MUSCLE_GROUPS.get(row.body_part.strip().lower())
+    if not muscle_groups:
+        return None
+
+    equipment = WORKBOOK_EQUIPMENT_MAP.get(row.equipment_label.strip().lower(), row.equipment_label.strip().lower())
+    return {
+        "muscleGroups": muscle_groups,
+        "equipment": equipment,
+        "type": infer_type_from_equipment(equipment),
+        "videoUrl": None,
+        "instructions": None,
+        "links": None,
+    }
+
+
 def load_workbook_rows(workbook_path: Path) -> list[WorkbookRow]:
     workbook = load_workbook(workbook_path, data_only=False)
     sheet = workbook.active
     rows: list[WorkbookRow] = []
 
     for row_num in range(2, sheet.max_row + 1):
-        target_name = normalize_text(sheet[f"E{row_num}"].value)
-        source_value = normalize_text(sheet[f"I{row_num}"].value)
-        current_name = normalize_text(sheet[f"J{row_num}"].value)
-        add_flag = truthy(sheet[f"H{row_num}"].value)
+        target_name = normalize_text(sheet[f"F{row_num}"].value)
+        body_part = normalize_text(sheet[f"C{row_num}"].value)
+        equipment_label = normalize_text(sheet[f"D{row_num}"].value)
+        source_value = normalize_text(sheet[f"K{row_num}"].value)
+        current_name = normalize_text(sheet[f"L{row_num}"].value)
+        add_flag = truthy(sheet[f"I{row_num}"].value)
+        change_flag = truthy(sheet[f"J{row_num}"].value)
 
         if not target_name:
             continue
 
         if not source_value:
-            raise RuntimeError(f"Workbook row {row_num} is missing column I (source GIF).")
+            raise RuntimeError(f"Workbook row {row_num} is missing column K (source GIF).")
 
         rows.append(
             WorkbookRow(
                 row_num=row_num,
                 target_name=target_name,
+                body_part=body_part,
+                equipment_label=equipment_label,
                 source_value=source_value,
                 source_path=resolve_source_path(source_value, workbook_path),
                 current_name=current_name,
                 add_flag=add_flag,
+                change_flag=change_flag,
             )
         )
 
@@ -235,6 +304,9 @@ def choose_metadata_source(
     for candidate in candidates:
         if candidate and candidate in seed_by_name:
             return seed_by_name[candidate], f"seed:{candidate}"
+    metadata = workbook_metadata(row)
+    if metadata:
+        return metadata, "workbook"
     return None, None
 
 
@@ -309,7 +381,8 @@ def build_sync_plan(
             row_notes[row.row_num] = action
         elif current_row:
             db_upserts.append({"mode": "update", "id": current_row["id"], "data": desired})
-            row_notes[row.row_num] = f"Rename from {row.current_name}"
+            action_label = "Change" if row.change_flag else "Rename"
+            row_notes[row.row_num] = f"{action_label} from {row.current_name}"
         else:
             db_upserts.append({"mode": "create", "data": desired})
             if row.add_flag:
@@ -319,6 +392,8 @@ def build_sync_plan(
 
         if update_source and row.current_name and row.current_name == row.target_name and row.add_flag:
             row_notes[row.row_num] = "Exists already; add flag can be cleared"
+        elif update_source and row.current_name and row.current_name == row.target_name and row.change_flag:
+            row_notes[row.row_num] = "Change flag set; source/image changes will be applied if needed"
 
     removal_candidates: list[dict[str, Any]] = []
     desired_image_urls = {record["imageUrl"] for record in desired_records}
@@ -497,11 +572,54 @@ def copy_gifs(desired_records: list[dict[str, Any]]) -> int:
     return copied
 
 
+def find_disk_orphans(desired_records: list[dict[str, Any]]) -> list[str]:
+    manifest_files = {record["gifFile"] for record in desired_records}
+    ignored = {"exercises.json"}
+    orphans: list[str] = []
+    for path in GIF_DIR.iterdir():
+        if not path.is_file():
+            continue
+        if path.name in ignored:
+            continue
+        if path.name not in manifest_files:
+            orphans.append(path.name)
+    return sorted(orphans)
+
+
+def archive_orphan_disk_files(orphan_files: list[str]) -> list[str]:
+    if not orphan_files:
+        return []
+
+    ARCHIVE_DIR.mkdir(parents=True, exist_ok=True)
+    archived: list[str] = []
+    for filename in orphan_files:
+        source = GIF_DIR / filename
+        if not source.exists():
+            continue
+
+        destination = ARCHIVE_DIR / filename
+        if destination.exists():
+            stem = destination.stem
+            suffix = destination.suffix
+            counter = 1
+            while True:
+                candidate = ARCHIVE_DIR / f"{stem}__{counter}{suffix}"
+                if not candidate.exists():
+                    destination = candidate
+                    break
+                counter += 1
+
+        shutil.move(str(source), str(destination))
+        archived.append(filename)
+
+    return archived
+
+
 def write_workbook_notes(workbook_path: Path, row_notes: dict[int, str]) -> None:
     workbook = load_workbook(workbook_path)
     sheet = workbook.active
     for row_num, note in row_notes.items():
-        sheet[f"K{row_num}"] = note
+        sheet[f"M{row_num}"] = note
     workbook.save(workbook_path)
 
 
@@ -611,6 +729,13 @@ def print_report(plan: dict[str, Any], apply: bool, removals_to_apply: list[dict
     else:
         print("\nRemoval candidates: none")
 
+    if plan.get("diskOrphans"):
+        print("\nOrphan GIF files on disk (will be archived to public/gifs/_deleted on apply):")
+        for filename in plan["diskOrphans"]:
+            print(f"   - {filename}")
+    else:
+        print("\nOrphan GIF files on disk: none")
+
     if removals_to_apply:
         selected_labels = ", ".join(candidate["name"] for candidate in removals_to_apply)
         print(f"\nSelected for removal on apply: {selected_labels}")
@@ -628,6 +753,7 @@ def main() -> int:
     db_state = load_db_state()
     seed_exercises = load_seed_exercises()
     plan = build_sync_plan(workbook_rows, db_state, seed_exercises)
+    plan["diskOrphans"] = find_disk_orphans(plan["desiredRecords"])
     removals_to_apply = resolve_removal_selection(plan, args.remove, args.confirm_remove)
 
     if removals_to_apply and not args.apply:
@@ -650,6 +776,7 @@ def main() -> int:
     )
     db_result = apply_db_changes(plan, removals_to_apply=removals_to_apply)
     deleted_gifs = delete_orphan_gifs(removals_to_apply) if removals_to_apply else []
+    archived_orphans = archive_orphan_disk_files(plan["diskOrphans"])
 
     try:
         write_workbook_notes(workbook_path, plan["rowNotes"])
@@ -662,6 +789,7 @@ def main() -> int:
     print(f"  - DB rows created/updated: {db_result['updatedOrCreated']}")
     print(f"  - DB rows deleted: {db_result['deleted']}")
     print(f"  - GIFs deleted: {len(deleted_gifs)}")
+    print(f"  - Orphan GIFs archived: {len(archived_orphans)}")
     print(f"  - {workbook_note_status}")
 
     return 0

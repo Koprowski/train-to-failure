@@ -84,6 +84,11 @@
     "imageUrl": "/gifs/Barbell Curl - Male.gif",
     "muscleGroups": "biceps"
   },
+  "Curl - Dumbbell": {
+    "gifFile": "Dumbbell Biceps Curl - Male.gif",
+    "imageUrl": "/gifs/Dumbbell Biceps Curl - Male.gif",
+    "muscleGroups": "biceps"
+  },
   "Dead Bug": {
     "gifFile": "Dead Bug - Male.gif",
     "imageUrl": "/gifs/Dead Bug - Male.gif",
@@ -103,11 +108,6 @@
     "gifFile": "Chest Dip - Male.gif",
     "imageUrl": "/gifs/Chest Dip - Male.gif",
     "muscleGroups": "chest,triceps,shoulders"
-  },
-  "Dumbbell Curl": {
-    "gifFile": "Dumbbell Biceps Curl - Male.gif",
-    "imageUrl": "/gifs/Dumbbell Biceps Curl - Male.gif",
-    "muscleGroups": "biceps"
   },
   "Dumbbell Fly": {
     "gifFile": "Dumbbell Fly - Male.gif",
@@ -143,6 +143,11 @@
     "gifFile": "Dumbbell Hammer Curl - Male.gif",
     "imageUrl": "/gifs/Dumbbell Hammer Curl - Male.gif",
     "muscleGroups": "biceps,forearms"
+  },
+  "Handstand - Wall": {
+    "gifFile": "Handstand against the Wall - Male.gif",
+    "imageUrl": "/gifs/Handstand against the Wall - Male.gif",
+    "muscleGroups": "shoulders"
   },
   "Hip Abduction - Band": {
     "gifFile": "Resistance Band Seated Hip Abduction - Male.gif",

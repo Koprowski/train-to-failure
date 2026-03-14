@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { slugify } from "@/lib/slugify";
 import { useSession } from "next-auth/react";
 import { isAdminSessionUser } from "@/lib/access";
@@ -214,7 +215,10 @@ function getBadgeColor(group: string) {
   return BADGE_COLORS[group.toLowerCase().trim()] ?? "bg-gray-500/20 text-gray-400";
 }
 
+const REPEAT_ICON = "M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15";
+
 export default function ExercisesPage() {
+  const router = useRouter();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -442,11 +446,8 @@ export default function ExercisesPage() {
         <h1 className="text-2xl font-bold">Exercise Library</h1>
         <button
           onClick={() => (isAdmin ? setShowModal(true) : setShowPaidFeatureModal(true))}
-          className="inline-flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-lg text-sm transition-colors"
+          className="inline-flex items-center bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-lg text-sm transition-colors"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
           + Custom
         </button>
       </div>
@@ -610,6 +611,20 @@ export default function ExercisesPage() {
                   className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden hover:border-gray-700 transition-colors group relative"
                 >
                   <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      router.push(`/exercises/${slugify(ex.name)}?quickLog=1`);
+                    }}
+                    className="absolute top-2 right-10 z-10 p-1.5 text-gray-500 hover:text-emerald-400 transition-colors"
+                    aria-label={`Quick log ${ex.name}`}
+                    title="Quick log"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={REPEAT_ICON} />
+                    </svg>
+                  </button>
+                  <button
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(ex.id); }}
                     className="absolute top-2 right-2 z-10 p-1.5 text-gray-400 hover:text-white transition-colors"
                     aria-label={favoriteIds.has(ex.id) ? "Remove from favorites" : "Add to favorites"}
@@ -635,9 +650,7 @@ export default function ExercisesPage() {
                       </h3>
                       {ex.isCustom ? (
                         <span className="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">Custom</span>
-                      ) : (
-                        <span className="text-xs bg-sky-500/15 text-sky-300 px-2 py-0.5 rounded-full">Library</span>
-                      )}
+                      ) : null}
                     </div>
                     <div className="flex items-start justify-between gap-2 mt-3">
                       <div className="flex flex-wrap gap-1.5">

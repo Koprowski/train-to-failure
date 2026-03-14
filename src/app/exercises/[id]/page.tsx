@@ -3,7 +3,7 @@
 import { use, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { canUploadExerciseImageSessionUser, isAdminSessionUser } from "@/lib/access";
 
@@ -135,6 +135,7 @@ function YouTubeLite({ videoId, startSeconds, title }: { videoId: string; startS
 export default function ExerciseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session } = useSession();
   const isAdmin = isAdminSessionUser(session?.user);
   const canUploadExerciseImage = canUploadExerciseImageSessionUser(session?.user);
@@ -171,6 +172,7 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
     notes: "",
   });
   const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const quickLogOpenedFromQueryRef = useRef(false);
 
   useEffect(() => {
     fetch(`/api/exercises/${id}`)
@@ -194,6 +196,14 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
       })
       .catch(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (quickLogOpenedFromQueryRef.current || !exercise) return;
+    if (searchParams.get("quickLog") !== "1") return;
+    quickLogOpenedFromQueryRef.current = true;
+    setShowQuickLog(true);
+    router.replace(`/exercises/${id}`, { scroll: false });
+  }, [exercise, id, router, searchParams]);
 
   const toggleFavorite = async () => {
     if (!exercise) return;
