@@ -73,19 +73,24 @@ export const authOptions: NextAuthOptions = {
     async signIn({ user, account }) {
       if (!user.id) return true;
 
-      const googleAccountId = account?.provider === "google" ? account.providerAccountId : null;
-      const profile = getAccessProfile({
-        email: user.email,
-        googleAccountId,
-      });
+      try {
+        const googleAccountId = account?.provider === "google" ? account.providerAccountId : null;
+        const profile = getAccessProfile({
+          email: user.email,
+          googleAccountId,
+        });
 
-      await prismaBase.user.update({
-        where: { id: user.id },
-        data: {
-          role: profile.role,
-          accountType: profile.accountType,
-        },
-      });
+        await prismaBase.user.update({
+          where: { id: user.id },
+          data: {
+            role: profile.role,
+            accountType: profile.accountType,
+          },
+        });
+      } catch (err) {
+        // Don't block sign-in if role update fails -- jwt callback will set it later
+        console.error("signIn callback: failed to update role", err);
+      }
 
       return true;
     },
