@@ -29,6 +29,19 @@ interface RecentExercise {
 
 const PINNED_TABS = ["Recent", "Favorites", "All"];
 
+const POPULAR_EXERCISE_NAMES = new Set([
+  "Bench Press - Barbell",
+  "Barbell Olympic Squat",
+  "Barbell Deadlift",
+  "Dumbbell Biceps Curl",
+  "Pull Up",
+  "Dumbbell Lateral Raise",
+  "Dumbbell Bent Over Row",
+  "Cable Lat Pulldown",
+  "Leg Press",
+  "Barbell Hip Thrust",
+]);
+
 function formatQuickWorkoutName(name: string) {
   const trimmed = name.trim();
   return /workout$/i.test(trimmed) ? trimmed : `${trimmed} Workout`;
@@ -42,7 +55,7 @@ export default function QuickLogPage() {
   const [allExercises, setAllExercises] = useState<Exercise[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState("Recent");
+  const [activeTab, setActiveTab] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState<string | null>(null);
 
@@ -52,9 +65,11 @@ export default function QuickLogPage() {
       fetch("/api/exercises").then((r) => r.ok ? r.json() : []).catch(() => []),
       fetch("/api/exercises/favorites").then((r) => r.ok ? r.json() : []).catch(() => []),
     ]).then(([recent, all, favIds]) => {
-      setRecentExercises(Array.isArray(recent) ? recent : []);
+      const recentArr = Array.isArray(recent) ? recent : [];
+      setRecentExercises(recentArr);
       setAllExercises(Array.isArray(all) ? all : []);
       if (Array.isArray(favIds)) setFavoriteIds(new Set(favIds));
+      setActiveTab(recentArr.length > 0 ? "Recent" : "All");
       setLoading(false);
     });
   }, []);
@@ -144,8 +159,9 @@ export default function QuickLogPage() {
   const renderExerciseRow = (exercise: Exercise, options?: { summary?: string; subtext?: string }) => (
     <div key={exercise.id} className="flex items-center bg-gray-900 border border-gray-800 rounded-xl hover:bg-gray-800/50 transition-colors">
       <button
-        onClick={() => openExercise(exercise.id)}
-        className="flex-1 text-left p-4 flex items-center gap-3"
+        onClick={() => startQuickLog(exercise)}
+        disabled={starting !== null}
+        className="flex-1 text-left p-4 flex items-center gap-3 disabled:opacity-50"
       >
         {exercise.imageUrl ? (
           <img src={exercise.imageUrl} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
@@ -160,7 +176,9 @@ export default function QuickLogPage() {
           <p className="font-medium text-white">{exercise.name}</p>
           <p className="text-xs text-gray-400 capitalize">{exercise.muscleGroups}</p>
         </div>
-        {options?.summary ? (
+        {starting === exercise.id ? (
+          <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-emerald-500 shrink-0" />
+        ) : options?.summary ? (
           <div className="text-right shrink-0">
             <p className="text-sm text-emerald-500 font-medium">{options.summary}</p>
             {options.subtext ? <p className="text-xs text-gray-500">{options.subtext}</p> : null}
@@ -169,18 +187,13 @@ export default function QuickLogPage() {
       </button>
       <div className="flex items-center shrink-0 pr-2">
         <button
-          onClick={() => startQuickLog(exercise)}
-          disabled={starting !== null}
-          className="p-3 text-gray-500 hover:text-emerald-400 transition-colors disabled:opacity-50"
-          title="Start quick log"
+          onClick={() => openExercise(exercise.id)}
+          className="p-3 text-gray-500 hover:text-emerald-400 transition-colors"
+          title="View exercise details"
         >
-          {starting === exercise.id ? (
-            <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-emerald-500" />
-          ) : (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={REPEAT_ICON} />
-            </svg>
-          )}
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
         </button>
         <button onClick={(e) => toggleFavorite(e, exercise.id)} className="p-3 shrink-0">
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill={favoriteIds.has(exercise.id) ? "#ef4444" : "none"} stroke={favoriteIds.has(exercise.id) ? "#ef4444" : "#6b7280"} strokeWidth={2}>
@@ -289,19 +302,29 @@ export default function QuickLogPage() {
           })()}
 
           {activeTab !== "Recent" && activeTab !== "Favorites" && (() => {
-            const filterGroup = activeTab === "All" ? null : activeTab.toLowerCase();
+            const filterGroup = activeTab === "All" ? null : activeTab?.toLowerCase();
             const filtered = filterGroup
               ? allExercises.filter((ex) =>
                   ex.muscleGroups.toLowerCase().split(",").map((g) => g.trim()).includes(filterGroup)
                 )
               : allExercises;
+            const showPopular = activeTab === "All" && recentExercises.length === 0;
+            const popular = showPopular ? filtered.filter((ex) => POPULAR_EXERCISE_NAMES.has(ex.name)) : [];
+            const remaining = showPopular ? filtered.filter((ex) => !POPULAR_EXERCISE_NAMES.has(ex.name)) : filtered;
             return filtered.length === 0 ? (
               <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
                 <p className="text-gray-500 text-sm">No exercises found in this category.</p>
               </div>
             ) : (
               <div className="space-y-2">
-                {filtered.map((ex) => renderExerciseRow(ex))}
+                {popular.length > 0 && (
+                  <>
+                    <p className="text-xs font-medium text-gray-400 px-1 pt-1">Popular exercises to get started</p>
+                    {popular.map((ex) => renderExerciseRow(ex))}
+                    <p className="text-xs font-medium text-gray-400 px-1 pt-3">All exercises</p>
+                  </>
+                )}
+                {remaining.map((ex) => renderExerciseRow(ex))}
               </div>
             );
           })()}

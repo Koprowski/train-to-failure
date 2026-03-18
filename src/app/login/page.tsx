@@ -327,15 +327,11 @@ export default function LoginPage() {
           )}
         </div>
 
-        {notice?.previewUrl && (
+        {process.env.NODE_ENV === "development" && notice?.previewUrl && (
           <div className="mt-4 text-xs text-gray-500">
             Development mode is returning a preview link because no email transport is configured.
           </div>
         )}
-
-        <div className="mt-4 text-xs text-gray-500">
-          Reset link page: <Link href="/reset-password" className="text-emerald-400 hover:text-emerald-300">open manually</Link>
-        </div>
       </div>
     </div>
   );

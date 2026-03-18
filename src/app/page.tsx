@@ -203,47 +203,82 @@ export default function DashboardPage() {
     );
   }
 
+  const isNewUser = workouts.length === 0;
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-gray-400 text-sm mt-1">Track your training progress</p>
-        <div className="flex gap-2 mt-3">
-          <Link
-            href="/workouts/quick"
-            className="flex-1 inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" />
+      {isNewUser ? (
+        /* Welcome card for new users */
+        <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-500/10 flex items-center justify-center">
+            <svg className="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            Quick Log
-          </Link>
+          </div>
+          <h1 className="text-2xl font-bold mb-2">Welcome to One Foot Fitness</h1>
+          <p className="text-gray-400 text-sm mb-6 max-w-sm mx-auto">
+            Track your workouts, monitor progress, and build consistency. Let&apos;s log your first workout.
+          </p>
           <Link
             href="/workouts/new"
-            className="flex-1 inline-flex items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors"
+            className="inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6 py-3 rounded-lg text-base transition-colors"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Start Workout
+            Log Your First Workout
           </Link>
+          <div className="mt-4">
+            <Link
+              href="/exercises"
+              className="text-sm text-gray-400 hover:text-emerald-400 transition-colors"
+            >
+              or browse the exercise library first
+            </Link>
+          </div>
         </div>
-      </div>
+      ) : (
+        <>
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <p className="text-gray-400 text-sm mt-1">Track your training progress</p>
+          <div className="flex gap-2 mt-3">
+            <Link
+              href="/workouts/quick"
+              className="flex-1 inline-flex flex-col items-center justify-center gap-0.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 py-2.5 rounded-lg transition-colors"
+            >
+              <span className="flex items-center gap-1.5 text-sm">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" />
+                </svg>
+                Quick Log
+              </span>
+              <span className="text-[10px] font-normal text-blue-200">Single exercise</span>
+            </Link>
+            <Link
+              href="/workouts/new"
+              className="flex-1 inline-flex flex-col items-center justify-center gap-0.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-4 py-2.5 rounded-lg transition-colors"
+            >
+              <span className="flex items-center gap-1.5 text-sm">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Start Workout
+              </span>
+              <span className="text-[10px] font-normal text-emerald-200">Full session</span>
+            </Link>
+          </div>
+        </div>
 
-      {/* Recent Workouts */}
-      <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Recent Workouts</h2>
-          <Link href="/workouts" className="text-emerald-500 text-sm hover:underline">
-            View all
-          </Link>
-        </div>
-        {recentWorkouts.length === 0 ? (
-          <p className="text-gray-500 text-sm py-8 text-center">
-            No workouts yet. Start your first one!
-          </p>
-        ) : (
+        {/* Recent Workouts */}
+        <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Recent Workouts</h2>
+            <Link href="/workouts" className="text-emerald-500 text-sm hover:underline">
+              View all
+            </Link>
+          </div>
           <div className="space-y-3">
             {recentWorkouts.map((w) => {
               const isActive = !w.finishedAt;
@@ -353,20 +388,15 @@ export default function DashboardPage() {
               );
             })}
           </div>
-        )}
-      </div>
-
-      {/* Muscle Group Distribution */}
-      <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Sets by Muscle Group</h2>
-          <span className="text-gray-500 text-sm">Last 30 days</span>
         </div>
-        {muscleData.length === 0 ? (
-          <p className="text-gray-500 text-sm py-8 text-center">
-            No data yet. Complete some workouts to see distribution.
-          </p>
-        ) : (
+
+        {/* Muscle Group Distribution */}
+        {muscleData.length > 0 && (
+        <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Sets by Muscle Group</h2>
+            <span className="text-gray-500 text-sm">Last 30 days</span>
+          </div>
           <div className="flex flex-col items-center overflow-visible">
             <ResponsiveContainer width="100%" height={360}>
               <PieChart margin={{ top: 30, right: 60, bottom: 30, left: 60 }}>
@@ -426,8 +456,10 @@ export default function DashboardPage() {
               </PieChart>
             </ResponsiveContainer>
           </div>
+        </div>
         )}
-      </div>
+        </>
+      )}
 
       {/* Date Edit Modal */}
       {editingDateId && (
