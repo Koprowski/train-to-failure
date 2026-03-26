@@ -528,9 +528,10 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
         body: JSON.stringify({ exerciseId, completed: true }),
       });
       if (res.ok) {
-        const updated = await (await fetch(`/api/workouts/${workout.id}`)).json();
-        setWorkout(updated);
-        initEditState(updated);
+        const newSet = await res.json();
+        setWorkout((prev) => prev ? { ...prev, sets: [...prev.sets, newSet] } : prev);
+      } else {
+        console.error("Failed to add exercise:", await res.text());
       }
     } catch (err) {
       console.error("Failed to add exercise:", err);
