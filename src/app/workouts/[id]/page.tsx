@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import DateTimePicker from "@/components/DateTimePicker";
+import ExerciseProgressHistory, { type ExerciseHistoryEntry } from "@/components/ExerciseProgressHistory";
 import { slugify } from "@/lib/slugify";
 
 interface Exercise {
@@ -184,7 +185,9 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [favoriteExerciseIds, setFavoriteExerciseIds] = useState<Set<string>>(new Set());
   const [favoriteWorkout, setFavoriteWorkout] = useState(false);
-  const [expandedProgress, setExpandedProgress] = useState<Set<string>>(new Set());
+  const [exerciseHistory, setExerciseHistory] = useState<Record<string, ExerciseHistoryEntry[]>>({});
+  const [exerciseHistoryLoading, setExerciseHistoryLoading] = useState<Record<string, boolean>>({});
+  const [expandedExerciseHistory, setExpandedExerciseHistory] = useState<Record<string, boolean>>({});
 
   // Inline edit state
   const [editName, setEditName] = useState("");
@@ -227,6 +230,63 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [id, initEditState]);
+
+  useEffect(() => {
+    if (!workout || workout.sets.length === 0) return;
+
+    const exerciseIds = Array.from(new Set(workout.sets.map((set) => set.exerciseId)));
+
+    setExpandedExerciseHistory((prev) => {
+      const next: Record<string, boolean> = {};
+      for (const exerciseId of exerciseIds) {
+        next[exerciseId] = prev[exerciseId] ?? true;
+      }
+      return next;
+    });
+
+    let cancelled = false;
+    setExerciseHistoryLoading((prev) => {
+      const next = { ...prev };
+      for (const exerciseId of exerciseIds) {
+        next[exerciseId] = true;
+      }
+      return next;
+    });
+
+    void Promise.all(
+      exerciseIds.map(async (exerciseId) => {
+        try {
+          const res = await fetch(`/api/stats?exerciseId=${exerciseId}`);
+          const data = res.ok ? await res.json() : null;
+          return { exerciseId, history: Array.isArray(data?.history) ? data.history as ExerciseHistoryEntry[] : [] };
+        } catch {
+          return { exerciseId, history: [] as ExerciseHistoryEntry[] };
+        }
+      })
+    ).then((results) => {
+      if (cancelled) return;
+
+      setExerciseHistory((prev) => {
+        const next = { ...prev };
+        for (const result of results) {
+          next[result.exerciseId] = result.history;
+        }
+        return next;
+      });
+
+      setExerciseHistoryLoading((prev) => {
+        const next = { ...prev };
+        for (const result of results) {
+          next[result.exerciseId] = false;
+        }
+        return next;
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [workout]);
 
   const toggleExerciseFavorite = async (exerciseId: string) => {
     setFavoriteExerciseIds((prev) => {
@@ -500,6 +560,66 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
   }, 0);
 
   const completedSets = workout.sets.filter((s) => s.completed).length;
+  const toggleExerciseHistory = (exerciseId: string) => {
+    setExpandedExerciseHistory((prev) => ({
+      ...prev,
+      [exerciseId]: !(prev[exerciseId] ?? true),
+    }));
+  };
+
+  const buildCurrentExerciseHistoryEntry = (sets: WorkoutSet[]): ExerciseHistoryEntry => {
+    const normalizedSets = sets
+      .map((set) => {
+        const edits = setEdits[set.id];
+        const weightLbs = edits?.weightLbs !== undefined ? (edits.weightLbs ? Number(edits.weightLbs) : null) : set.weightLbs;
+        const reps = edits?.reps !== undefined ? (edits.reps ? Number(edits.reps) : null) : set.reps;
+        const completed = edits?.completed ?? set.completed;
+        return {
+          setNumber: set.setNumber,
+          weightLbs,
+          reps,
+          completed,
+        };
+      })
+      .filter((set) => set.completed && set.reps !== null);
+
+    let maxWeight = 0;
+    let totalVolume = 0;
+    let estimated1RM = 0;
+    let totalReps = 0;
+    let weightedSetTotal = 0;
+    let weightedSetCount = 0;
+
+    for (const set of normalizedSets) {
+      const weight = set.weightLbs ?? 0;
+      const reps = set.reps ?? 0;
+      totalVolume += weight * reps;
+      totalReps += reps;
+      if (weight > maxWeight) maxWeight = weight;
+      if (weight > 0) {
+        weightedSetTotal += weight;
+        weightedSetCount += 1;
+      }
+      const e1rm = weight > 0 ? (reps === 1 ? weight : weight * (1 + reps / 30)) : 0;
+      if (e1rm > estimated1RM) estimated1RM = e1rm;
+    }
+
+    const sourceDate = editDate || workout.startedAt;
+    const date = new Date(sourceDate).toISOString().split("T")[0];
+
+    return {
+      date,
+      workoutName: editName || workout.name,
+      maxWeight,
+      averageWeight: weightedSetCount > 0 ? Math.round((weightedSetTotal / weightedSetCount) * 10) / 10 : 0,
+      totalVolume,
+      estimated1RM: Math.round(estimated1RM * 10) / 10,
+      totalReps,
+      sets: normalizedSets
+        .map(({ setNumber, weightLbs, reps }) => ({ setNumber, weightLbs, reps }))
+        .sort((a, b) => a.setNumber - b.setNumber),
+    };
+  };
 
   return (
     <div className="space-y-6">
@@ -743,32 +863,54 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
               </tbody>
             </table>
           </div>
-          <div className="flex border-t border-gray-800/50">
-            <button
-              onClick={() => addSet(exercise.id)}
-              disabled={addingSet === exercise.id}
-              className="flex-1 py-2 text-xs text-gray-500 hover:text-emerald-400 hover:bg-gray-800/50 transition-colors disabled:opacity-50"
-            >
-              {addingSet === exercise.id ? "Adding..." : "+ Add Set"}
-            </button>
-            <button
-              onClick={() => setExpandedProgress((prev) => {
-                const next = new Set(prev);
-                if (next.has(exercise.id)) next.delete(exercise.id);
-                else next.add(exercise.id);
-                return next;
-              })}
-              className="px-3 py-2 text-xs text-gray-500 hover:text-emerald-400 hover:bg-gray-800/50 transition-colors border-l border-gray-800/50 flex items-center gap-1"
-            >
-              <svg className={`w-3 h-3 transition-transform ${expandedProgress.has(exercise.id) ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-              Progress
-            </button>
-          </div>
-          {expandedProgress.has(exercise.id) && (
-            <div className="px-4 py-3 border-t border-gray-800/50 bg-gray-800/20">
-              <ExerciseProgress exerciseId={exercise.id} />
+          <button
+            onClick={() => addSet(exercise.id)}
+            disabled={addingSet === exercise.id}
+            className="w-full py-2 text-xs text-gray-500 hover:text-emerald-400 hover:bg-gray-800/50 transition-colors disabled:opacity-50 border-t border-gray-800/50"
+          >
+            {addingSet === exercise.id ? "Adding..." : "+ Add Set"}
+          </button>
+          {workout.finishedAt && (
+            <div className="border-t border-gray-800 bg-gray-950/40">
+              <button
+                onClick={() => toggleExerciseHistory(exercise.id)}
+                className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-gray-900/60"
+              >
+                <div>
+                  <p className="text-sm font-medium text-white">Progress History</p>
+                  <p className="text-xs text-gray-500">Expanded by default for completed workouts.</p>
+                </div>
+                <svg
+                  className={`h-4 w-4 text-gray-400 transition-transform ${expandedExerciseHistory[exercise.id] ? "rotate-180" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {expandedExerciseHistory[exercise.id] && (
+                <div className="px-4 pb-4">
+                  {exerciseHistoryLoading[exercise.id] ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-emerald-500" />
+                    </div>
+                  ) : (
+                    <ExerciseProgressHistory
+                      history={[
+                        ...(exerciseHistory[exercise.id] ?? []).filter((entry) => {
+                          const currentDate = (editDate || workout.startedAt).slice(0, 10);
+                          const currentWorkoutName = editName || workout.name;
+                          return !(entry.date === currentDate && entry.workoutName === currentWorkoutName);
+                        }),
+                        buildCurrentExerciseHistoryEntry(sets),
+                      ].sort((a, b) => a.date.localeCompare(b.date))}
+                      compact
+                      showSessionHistory={false}
+                    />
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

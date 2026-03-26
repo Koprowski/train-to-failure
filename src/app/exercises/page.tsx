@@ -289,19 +289,17 @@ export default function ExercisesPage() {
             return equipmentFilter.some((f) => exEquip.includes(f.toLowerCase()));
           });
         }
-        // When searching, sort: favorites first, then alphabetical
-        if (search) {
-          list.sort((a: Exercise, b: Exercise) => {
-            const aFav = favoriteIds.has(a.id) ? 0 : 1;
-            const bFav = favoriteIds.has(b.id) ? 0 : 1;
-            if (aFav !== bFav) return aFav - bFav;
-            return a.name.localeCompare(b.name);
-          });
-        } else if (viewMode === "recent") {
+        if (!search && viewMode === "recent") {
           list = list.filter((ex: Exercise) => recentExerciseIds.has(ex.id));
-        } else if (viewMode === "recommended") {
+        } else if (!search && viewMode === "recommended") {
           list = list.filter((ex: Exercise) => favoriteIds.has(ex.id) || !recentExerciseIds.has(ex.id));
         }
+        list.sort((a: Exercise, b: Exercise) => {
+          const aFav = favoriteIds.has(a.id) ? 0 : 1;
+          const bFav = favoriteIds.has(b.id) ? 0 : 1;
+          if (aFav !== bFav) return aFav - bFav;
+          return a.name.localeCompare(b.name);
+        });
         setExercises(list);
         setLoading(false);
       })

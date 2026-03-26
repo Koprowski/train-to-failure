@@ -4,8 +4,8 @@ import { use, useEffect, useRef, useState, type ChangeEvent, type FormEvent } fr
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { canUploadExerciseImageSessionUser, isAdminSessionUser } from "@/lib/access";
+import ExerciseProgressHistory, { type ExerciseHistoryEntry } from "@/components/ExerciseProgressHistory";
 
 const MUSCLE_GROUPS = [
   "abs", "abductors", "adductors", "back", "biceps", "calves",
@@ -31,16 +31,6 @@ interface Exercise {
   links: string | null;
   isCustom: boolean;
   userId: string | null;
-}
-
-interface HistoryEntry {
-  date: string;
-  workoutName: string;
-  maxWeight: number;
-  totalVolume: number;
-  estimated1RM: number;
-  totalReps: number;
-  sets: { setNumber: number; weightLbs: number | null; reps: number | null }[];
 }
 
 const BADGE_COLORS: Record<string, string> = {
@@ -140,7 +130,7 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
   const isAdmin = isAdminSessionUser(session?.user);
   const canUploadExerciseImage = canUploadExerciseImageSessionUser(session?.user);
   const [exercise, setExercise] = useState<Exercise | null>(null);
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [history, setHistory] = useState<ExerciseHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [chartMetric, setChartMetric] = useState<"maxWeight" | "estimated1RM" | "totalVolume" | "totalReps">("estimated1RM");
   const [editing, setEditing] = useState(false);
@@ -186,7 +176,7 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
         ]).then(([stats, favIds]) => {
           const h = stats?.history ?? [];
           setHistory(h);
-          const hasWeight = h.some((e: HistoryEntry) => e.maxWeight > 0);
+          const hasWeight = h.some((e: ExerciseHistoryEntry) => e.maxWeight > 0);
           setChartMetric(hasWeight ? "estimated1RM" : "totalReps");
           if (Array.isArray(favIds)) {
             setIsFavorite(favIds.includes(ex.id));
@@ -376,9 +366,6 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
     }
   }
 
-  const hasWeightData = history.some((h) => h.maxWeight > 0);
-  const chartLabel = chartMetric === "maxWeight" ? "Max Weight (lbs)" : chartMetric === "estimated1RM" ? "Est. 1RM (lbs)" : chartMetric === "totalVolume" ? "Total Volume (lbs)" : "Total Reps";
-
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
@@ -497,113 +484,7 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
         </div>
       )}
 
-      {/* History Chart */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <h2 className="text-lg font-semibold">Progress History</h2>
-          <div className="flex gap-2">
-            {(["estimated1RM", "maxWeight", "totalVolume", "totalReps"] as const).map((metric) => {
-              const isWeightMetric = metric !== "totalReps";
-              const disabled = isWeightMetric && !hasWeightData;
-              return (
-                <button
-                  key={metric}
-                  onClick={() => !disabled && setChartMetric(metric)}
-                  disabled={disabled}
-                  className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
-                    chartMetric === metric
-                      ? "bg-emerald-500 text-white"
-                      : disabled
-                        ? "bg-gray-800 text-gray-600 cursor-not-allowed"
-                        : "bg-gray-800 text-gray-400 hover:text-white"
-                  }`}
-                >
-                  {metric === "maxWeight" ? "Weight" : metric === "estimated1RM" ? "Est. 1RM" : metric === "totalVolume" ? "Volume" : "Reps"}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        {history.length === 0 ? (
-          <p className="text-gray-500 text-sm py-8 text-center">
-            No history yet. Log some sets to see progress.
-          </p>
-        ) : (
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={history}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis
-                dataKey="date"
-                stroke="#6b7280"
-                fontSize={12}
-                tickFormatter={(d) => {
-                  const date = new Date(d + "T00:00:00");
-                  return `${date.getMonth() + 1}/${date.getDate()}`;
-                }}
-              />
-              <YAxis stroke="#6b7280" fontSize={12} domain={[(min: number) => Math.max(0, Math.floor(min * 0.9)), (max: number) => Math.ceil(max * 1.05)]} />
-              <Tooltip
-                contentStyle={{ backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: "8px" }}
-                labelStyle={{ color: "#fff" }}
-                itemStyle={{ color: "#d1d5db" }}
-                formatter={(value: number | undefined) => [value ?? 0, chartLabel]}
-              />
-              <Line
-                type="monotone"
-                dataKey={chartMetric}
-                stroke="#10b981"
-                strokeWidth={2}
-                dot={{ fill: "#10b981", r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        )}
-      </div>
-
-      {/* Recent History Table */}
-      {history.length > 0 && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-          <h2 className="text-lg font-semibold mb-4">Session History</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-gray-400 border-b border-gray-800">
-                  <th className="text-left py-2 pr-4">Date</th>
-                  <th className="text-left py-2 pr-4">Workout</th>
-                  <th className="text-right py-2 pr-4">Sets</th>
-                  <th className="text-right py-2 pr-4">Reps</th>
-                  {hasWeightData && <th className="text-right py-2 pr-4">Max Weight</th>}
-                  {hasWeightData && <th className="text-right py-2 pr-4">Volume</th>}
-                  {hasWeightData && <th className="text-right py-2">Est. 1RM</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {history.slice().reverse().slice(0, 20).map((h) => (
-                  <tr key={h.date} className="border-b border-gray-800/50">
-                    <td className="py-2.5 pr-4 text-gray-300">{h.date}</td>
-                    <td className="py-2.5 pr-4 text-gray-300">{h.workoutName}</td>
-                    <td className="py-2.5 pr-4">
-                      <div className="flex justify-end gap-2">
-                        {h.sets.map((set) => (
-                          <div key={set.setNumber} className="min-w-[32px] text-center text-xs">
-                            <p className="font-medium text-gray-300">{set.weightLbs ?? "BW"}</p>
-                            <p className="text-gray-400">{set.reps ?? 0}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="py-2.5 pr-4 text-right">{h.totalReps}</td>
-                    {hasWeightData && <td className="py-2.5 pr-4 text-right">{h.maxWeight} lbs</td>}
-                    {hasWeightData && <td className="py-2.5 pr-4 text-right">{h.totalVolume.toLocaleString()} lbs</td>}
-                    {hasWeightData && <td className="py-2.5 text-right text-emerald-500">{h.estimated1RM} lbs</td>}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      <ExerciseProgressHistory history={history} defaultMetric={chartMetric} />
 
       {/* Delete Confirmation */}
       {canManageExercise && showDeleteConfirm && (

@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -31,6 +32,7 @@ from pathlib import Path
 from typing import Any
 
 from openpyxl import load_workbook
+from openpyxl.cell.cell import Cell
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -83,6 +85,12 @@ class WorkbookRow:
     note: str | None = None
 
 
+@dataclass
+class WorkbookContext:
+    workbook_path: Path
+    videos_lookup: dict[str, dict[str, str | None]]
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Sync exercise library from workbook")
     parser.add_argument("--workbook", default=str(WORKBOOK_PATH), help="Path to OneFootExerciseList.xlsx")
@@ -100,6 +108,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--remove",
         help="Removal selection for apply mode: 'all' or comma-separated candidate numbers from the dry-run report",
+    )
+    parser.add_argument(
+        "--allow-partial",
+        action="store_true",
+        help="Allow apply mode to proceed even when workbook warnings are present",
     )
     return parser.parse_args()
 
@@ -213,6 +226,123 @@ def normalize_text(value: Any) -> str | None:
     return text
 
 
+FORMULA_REFERENCE_RE = re.compile(r"(?<![A-Z0-9_])([A-Z]{1,3})(\d+)(?![A-Z0-9_])")
+HYPERLINK_WITH_REF_RE = re.compile(r'^=HYPERLINK\("([^"]*)"&([A-Z]{1,3}\d+),', re.IGNORECASE)
+HYPERLINK_LITERAL_RE = re.compile(r'^=HYPERLINK\("([^"]+)"(?:,"[^"]*")?\)$', re.IGNORECASE)
+
+
+def extract_hyperlink_formula_path(cell: Cell, sheet: Any) -> str | None:
+    if cell.data_type != "f" or not isinstance(cell.value, str):
+        return None
+
+    formula = cell.value.strip()
+    if not formula.upper().startswith("=HYPERLINK("):
+        return None
+
+    referenced = HYPERLINK_WITH_REF_RE.match(formula)
+    if referenced:
+        prefix, reference = referenced.groups()
+        value = normalize_text(sheet[reference].value)
+        if value is None:
+            return None
+        combined = f"{prefix}{value}".strip()
+        return combined or None
+
+    literal = HYPERLINK_LITERAL_RE.match(formula)
+    if literal:
+        return normalize_text(literal.group(1))
+
+    parts = [part.strip() for part in formula[11:].rstrip(")").split("&")]
+    resolved: list[str] = []
+    for part in parts:
+        if not part:
+            continue
+        if part.startswith('"') and part.endswith('"'):
+            resolved.append(part[1:-1])
+            continue
+        match = FORMULA_REFERENCE_RE.search(part.replace("$", ""))
+        if not match:
+            continue
+        reference = f"{match.group(1)}{match.group(2)}"
+        value = normalize_text(sheet[reference].value)
+        if value:
+            resolved.append(value)
+
+    combined = "".join(resolved).strip()
+    return combined or None
+
+
+def get_source_value(sheet: Any, row_num: int) -> str | None:
+    cell = sheet[f"K{row_num}"]
+    hyperlink_target = getattr(cell.hyperlink, "target", None)
+    if hyperlink_target:
+        return normalize_text(hyperlink_target)
+
+    formula_path = extract_hyperlink_formula_path(cell, sheet)
+    if formula_path:
+        return formula_path
+
+    direct = normalize_text(cell.value)
+    if direct:
+        return direct
+
+    filename = normalize_text(sheet[f"G{row_num}"].value)
+    if filename:
+        return filename
+
+    return None
+
+
+def load_videos_lookup(workbook: Any) -> dict[str, dict[str, str | None]]:
+    if "Videos" not in workbook.sheetnames:
+        return {}
+
+    sheet = workbook["Videos"]
+    lookup: dict[str, dict[str, str | None]] = {}
+    for row_num in range(2, sheet.max_row + 1):
+        key = normalize_text(sheet[f"A{row_num}"].value)
+        if not key:
+            continue
+        lookup[key] = {
+            "exerciseNameOriginal": normalize_text(sheet[f"B{row_num}"].value),
+            "bodyPart": normalize_text(sheet[f"D{row_num}"].value),
+            "equipment": normalize_text(sheet[f"E{row_num}"].value),
+            "gender": normalize_text(sheet[f"F{row_num}"].value),
+        }
+    return lookup
+
+
+def workbook_lookup_value(
+    sheet: Any,
+    row_num: int,
+    column: str,
+    videos_lookup: dict[str, dict[str, str | None]],
+) -> str | None:
+    direct = normalize_text(sheet[f"{column}{row_num}"].value)
+    if direct and not direct.startswith("="):
+        return direct
+
+    exercise_id = normalize_text(sheet[f"A{row_num}"].value)
+    if not exercise_id:
+        return direct
+
+    lookup_key = exercise_id[:6]
+    source = videos_lookup.get(lookup_key)
+    if not source:
+        return direct
+
+    if column == "C":
+        return source.get("bodyPart")
+    if column == "D":
+        return source.get("equipment")
+    if column == "B":
+        return source.get("exerciseNameOriginal")
+    if column == "E":
+        return source.get("gender")
+
+    return direct
+
+
 def resolve_source_path(source_value: str, workbook_path: Path) -> Path | None:
     raw = source_value.strip()
     candidates = [
@@ -255,16 +385,17 @@ def workbook_metadata(row: WorkbookRow) -> dict[str, Any] | None:
     }
 
 
-def load_workbook_rows(workbook_path: Path) -> list[WorkbookRow]:
+def load_workbook_rows(workbook_path: Path) -> tuple[list[WorkbookRow], WorkbookContext]:
     workbook = load_workbook(workbook_path, data_only=False)
     sheet = workbook.active
+    videos_lookup = load_videos_lookup(workbook)
     rows: list[WorkbookRow] = []
 
     for row_num in range(2, sheet.max_row + 1):
         target_name = normalize_text(sheet[f"F{row_num}"].value)
-        body_part = normalize_text(sheet[f"C{row_num}"].value)
-        equipment_label = normalize_text(sheet[f"D{row_num}"].value)
-        source_value = normalize_text(sheet[f"K{row_num}"].value)
+        body_part = workbook_lookup_value(sheet, row_num, "C", videos_lookup)
+        equipment_label = workbook_lookup_value(sheet, row_num, "D", videos_lookup)
+        source_value = get_source_value(sheet, row_num)
         current_name = normalize_text(sheet[f"L{row_num}"].value)
         add_flag = truthy(sheet[f"I{row_num}"].value)
         change_flag = truthy(sheet[f"J{row_num}"].value)
@@ -289,7 +420,7 @@ def load_workbook_rows(workbook_path: Path) -> list[WorkbookRow]:
             )
         )
 
-    return rows
+    return rows, WorkbookContext(workbook_path=workbook_path, videos_lookup=videos_lookup)
 
 
 def choose_metadata_source(
@@ -308,6 +439,24 @@ def choose_metadata_source(
     if metadata:
         return metadata, "workbook"
     return None, None
+
+
+def resolve_existing_image_fallback(record: dict[str, Any] | None) -> Path | None:
+    if not record:
+        return None
+
+    image_url = record.get("imageUrl")
+    if not image_url:
+        return None
+
+    filename = Path(image_url).name
+    for candidate in (
+        GIF_DIR / filename,
+        DEFAULT_SOURCE_DIR / filename,
+    ):
+        if candidate.exists():
+            return candidate
+    return None
 
 
 def build_sync_plan(
@@ -337,7 +486,14 @@ def build_sync_plan(
             row_notes[row.row_num] = "Blocked: missing metadata source"
             continue
 
-        if row.source_path is None:
+        target_row = db_by_name.get(row.target_name)
+        current_row = db_by_name.get(row.current_name) if row.current_name else None
+
+        source_path = row.source_path
+        if source_path is None:
+            source_path = resolve_existing_image_fallback(current_row or target_row)
+
+        if source_path is None:
             warning = (
                 f"Row {row.row_num}: source GIF not found for '{row.target_name}' "
                 f"({row.source_value})"
@@ -346,7 +502,7 @@ def build_sync_plan(
             row_notes[row.row_num] = "Blocked: source GIF not found"
             continue
 
-        gif_file = row.source_path.name
+        gif_file = source_path.name
         image_url = f"/gifs/{gif_file}"
         desired = {
             "name": row.target_name,
@@ -358,13 +514,10 @@ def build_sync_plan(
             "links": metadata.get("links"),
             "gifFile": gif_file,
             "imageUrl": image_url,
-            "sourcePath": str(row.source_path),
+            "sourcePath": str(source_path),
             "rowNum": row.row_num,
         }
         desired_records.append(desired)
-
-        target_row = db_by_name.get(row.target_name)
-        current_row = db_by_name.get(row.current_name) if row.current_name else None
 
         update_source = current_row or target_row
         if target_row:
@@ -521,7 +674,13 @@ def build_prisma_seed_source(desired_records: list[dict[str, Any]]) -> str:
         "",
         "const prisma = new PrismaClient();",
         "",
-        "const exercises = [",
+        "const exercises: Array<{",
+        "  name: string;",
+        "  muscleGroups: string;",
+        "  equipment: string;",
+        "  type: string;",
+        "  videoUrl?: string;",
+        "}> = [",
     ]
     for record in desired_records:
         parts = [
@@ -749,7 +908,7 @@ def main() -> int:
     if not workbook_path.exists():
         raise FileNotFoundError(f"Workbook not found: {workbook_path}")
 
-    workbook_rows = load_workbook_rows(workbook_path)
+    workbook_rows, _context = load_workbook_rows(workbook_path)
     db_state = load_db_state()
     seed_exercises = load_seed_exercises()
     plan = build_sync_plan(workbook_rows, db_state, seed_exercises)
@@ -758,6 +917,13 @@ def main() -> int:
 
     if removals_to_apply and not args.apply:
         raise RuntimeError("Removal selection requires --apply.")
+
+    if args.apply and plan["warnings"] and not args.allow_partial:
+        print_report(plan, apply=args.apply, removals_to_apply=removals_to_apply)
+        raise RuntimeError(
+            "Apply aborted because workbook warnings are present. Fix the workbook/script mismatch first, "
+            "or rerun with --allow-partial if you intentionally want a partial sync."
+        )
 
     print_report(plan, apply=args.apply, removals_to_apply=removals_to_apply)
 

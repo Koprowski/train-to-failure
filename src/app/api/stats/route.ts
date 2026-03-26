@@ -34,7 +34,18 @@ export async function GET(request: NextRequest) {
     // Group sets by workout date and compute stats
     const workoutMap = new Map<
       string,
-      { date: string; workoutName: string; maxWeight: number; totalVolume: number; estimated1RM: number; totalReps: number; sets: { setNumber: number; weightLbs: number | null; reps: number | null }[] }
+      {
+        date: string;
+        workoutName: string;
+        maxWeight: number;
+        averageWeight: number;
+        totalVolume: number;
+        estimated1RM: number;
+        totalReps: number;
+        sets: { setNumber: number; weightLbs: number | null; reps: number | null }[];
+        weightedSetCount: number;
+        weightedSetTotal: number;
+      }
     >();
 
     for (const set of sets) {
@@ -51,10 +62,13 @@ export async function GET(request: NextRequest) {
           date: dateKey,
           workoutName: set.workout.name,
           maxWeight: weight,
+          averageWeight: weight,
           totalVolume: 0,
           estimated1RM: e1rm,
           totalReps: 0,
           sets: [],
+          weightedSetCount: weight > 0 ? 1 : 0,
+          weightedSetTotal: weight > 0 ? weight : 0,
         });
       }
 
@@ -62,14 +76,29 @@ export async function GET(request: NextRequest) {
       entry.totalVolume += volume;
       entry.totalReps += reps;
       if (weight > entry.maxWeight) entry.maxWeight = weight;
+      if (weight > 0) {
+        if (entry.weightedSetCount === 0) {
+          entry.weightedSetCount = 1;
+          entry.weightedSetTotal = weight;
+        } else {
+          entry.weightedSetCount += 1;
+          entry.weightedSetTotal += weight;
+        }
+        entry.averageWeight = entry.weightedSetTotal / entry.weightedSetCount;
+      }
       if (e1rm > entry.estimated1RM) entry.estimated1RM = e1rm;
       entry.sets.push({ setNumber: set.setNumber, weightLbs: set.weightLbs, reps: set.reps });
     }
 
-    const history = Array.from(workoutMap.values()).map(({ ...rest }) => ({
-      ...rest,
-      estimated1RM: Math.round(rest.estimated1RM * 10) / 10,
-      sets: rest.sets.sort((a, b) => a.setNumber - b.setNumber),
+    const history = Array.from(workoutMap.values()).map((entry) => ({
+      date: entry.date,
+      workoutName: entry.workoutName,
+      maxWeight: entry.maxWeight,
+      averageWeight: Math.round(entry.averageWeight * 10) / 10,
+      totalVolume: entry.totalVolume,
+      estimated1RM: Math.round(entry.estimated1RM * 10) / 10,
+      totalReps: entry.totalReps,
+      sets: entry.sets.sort((a, b) => a.setNumber - b.setNumber),
     }));
     // PersonalRecord is not user-scoped in the schema. Avoid leaking cross-user data from this endpoint until the model is corrected.
     return NextResponse.json({ history, personalRecords: [] });
