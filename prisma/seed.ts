@@ -2,7 +2,13 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-const exercises = [
+const exercises: Array<{
+  name: string;
+  muscleGroups: string;
+  equipment: string;
+  type: string;
+  videoUrl?: string;
+}> = [
   { name: "Ab Wheel Rollout", muscleGroups: "abs", equipment: "ab_wheel", type: "bodyweight" },
   { name: "Arnold Press", muscleGroups: "shoulders,triceps", equipment: "dumbbell", type: "weight_reps" },
   { name: "Back Extension - Weighted", muscleGroups: "back,glutes,hamstrings", equipment: "machine", type: "weight_reps" },
@@ -19,6 +25,7 @@ const exercises = [
   { name: "Calf Raise", muscleGroups: "calves", equipment: "machine", type: "weight_reps" },
   { name: "Calf Raise - Seated", muscleGroups: "calves", equipment: "bench, dumbbell", type: "weight_reps" },
   { name: "Chest Press - Machine", muscleGroups: "chest,triceps", equipment: "machine", type: "weight_reps" },
+  { name: "Crunch - Kneeling Cable", muscleGroups: "abs,obliques", equipment: "machine", type: "weight_reps" },
   { name: "Curl - Barbbell", muscleGroups: "biceps", equipment: "barbell", type: "weight_reps" },
   { name: "Curl - Dumbbell", muscleGroups: "biceps", equipment: "dumbbell", type: "weight_reps" },
   { name: "Dead Bug", muscleGroups: "abs", equipment: "bodyweight", type: "bodyweight" },
@@ -28,6 +35,7 @@ const exercises = [
   { name: "Dumbbell Fly", muscleGroups: "chest", equipment: "dumbbell,bench", type: "weight_reps" },
   { name: "Face Pull", muscleGroups: "shoulders,back", equipment: "cable", type: "weight_reps" },
   { name: "Farmer's Walk", muscleGroups: "traps,forearms", equipment: "dumbbell", type: "time" },
+  { name: "Fly - Machine", muscleGroups: "chest", equipment: "machine", type: "weight_reps" },
   { name: "Front Raise - Weighted", muscleGroups: "shoulders", equipment: "dumbbell", type: "weight_reps" },
   { name: "Goblet Squat - Dumbbell", muscleGroups: "quads,glutes", equipment: "dumbbell,kettlebell", type: "weight_reps" },
   { name: "Good Morning - Barbell", muscleGroups: "hamstrings,back,glutes", equipment: "barbell", type: "weight_reps" },
@@ -37,14 +45,16 @@ const exercises = [
   { name: "Hip Abductor - Machine", muscleGroups: "abductors,glutes", equipment: "machine", type: "weight_reps" },
   { name: "Hip Adduction -  Bench - Side Plank", muscleGroups: "adductors", equipment: "machine", type: "weight_reps" },
   { name: "Hip Thrust - Barbbell - Bench", muscleGroups: "glutes,hamstrings", equipment: "barbell,bench", type: "weight_reps" },
+  { name: "Hip Thrust - Barbell", muscleGroups: "glutes", equipment: "barbell", type: "weight_reps" },
   { name: "Jump Rope", muscleGroups: "cardio,calves", equipment: "jump_rope", type: "cardio" },
   { name: "Kettlebell - One Arm Clean + Jerk", muscleGroups: "shoulders,glutes,quads,back", equipment: "kettlebell", type: "weight_reps" },
   { name: "Lat Pulldown", muscleGroups: "back,biceps", equipment: "cable,machine", type: "weight_reps" },
   { name: "Lateral Raise - Dumbbell", muscleGroups: "shoulders", equipment: "dumbbell", type: "weight_reps" },
+  { name: "Lateral Raise - Machine", muscleGroups: "shoulders", equipment: "machine", type: "weight_reps" },
   { name: "Leg Curl - Machine", muscleGroups: "hamstrings", equipment: "machine", type: "weight_reps" },
   { name: "Leg Extension", muscleGroups: "quads", equipment: "machine", type: "weight_reps" },
   { name: "Leg Press Machine / Sled", muscleGroups: "quads,glutes,hamstrings", equipment: "machine", type: "weight_reps" },
-  { name: "Overhead Press", muscleGroups: "shoulders,triceps", equipment: "barbell", type: "weight_reps", videoUrl: "https://www.youtube.com/watch?v=2yjwXTZQDDI" },
+  { name: "Overhead Press - Dumbbell", muscleGroups: "shoulders,triceps", equipment: "barbell", type: "weight_reps", videoUrl: "https://www.youtube.com/watch?v=2yjwXTZQDDI" },
   { name: "Plank - Weighted", muscleGroups: "abs", equipment: "bodyweight", type: "time" },
   { name: "Plank Jack", muscleGroups: "abs", equipment: "bodyweight", type: "time" },
   { name: "Preacher Curl", muscleGroups: "biceps", equipment: "barbell,machine", type: "weight_reps" },
@@ -52,15 +62,21 @@ const exercises = [
   { name: "Push Up", muscleGroups: "chest,triceps,shoulders", equipment: "bodyweight", type: "bodyweight" },
   { name: "Reverse Curl", muscleGroups: "forearms,biceps", equipment: "dumbbell", type: "weight_reps" },
   { name: "Reverse Fly - Dumbbell - Inclined", muscleGroups: "shoulders,back", equipment: "dumbbell", type: "weight_reps" },
+  { name: "Reverse Fly (Delt) - Machine", muscleGroups: "shoulders", equipment: "machine", type: "weight_reps" },
   { name: "Row - Dumbbell", muscleGroups: "back,biceps", equipment: "dumbbell", type: "weight_reps" },
+  { name: "Row - Seated Cable", muscleGroups: "back,biceps", equipment: "cable", type: "weight_reps" },
   { name: "Russian Twist", muscleGroups: "abs,obliques", equipment: "bodyweight", type: "weight_reps" },
-  { name: "Seated Cable Row", muscleGroups: "back,biceps", equipment: "cable", type: "weight_reps" },
+  { name: "Shoulder Press - Cable", muscleGroups: "shoulders", equipment: "machine", type: "weight_reps" },
   { name: "Side Plank", muscleGroups: "obliques", equipment: "bodyweight", type: "time" },
   { name: "Situps", muscleGroups: "abs,hip flexors", equipment: "bodyweight", type: "weight_reps" },
+  { name: "Situps - Decline", muscleGroups: "glutes", equipment: "bodyweight", type: "bodyweight" },
   { name: "Situps - Decline Weighted", muscleGroups: "abs", equipment: "bench", type: "weight_reps" },
   { name: "Skull Crusher", muscleGroups: "triceps", equipment: "barbell,bench", type: "weight_reps" },
+  { name: "Squat - Belt", muscleGroups: "quads", equipment: "machine", type: "weight_reps" },
   { name: "Squat - Smith Machine", muscleGroups: "quads,glutes,hamstrings", equipment: "smith machine", type: "weight_reps" },
   { name: "Treadmill Run", muscleGroups: "cardio,quads,calves", equipment: "treadmill", type: "cardio" },
+  { name: "Tricep Dip - Machine", muscleGroups: "biceps,triceps", equipment: "machine", type: "weight_reps" },
+  { name: "Tricep Extension - Machine", muscleGroups: "biceps,triceps", equipment: "machine", type: "weight_reps" },
   { name: "Tricep Pushdown - Cable", muscleGroups: "triceps", equipment: "cable", type: "weight_reps" },
   { name: "Walking Lunge", muscleGroups: "quads,glutes", equipment: "dumbbell", type: "weight_reps" },
   { name: "Wall Sit - Calf Raise", muscleGroups: "quads,glutes,calves", equipment: "bodyweight", type: "time" },

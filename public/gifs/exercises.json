@@ -79,6 +79,11 @@
     "imageUrl": "/gifs/Cable Seated Chest Press - Male.gif",
     "muscleGroups": "chest,triceps"
   },
+  "Crunch - Kneeling Cable": {
+    "gifFile": "Cable Kneeling Crunch - Male.gif",
+    "imageUrl": "/gifs/Cable Kneeling Crunch - Male.gif",
+    "muscleGroups": "abs,obliques"
+  },
   "Curl - Barbbell": {
     "gifFile": "Barbell Curl - Male.gif",
     "imageUrl": "/gifs/Barbell Curl - Male.gif",
@@ -124,9 +129,14 @@
     "imageUrl": "/gifs/Farmers walk - Male.gif",
     "muscleGroups": "traps,forearms"
   },
+  "Fly - Machine": {
+    "gifFile": "Lever Seated Fly - Male.gif",
+    "imageUrl": "/gifs/Lever Seated Fly - Male.gif",
+    "muscleGroups": "chest"
+  },
   "Front Raise - Weighted": {
-    "gifFile": "Weighted Front Raise - Male.gif",
-    "imageUrl": "/gifs/Weighted Front Raise - Male.gif",
+    "gifFile": "Barbell Front Raise - Male.gif",
+    "imageUrl": "/gifs/Barbell Front Raise - Male.gif",
     "muscleGroups": "shoulders"
   },
   "Goblet Squat - Dumbbell": {
@@ -169,6 +179,11 @@
     "imageUrl": "/gifs/Barbell Hip Thrust - Male.gif",
     "muscleGroups": "glutes,hamstrings"
   },
+  "Hip Thrust - Barbell": {
+    "gifFile": "Barbell Hip Thrust - Male.gif",
+    "imageUrl": "/gifs/Barbell Hip Thrust - Male.gif",
+    "muscleGroups": "glutes"
+  },
   "Jump Rope": {
     "gifFile": "Jump Rope - Male.gif",
     "imageUrl": "/gifs/Jump Rope - Male.gif",
@@ -189,6 +204,11 @@
     "imageUrl": "/gifs/Dumbbell Lateral Raise - Male.gif",
     "muscleGroups": "shoulders"
   },
+  "Lateral Raise - Machine": {
+    "gifFile": "Lever Lateral Raise - Male.gif",
+    "imageUrl": "/gifs/Lever Lateral Raise - Male.gif",
+    "muscleGroups": "shoulders"
+  },
   "Leg Curl - Machine": {
     "gifFile": "Lever Lying Leg Curl - Male.gif",
     "imageUrl": "/gifs/Lever Lying Leg Curl - Male.gif",
@@ -204,7 +224,7 @@
     "imageUrl": "/gifs/Sled 45 degrees Leg Press - Male.gif",
     "muscleGroups": "quads,glutes,hamstrings"
   },
-  "Overhead Press": {
+  "Overhead Press - Dumbbell": {
     "gifFile": "Dumbbell Standing Overhead Press - Male.gif",
     "imageUrl": "/gifs/Dumbbell Standing Overhead Press - Male.gif",
     "muscleGroups": "shoulders,triceps"
@@ -244,9 +264,19 @@
     "imageUrl": "/gifs/Dumbbell Reverse Fly - Male.gif",
     "muscleGroups": "shoulders,back"
   },
+  "Reverse Fly (Delt) - Machine": {
+    "gifFile": "Lever Seated Reverse Fly - Male.gif",
+    "imageUrl": "/gifs/Lever Seated Reverse Fly - Male.gif",
+    "muscleGroups": "shoulders"
+  },
   "Row - Dumbbell": {
     "gifFile": "Dumbbell Bent Over Row - Male.gif",
     "imageUrl": "/gifs/Dumbbell Bent Over Row - Male.gif",
+    "muscleGroups": "back,biceps"
+  },
+  "Row - Seated Cable": {
+    "gifFile": "Cable Seated Row - Male.gif",
+    "imageUrl": "/gifs/Cable Seated Row - Male.gif",
     "muscleGroups": "back,biceps"
   },
   "Russian Twist": {
@@ -254,10 +284,10 @@
     "imageUrl": "/gifs/Russian Twist - Male.gif",
     "muscleGroups": "abs,obliques"
   },
-  "Seated Cable Row": {
-    "gifFile": "Cable Seated Row - Male.gif",
-    "imageUrl": "/gifs/Cable Seated Row - Male.gif",
-    "muscleGroups": "back,biceps"
+  "Shoulder Press - Cable": {
+    "gifFile": "Cable Shoulder Press - Male.gif",
+    "imageUrl": "/gifs/Cable Shoulder Press - Male.gif",
+    "muscleGroups": "shoulders"
   },
   "Side Plank": {
     "gifFile": "Side Plank - Male.gif",
@@ -269,15 +299,25 @@
     "imageUrl": "/gifs/Sit up with Arms on Chest - Male.gif",
     "muscleGroups": "abs,hip flexors"
   },
+  "Situps - Decline": {
+    "gifFile": "Decline Sit up - Male.gif",
+    "imageUrl": "/gifs/Decline Sit up - Male.gif",
+    "muscleGroups": "glutes"
+  },
   "Situps - Decline Weighted": {
-    "gifFile": "Dumbbell Decline Sit up - Male.gif",
-    "imageUrl": "/gifs/Dumbbell Decline Sit up - Male.gif",
+    "gifFile": "Dumbbell Decline Sit Up - Male.gif",
+    "imageUrl": "/gifs/Dumbbell Decline Sit Up - Male.gif",
     "muscleGroups": "abs"
   },
   "Skull Crusher": {
     "gifFile": "Barbell Lying Triceps Extension Skull Crusher - Male.gif",
     "imageUrl": "/gifs/Barbell Lying Triceps Extension Skull Crusher - Male.gif",
     "muscleGroups": "triceps"
+  },
+  "Squat - Belt": {
+    "gifFile": "Lever Belt Squat - Male.gif",
+    "imageUrl": "/gifs/Lever Belt Squat - Male.gif",
+    "muscleGroups": "quads"
   },
   "Squat - Smith Machine": {
     "gifFile": "Smith Squat - Male.gif",
@@ -288,6 +328,16 @@
     "gifFile": "Run on Treadmill - Female.gif",
     "imageUrl": "/gifs/Run on Treadmill - Female.gif",
     "muscleGroups": "cardio,quads,calves"
+  },
+  "Tricep Dip - Machine": {
+    "gifFile": "Lever Triceps Dip (plate loaded) - Male.gif",
+    "imageUrl": "/gifs/Lever Triceps Dip (plate loaded) - Male.gif",
+    "muscleGroups": "biceps,triceps"
+  },
+  "Tricep Extension - Machine": {
+    "gifFile": "Lever Triceps Extension (VERSION 2) - Male.gif",
+    "imageUrl": "/gifs/Lever Triceps Extension (VERSION 2) - Male.gif",
+    "muscleGroups": "biceps,triceps"
   },
   "Tricep Pushdown - Cable": {
     "gifFile": "Cable Triceps Pushdown (V bar attachment) - Male.gif",
