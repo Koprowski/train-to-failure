@@ -343,19 +343,35 @@ def workbook_lookup_value(
     return direct
 
 
+def _ci_find(directory: Path, filename: str) -> Path | None:
+    """Case-insensitive file lookup within a directory."""
+    if not directory.is_dir():
+        return None
+    lower = filename.lower()
+    return next((p for p in directory.iterdir() if p.name.lower() == lower), None)
+
+
 def resolve_source_path(source_value: str, workbook_path: Path) -> Path | None:
     raw = source_value.strip()
-    candidates = [
-        Path(raw),
-        workbook_path.parent / raw,
-        workbook_path.parent / "gifs" / raw,
-        GIF_DIR / raw,
-        DEFAULT_SOURCE_DIR / raw,
+    filename = Path(raw).name
+    candidate_dirs = [
+        Path(raw).parent,
+        workbook_path.parent,
+        workbook_path.parent / "gifs",
+        GIF_DIR,
+        DEFAULT_SOURCE_DIR,
     ]
 
-    for candidate in candidates:
+    for candidate in [Path(raw), workbook_path.parent / raw, workbook_path.parent / "gifs" / raw, GIF_DIR / raw, DEFAULT_SOURCE_DIR / raw]:
         if candidate.exists():
             return candidate
+
+    # Case-insensitive fallback
+    for directory in candidate_dirs:
+        match = _ci_find(directory, filename)
+        if match:
+            return match
+
     return None
 
 
@@ -725,6 +741,12 @@ def copy_gifs(desired_records: list[dict[str, Any]]) -> int:
     for record in desired_records:
         source = Path(record["sourcePath"])
         destination = GIF_DIR / record["gifFile"]
+
+        # Remove any differently-cased version of the same file (Linux is case-sensitive)
+        existing = _ci_find(GIF_DIR, record["gifFile"])
+        if existing and existing.name != record["gifFile"]:
+            existing.unlink()
+
         if not destination.exists() or source.read_bytes() != destination.read_bytes():
             shutil.copy2(source, destination)
             copied += 1
