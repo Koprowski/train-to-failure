@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/session";
 import { isAdminSessionUser } from "@/lib/access";
-import { hasUploadedExerciseImage } from "@/lib/exercise-images";
 import { slugify } from "@/lib/slugify";
-import { readFileSync } from "fs";
-import { join } from "path";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -17,22 +14,6 @@ async function findExercise(idOrSlug: string) {
   return all.find((e: { name: string }) => slugify(e.name) === idOrSlug) ?? null;
 }
 
-let gifLookup: Record<string, string> | null = null;
-function getGifLookup(): Record<string, string> {
-  if (!gifLookup) {
-    try {
-      const data = JSON.parse(readFileSync(join(process.cwd(), "public", "gifs", "exercises.json"), "utf-8"));
-      gifLookup = {};
-      for (const [name, entry] of Object.entries(data)) {
-        const e = entry as { imageUrl?: string };
-        if (e.imageUrl) gifLookup[name] = e.imageUrl;
-      }
-    } catch {
-      gifLookup = {};
-    }
-  }
-  return gifLookup;
-}
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -63,14 +44,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     if (!exercise) {
       return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
-    }
-
-    const lookup = getGifLookup();
-    const gifUrl = lookup[exercise.name];
-    const hasManualImageOverride = hasUploadedExerciseImage(exercise.imageUrl);
-    if (gifUrl && !hasManualImageOverride && exercise.imageUrl !== gifUrl) {
-      await prisma.exercise.update({ where: { id: exercise.id }, data: { imageUrl: gifUrl } });
-      exercise = { ...exercise, imageUrl: gifUrl };
     }
 
     return NextResponse.json(exercise);
