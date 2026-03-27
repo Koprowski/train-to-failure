@@ -290,6 +290,16 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
     };
   }, [workout]);
 
+  useEffect(() => {
+    if (!lastAddedExerciseId) return;
+    const card = exerciseCardRefs.current[lastAddedExerciseId];
+    if (card) {
+      card.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    const t = setTimeout(() => setLastAddedExerciseId(null), 2000);
+    return () => clearTimeout(t);
+  }, [lastAddedExerciseId]);
+
   const toggleExerciseFavorite = async (exerciseId: string) => {
     setFavoriteExerciseIds((prev) => {
       const next = new Set(prev);
@@ -579,16 +589,6 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
     }
     setExpandedExerciseHistory(next);
   };
-
-  useEffect(() => {
-    if (!lastAddedExerciseId) return;
-    const card = exerciseCardRefs.current[lastAddedExerciseId];
-    if (card) {
-      card.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-    const t = setTimeout(() => setLastAddedExerciseId(null), 2000);
-    return () => clearTimeout(t);
-  }, [lastAddedExerciseId]);
 
   const buildCurrentExerciseHistoryEntry = (sets: WorkoutSet[]): ExerciseHistoryEntry => {
     const normalizedSets = sets
