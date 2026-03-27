@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, use } from "react";
+import { useEffect, useState, useCallback, use, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -188,6 +188,8 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
   const [exerciseHistory, setExerciseHistory] = useState<Record<string, ExerciseHistoryEntry[]>>({});
   const [exerciseHistoryLoading, setExerciseHistoryLoading] = useState<Record<string, boolean>>({});
   const [expandedExerciseHistory, setExpandedExerciseHistory] = useState<Record<string, boolean>>({});
+  const [lastAddedExerciseId, setLastAddedExerciseId] = useState<string | null>(null);
+  const exerciseCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Inline edit state
   const [editName, setEditName] = useState("");
@@ -530,6 +532,7 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
       if (res.ok) {
         const newSet = await res.json();
         setWorkout((prev) => prev ? { ...prev, sets: [...prev.sets, newSet] } : prev);
+        setLastAddedExerciseId(exerciseId);
       } else {
         console.error("Failed to add exercise:", await res.text());
       }
@@ -567,6 +570,25 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
       [exerciseId]: !(prev[exerciseId] ?? true),
     }));
   };
+
+  const allHistoryExpanded = exerciseGroups.every(({ exercise }) => expandedExerciseHistory[exercise.id] !== false);
+  const toggleAllHistory = () => {
+    const next: Record<string, boolean> = {};
+    for (const { exercise } of exerciseGroups) {
+      next[exercise.id] = !allHistoryExpanded;
+    }
+    setExpandedExerciseHistory(next);
+  };
+
+  useEffect(() => {
+    if (!lastAddedExerciseId) return;
+    const card = exerciseCardRefs.current[lastAddedExerciseId];
+    if (card) {
+      card.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    const t = setTimeout(() => setLastAddedExerciseId(null), 2000);
+    return () => clearTimeout(t);
+  }, [lastAddedExerciseId]);
 
   const buildCurrentExerciseHistoryEntry = (sets: WorkoutSet[]): ExerciseHistoryEntry => {
     const normalizedSets = sets
@@ -750,8 +772,22 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
       </div>
 
       {/* Exercise details */}
+      {workout.finishedAt && exerciseGroups.length > 0 && (
+        <div className="flex justify-end">
+          <button
+            onClick={toggleAllHistory}
+            className="text-xs text-gray-400 hover:text-emerald-400 transition-colors px-2 py-1"
+          >
+            {allHistoryExpanded ? "Collapse all history" : "Expand all history"}
+          </button>
+        </div>
+      )}
       {exerciseGroups.map(({ exercise, sets }) => (
-        <div key={exercise.id} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div
+          key={exercise.id}
+          ref={(el) => { exerciseCardRefs.current[exercise.id] = el; }}
+          className={`bg-gray-900 border rounded-xl overflow-hidden transition-all duration-300 ${lastAddedExerciseId === exercise.id ? "border-emerald-500 shadow-lg shadow-emerald-500/20" : "border-gray-800"}`}
+        >
           <div className="px-4 py-3 bg-gray-800/50 flex items-center justify-between">
             <div>
               <Link href={`/exercises/${slugify(exercise.name)}`} className="font-semibold text-white hover:text-emerald-500 transition-colors">
