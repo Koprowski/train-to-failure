@@ -77,12 +77,12 @@ export default function ExerciseProgressHistory({
           </p>
         ) : (
           <ResponsiveContainer width="100%" height={compact ? 240 : 300}>
-            <LineChart data={history}>
+            <LineChart data={history} margin={{ top: 5, right: chartMetric === "weightAndReps" ? 55 : 20, left: 25, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
               <XAxis
                 dataKey="date"
                 stroke="#6b7280"
-                fontSize={12}
+                tick={{ fontWeight: "bold", fontSize: 12 }}
                 tickFormatter={(value) => {
                   const date = new Date(`${value}T00:00:00`);
                   return `${date.getMonth() + 1}/${date.getDate()}`;
@@ -91,33 +91,47 @@ export default function ExerciseProgressHistory({
               <YAxis
                 yAxisId="left"
                 stroke={chartMetric === "weightAndReps" ? "#10b981" : "#6b7280"}
-                fontSize={12}
+                tick={{ fontWeight: "bold", fontSize: 12 }}
                 domain={[
                   (min: number) => Math.max(0, Math.floor(min * 0.9)),
                   (max: number) => Math.ceil(max * 1.05),
                 ]}
+                label={chartMetric === "weightAndReps" ? {
+                  value: "Avg Weight",
+                  angle: -90,
+                  position: "insideLeft",
+                  style: { textAnchor: "middle", fill: "#10b981", fontWeight: "bold", fontSize: 11 },
+                } : undefined}
               />
               {chartMetric === "weightAndReps" && (
                 <YAxis
                   yAxisId="right"
                   orientation="right"
-                  stroke="#60a5fa"
-                  fontSize={12}
+                  stroke="#3b82f6"
+                  tick={{ fontWeight: "bold", fontSize: 12 }}
                   domain={[
                     (min: number) => Math.max(0, Math.floor(min * 0.9)),
                     (max: number) => Math.ceil(max * 1.05),
                   ]}
+                  label={{
+                    value: "Reps",
+                    angle: 90,
+                    position: "insideRight",
+                    style: { textAnchor: "middle", fill: "#3b82f6", fontWeight: "bold", fontSize: 11 },
+                  }}
                 />
               )}
               <Tooltip
                 contentStyle={{ backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: "8px" }}
                 labelStyle={{ color: "#fff" }}
-                itemStyle={{ color: "#d1d5db" }}
                 formatter={(value: number | undefined, name?: string) => {
                   if (chartMetric === "weightAndReps") {
                     return [value ?? 0, name ?? ""];
                   }
-                  return [value ?? 0, chartLabel];
+                  const formatted = chartMetric === "totalVolume"
+                    ? (value ?? 0).toLocaleString()
+                    : value ?? 0;
+                  return [formatted, chartLabel];
                 }}
               />
               {chartMetric === "weightAndReps" ? (
@@ -137,9 +151,9 @@ export default function ExerciseProgressHistory({
                     type="monotone"
                     dataKey="totalReps"
                     name="Reps"
-                    stroke="#60a5fa"
+                    stroke="#3b82f6"
                     strokeWidth={2}
-                    dot={{ fill: "#60a5fa", r: 4 }}
+                    dot={{ fill: "#3b82f6", r: 4 }}
                     activeDot={{ r: 6 }}
                   />
                 </>
