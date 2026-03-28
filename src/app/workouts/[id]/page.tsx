@@ -868,8 +868,8 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
                 <tr className="text-gray-400 text-xs border-b border-gray-800">
                   <th className="py-2 px-4 text-left">Set</th>
                   <th className="py-2 px-3 text-center">Weight</th>
-                  <th className="py-2 px-3 text-right">Reps</th>
-                  <th className="py-2 px-3 text-right">
+                  <th className="py-2 px-3 text-center">Reps</th>
+                  <th className="py-2 px-3 text-center">
                     <span className="group relative inline-flex items-center gap-1 cursor-help">
                       RIR
                       <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -930,28 +930,83 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
                         </button>
                       </div>
                     </td>
-                    <td className="py-1 px-1 text-right">
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        value={getSetValue(set, "reps")}
-                        onChange={(e) => updateSetEdit(set.id, "reps", e.target.value)}
-                        placeholder="--"
-                        className="w-12 bg-transparent border-b border-transparent focus:border-emerald-500 text-right text-white outline-none py-1 px-1 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
+                    <td className="py-1 px-1">
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cur = parseInt(getSetValue(set, "reps")) || 0;
+                            updateSetEdit(set.id, "reps", String(Math.max(0, cur - 1)));
+                          }}
+                          className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors border border-gray-700"
+                          title="-1 rep"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={getSetValue(set, "reps")}
+                          onChange={(e) => updateSetEdit(set.id, "reps", e.target.value)}
+                          placeholder="--"
+                          className="w-10 bg-transparent border-b border-transparent focus:border-emerald-500 text-center text-white outline-none py-1 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cur = parseInt(getSetValue(set, "reps")) || 0;
+                            updateSetEdit(set.id, "reps", String(cur + 1));
+                          }}
+                          className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors border border-gray-700"
+                          title="+1 rep"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
+                          </svg>
+                        </button>
+                      </div>
                     </td>
-                    <td className="py-1 px-1 text-right">
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        step="0.5"
-                        min="0"
-                        max="10"
-                        value={getSetValue(set, "rir")}
-                        onChange={(e) => updateSetEdit(set.id, "rir", e.target.value)}
-                        placeholder="--"
-                        className="w-12 bg-transparent border-b border-transparent focus:border-emerald-500 text-right text-gray-400 outline-none py-1 px-1 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
+                    <td className="py-1 px-1">
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cur = parseFloat(getSetValue(set, "rir")) || 0;
+                            updateSetEdit(set.id, "rir", String(Math.max(0, cur - 1)));
+                          }}
+                          className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors border border-gray-700"
+                          title="-1 RIR"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          min="0"
+                          max="10"
+                          value={getSetValue(set, "rir")}
+                          onChange={(e) => updateSetEdit(set.id, "rir", e.target.value)}
+                          placeholder="--"
+                          className="w-10 bg-transparent border-b border-transparent focus:border-emerald-500 text-center text-gray-400 outline-none py-1 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cur = parseFloat(getSetValue(set, "rir")) || 0;
+                            updateSetEdit(set.id, "rir", String(Math.min(10, cur + 1)));
+                          }}
+                          className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors border border-gray-700"
+                          title="+1 RIR"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
+                          </svg>
+                        </button>
+                      </div>
                     </td>
                     <td className="py-2 px-3 text-center">
                       <button
