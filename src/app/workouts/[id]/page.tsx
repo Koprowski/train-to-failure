@@ -189,7 +189,9 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
   const [exerciseHistoryLoading, setExerciseHistoryLoading] = useState<Record<string, boolean>>({});
   const [expandedExerciseHistory, setExpandedExerciseHistory] = useState<Record<string, boolean>>({});
   const [lastAddedExerciseId, setLastAddedExerciseId] = useState<string | null>(null);
+  const [lastAddedSetId, setLastAddedSetId] = useState<string | null>(null);
   const exerciseCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const weightInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   // Inline edit state
   const [editName, setEditName] = useState("");
@@ -299,6 +301,12 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
     const t = setTimeout(() => setLastAddedExerciseId(null), 2000);
     return () => clearTimeout(t);
   }, [lastAddedExerciseId]);
+
+  useEffect(() => {
+    if (!lastAddedSetId) return;
+    weightInputRefs.current[lastAddedSetId]?.focus();
+    setLastAddedSetId(null);
+  }, [lastAddedSetId]);
 
   const toggleExerciseFavorite = async (exerciseId: string) => {
     setFavoriteExerciseIds((prev) => {
@@ -491,9 +499,9 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
         body: JSON.stringify({ exerciseId, completed: true }),
       });
       if (res.ok) {
-        // Reload workout but preserve existing set edits
-        const updated = await (await fetch(`/api/workouts/${workout.id}`)).json();
-        setWorkout(updated);
+        const newSet = await res.json();
+        setWorkout((prev) => prev ? { ...prev, sets: [...prev.sets, newSet] } : prev);
+        setLastAddedSetId(newSet.id);
       }
     } catch (err) {
       console.error("Failed to add set:", err);
@@ -838,6 +846,7 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
                       <input
                         type="number"
                         inputMode="decimal"
+                        ref={(el) => { weightInputRefs.current[set.id] = el; }}
                         value={getSetValue(set, "weightLbs")}
                         onChange={(e) => updateSetEdit(set.id, "weightLbs", e.target.value)}
                         placeholder="--"

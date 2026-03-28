@@ -32,7 +32,7 @@ export default function ExerciseProgressHistory({
   const initialMetric: ChartMetric =
     defaultMetric === "maxWeight"
       ? "weightAndReps"
-      : defaultMetric ?? (hasWeightData ? "weightAndReps" : "totalReps");
+      : defaultMetric ?? (hasWeightData ? "estimated1RM" : "totalReps");
   const [chartMetric, setChartMetric] = useState<ChartMetric>(initialMetric);
   const chartLabel =
     chartMetric === "weightAndReps"
@@ -49,7 +49,7 @@ export default function ExerciseProgressHistory({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <h2 className="text-lg font-semibold">Progress History</h2>
           <div className="flex gap-2 flex-wrap">
-            {([hasWeightData ? "weightAndReps" : "totalReps", "estimated1RM", "totalVolume"] as const).map((metric) => {
+            {(["estimated1RM", hasWeightData ? "weightAndReps" : "totalReps", "totalVolume"] as const).map((metric) => {
               const isWeightMetric = metric !== "totalReps";
               const disabled = isWeightMetric && !hasWeightData;
               return (
