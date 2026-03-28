@@ -468,11 +468,19 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
     if (!workout || savingTemplate) return;
     setSavingTemplate(true);
     try {
-      const exercises = exerciseGroups.map((g, i) => ({
-        exerciseId: g.exercise.id,
-        order: i + 1,
-        sets: g.sets.length,
-      }));
+      const exercises = exerciseGroups.map((g, i) => {
+        const workingSets = g.sets.filter((s) => s.setType === "working" || !s.setType);
+        const firstSet = workingSets[0] ?? g.sets[0];
+        const w = firstSet ? (setEdits[firstSet.id]?.weightLbs ?? (firstSet.weightLbs != null ? String(firstSet.weightLbs) : "")) : "";
+        const r = firstSet ? (setEdits[firstSet.id]?.reps ?? (firstSet.reps != null ? String(firstSet.reps) : "")) : "";
+        return {
+          exerciseId: g.exercise.id,
+          order: i + 1,
+          sets: g.sets.length,
+          defaultWeightLbs: w ? parseFloat(w) : null,
+          defaultReps: r ? parseInt(r) : null,
+        };
+      });
 
       const res = await fetch("/api/templates", {
         method: "POST",

@@ -171,7 +171,7 @@ function TemplateForm({
               <input
                 type="number"
                 min={0}
-                step={2.5}
+                step={5}
                 value={fe.defaultWeightLbs}
                 onChange={(e) => update(i, { defaultWeightLbs: e.target.value })}
                 placeholder="—"
