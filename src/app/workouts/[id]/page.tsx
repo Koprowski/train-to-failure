@@ -867,7 +867,7 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
               <thead>
                 <tr className="text-gray-400 text-xs border-b border-gray-800">
                   <th className="py-2 px-4 text-left">Set</th>
-                  <th className="py-2 px-3 text-right">Weight</th>
+                  <th className="py-2 px-3 text-center">Weight</th>
                   <th className="py-2 px-3 text-right">Reps</th>
                   <th className="py-2 px-3 text-right">
                     <span className="group relative inline-flex items-center gap-1 cursor-help">
@@ -891,16 +891,44 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
                     <td className="py-2 px-4">
                       <span className="text-gray-300">{set.setNumber}</span>
                     </td>
-                    <td className="py-1 px-1 text-right">
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        ref={(el) => { weightInputRefs.current[set.id] = el; }}
-                        value={getSetValue(set, "weightLbs")}
-                        onChange={(e) => updateSetEdit(set.id, "weightLbs", e.target.value)}
-                        placeholder="--"
-                        className="w-16 bg-transparent border-b border-transparent focus:border-emerald-500 text-right text-white outline-none py-1 px-1 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
+                    <td className="py-1 px-1">
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cur = parseFloat(getSetValue(set, "weightLbs")) || 0;
+                            updateSetEdit(set.id, "weightLbs", String(Math.max(0, cur - 5)));
+                          }}
+                          className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors border border-gray-700"
+                          title="-5 lbs"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          ref={(el) => { weightInputRefs.current[set.id] = el; }}
+                          value={getSetValue(set, "weightLbs")}
+                          onChange={(e) => updateSetEdit(set.id, "weightLbs", e.target.value)}
+                          placeholder="--"
+                          className="w-14 bg-transparent border-b border-transparent focus:border-emerald-500 text-center text-white outline-none py-1 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cur = parseFloat(getSetValue(set, "weightLbs")) || 0;
+                            updateSetEdit(set.id, "weightLbs", String(cur + 5));
+                          }}
+                          className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors border border-gray-700"
+                          title="+5 lbs"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
+                          </svg>
+                        </button>
+                      </div>
                     </td>
                     <td className="py-1 px-1 text-right">
                       <input

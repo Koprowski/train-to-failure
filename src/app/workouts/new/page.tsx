@@ -1549,7 +1549,7 @@ function WorkoutContent() {
                 <thead>
                   <tr className="text-gray-400 text-xs border-b border-gray-800">
                     <th className="py-2 px-3 text-left w-10">Set</th>
-                    <th className="py-2 px-2 text-right w-20">Weight</th>
+                    <th className="py-2 px-2 text-center w-36">Weight</th>
                     <th className="py-2 px-2 text-right w-16">Reps</th>
                     {(block.exercise.type === "time" || block.exercise.type === "cardio") && (
                       <th className="py-2 px-2 text-right w-16">Time</th>
@@ -1610,17 +1610,45 @@ function WorkoutContent() {
                           className={`border-b border-gray-800/50 ${set.completed ? "bg-emerald-500/5" : ""}`}
                         >
                           <td className="py-1.5 px-3 text-gray-400 font-medium">{set.setNumber}</td>
-                          <td className="py-1.5 px-2">
-                            <input
-                              type="number"
-                              inputMode="decimal"
-                              value={set.weightLbs}
-                              onChange={(e) => updateSet(blockIndex, setIndex, "weightLbs", e.target.value)}
-                              placeholder={set.previousWeight || "lbs"}
-                              className={`w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                                set.weightLbs ? "text-white" : set.previousWeight ? "placeholder-gray-500 italic" : "placeholder-gray-600"
-                              }`}
-                            />
+                          <td className="py-1.5 px-1">
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const cur = parseFloat(set.weightLbs) || 0;
+                                  updateSet(blockIndex, setIndex, "weightLbs", String(Math.max(0, cur - 5)));
+                                }}
+                                className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors"
+                                title="-5 lbs"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </button>
+                              <input
+                                type="number"
+                                inputMode="decimal"
+                                value={set.weightLbs}
+                                onChange={(e) => updateSet(blockIndex, setIndex, "weightLbs", e.target.value)}
+                                placeholder={set.previousWeight || "lbs"}
+                                className={`w-14 bg-gray-800 border border-gray-700 rounded px-1 py-1 text-center text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                                  set.weightLbs ? "text-white" : set.previousWeight ? "placeholder-gray-500 italic" : "placeholder-gray-600"
+                                }`}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const cur = parseFloat(set.weightLbs) || 0;
+                                  updateSet(blockIndex, setIndex, "weightLbs", String(cur + 5));
+                                }}
+                                className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors"
+                                title="+5 lbs"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
+                                </svg>
+                              </button>
+                            </div>
                           </td>
                           <td className="py-1.5 px-2">
                             <input
