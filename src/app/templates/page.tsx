@@ -386,7 +386,7 @@ export default function TemplatesPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {templates.map((t) => (
-            <div key={t.id}>
+            <div key={t.id} className={editingId === t.id ? "col-span-full" : ""}>
               {editingId === t.id ? (
                 <div ref={editRef}>
                   <div className="flex items-center justify-between mb-3">
