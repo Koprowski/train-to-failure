@@ -63,12 +63,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         ...(exercises && {
           exercises: {
             create: exercises.map(
-              (ex: { exerciseId: string; order: number; sets?: number; supersetGroup?: number; notes?: string }) => ({
+              (ex: { exerciseId: string; order: number; sets?: number; supersetGroup?: number; notes?: string; defaultWeightLbs?: number | null; defaultReps?: number | null }) => ({
                 exerciseId: ex.exerciseId,
                 order: ex.order,
                 sets: ex.sets ?? 3,
                 supersetGroup: ex.supersetGroup ?? null,
                 notes: ex.notes ?? null,
+                defaultWeightLbs: ex.defaultWeightLbs ?? null,
+                defaultReps: ex.defaultReps ?? null,
               })
             ),
           },

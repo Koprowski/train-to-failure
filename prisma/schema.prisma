@@ -193,13 +193,15 @@ model WorkoutTemplate {
 }
 
 model TemplateExercise {
-  id            String  @id @default(uuid())
-  templateId    String
-  exerciseId    String
-  order         Int
-  sets          Int     @default(3)
-  supersetGroup Int?
-  notes         String?
+  id               String  @id @default(uuid())
+  templateId       String
+  exerciseId       String
+  order            Int
+  sets             Int     @default(3)
+  supersetGroup    Int?
+  notes            String?
+  defaultWeightLbs Float?
+  defaultReps      Int?
 
   template WorkoutTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
   exercise Exercise        @relation(fields: [exerciseId], references: [id])

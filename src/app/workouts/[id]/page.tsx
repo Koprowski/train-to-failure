@@ -36,6 +36,8 @@ interface Workout {
   duration: number | null;
   notes: string | null;
   sets: WorkoutSet[];
+  templateId: string | null;
+  template: { id: string; name: string } | null;
 }
 
 interface HistoryEntry {
@@ -176,6 +178,8 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
   const [loading, setLoading] = useState(true);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [templateSaved, setTemplateSaved] = useState(false);
+  const [syncingTemplate, setSyncingTemplate] = useState(false);
+  const [templateSynced, setTemplateSynced] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -486,6 +490,43 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
       alert("Failed to save template. Check your connection and try again.");
     } finally {
       setSavingTemplate(false);
+    }
+  };
+
+  const syncToTemplate = async () => {
+    if (!workout?.templateId || syncingTemplate) return;
+    setSyncingTemplate(true);
+    try {
+      // For each exercise group, use the first completed working set's weight/reps as defaults
+      const exercises = exerciseGroups.map((g, i) => {
+        const workingSets = g.sets.filter((s) => s.setType === "working" || !s.setType);
+        const firstSet = workingSets[0] ?? g.sets[0];
+        const w = firstSet ? (setEdits[firstSet.id]?.weightLbs ?? (firstSet.weightLbs != null ? String(firstSet.weightLbs) : "")) : "";
+        const r = firstSet ? (setEdits[firstSet.id]?.reps ?? (firstSet.reps != null ? String(firstSet.reps) : "")) : "";
+        return {
+          exerciseId: g.exercise.id,
+          order: i + 1,
+          sets: g.sets.length,
+          defaultWeightLbs: w ? parseFloat(w) : null,
+          defaultReps: r ? parseInt(r) : null,
+        };
+      });
+
+      const res = await fetch(`/api/templates/${workout.templateId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ exercises }),
+      });
+      if (res.ok) {
+        setTemplateSynced(true);
+        setTimeout(() => setTemplateSynced(false), 3000);
+      } else {
+        alert("Failed to update template. Try again.");
+      }
+    } catch (err) {
+      console.error("Failed to sync template:", err);
+    } finally {
+      setSyncingTemplate(false);
     }
   };
 
@@ -1017,8 +1058,25 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
         </div>
       )}
 
+      {/* Sync to existing template (if workout was created from one) */}
+      {workout.templateId && workout.template && (
+        <div className="flex justify-center pt-2">
+          <button
+            onClick={syncToTemplate}
+            disabled={syncingTemplate || templateSynced}
+            className={`text-sm transition-colors ${templateSynced ? "text-emerald-500" : "text-blue-400 hover:text-blue-300"} disabled:opacity-50`}
+          >
+            {templateSynced
+              ? "✓ Template updated!"
+              : syncingTemplate
+              ? "Updating..."
+              : `Update "${workout.template.name}" template with these numbers`}
+          </button>
+        </div>
+      )}
+
       {/* Save As Template */}
-      <div className="flex justify-center pt-4 pb-2">
+      <div className="flex justify-center pt-2 pb-2">
         <button
           onClick={saveAsTemplate}
           disabled={savingTemplate || templateSaved}

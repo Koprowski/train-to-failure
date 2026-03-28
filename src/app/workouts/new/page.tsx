@@ -484,7 +484,7 @@ function WorkoutContent() {
           if (template && template.name) {
             setWorkoutName(template.name);
             const blocks: ExerciseBlock[] = (template.exercises || []).map(
-              (te: { exercise: Exercise; sets: number; exerciseId: string }) => {
+              (te: { exercise: Exercise; sets: number; exerciseId: string; defaultWeightLbs?: number | null; defaultReps?: number | null }) => {
                 const sets: SetData[] = [];
                 for (let i = 0; i < (te.sets || 3); i++) {
                   sets.push({
@@ -492,8 +492,8 @@ function WorkoutContent() {
                     exerciseId: te.exerciseId,
                     setNumber: i + 1,
                     setType: "working",
-                    weightLbs: "",
-                    reps: "",
+                    weightLbs: te.defaultWeightLbs != null ? String(te.defaultWeightLbs) : "",
+                    reps: te.defaultReps != null ? String(te.defaultReps) : "",
                     timeSecs: "",
                     rir: "",
                     completed: false,
