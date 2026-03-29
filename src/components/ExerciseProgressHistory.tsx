@@ -59,7 +59,7 @@ export default function ExerciseProgressHistory({
                   disabled={disabled}
                   className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
                     chartMetric === metric
-                      ? "bg-emerald-500 text-white"
+                      ? "bg-emerald-500 text-gray-900 font-bold"
                       : disabled
                         ? "bg-gray-800 text-gray-600 cursor-not-allowed"
                         : "bg-gray-800 text-gray-400 hover:text-white"

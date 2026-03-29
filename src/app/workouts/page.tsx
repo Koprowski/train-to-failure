@@ -121,6 +121,7 @@ function SwipeableCard({
   } | null>(null);
   const [offsetX, setOffsetX] = useState(0);
   const [transitioning, setTransitioning] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   const isActive = !workout.finishedAt;
   const hasIncompleteSets = !isActive && workout.sets.some((s) => !s.completed);
@@ -280,7 +281,7 @@ function SwipeableCard({
             </div>
           </div>
           <div className="mt-3 space-y-1.5">
-            {uniqueExercises.slice(0, 5).map((ex) => (
+            {uniqueExercises.slice(0, expanded ? undefined : 5).map((ex) => (
               <div key={ex.id} className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2 min-w-0">
                   <button
@@ -306,8 +307,13 @@ function SwipeableCard({
                 )}
               </div>
             ))}
-            {uniqueExercises.length > 5 && (
-              <p className="text-xs text-gray-500">+{uniqueExercises.length - 5} more exercises</p>
+            {!expanded && uniqueExercises.length > 5 && (
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setExpanded(true); }}
+                className="text-xs text-emerald-500 hover:text-emerald-400 transition-colors text-left"
+              >
+                +{uniqueExercises.length - 5} more exercises
+              </button>
             )}
           </div>
           {totalVolume > 0 && (
@@ -566,7 +572,7 @@ export default function WorkoutsPage() {
         <h1 className="text-2xl font-bold">Workout History</h1>
         <Link
           href="/workouts/new"
-          className="inline-flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-lg text-sm transition-colors"
+          className="inline-flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-gray-900 font-semibold px-3 py-1.5 rounded-lg text-sm transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -580,7 +586,7 @@ export default function WorkoutsPage() {
         <button
           onClick={() => setSortMode("date")}
           className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-            sortMode === "date" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"
+            sortMode === "date" ? "bg-emerald-500 text-gray-900 font-bold" : "bg-gray-800 text-gray-400 hover:text-white"
           }`}
         >
           Date
@@ -588,7 +594,7 @@ export default function WorkoutsPage() {
         <button
           onClick={() => setSortMode("favorites")}
           className={`px-3 py-1.5 text-sm rounded-lg transition-colors flex items-center gap-1.5 ${
-            sortMode === "favorites" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"
+            sortMode === "favorites" ? "bg-emerald-500 text-gray-900 font-bold" : "bg-gray-800 text-gray-400 hover:text-white"
           }`}
         >
           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill={sortMode === "favorites" ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2}>
@@ -697,13 +703,13 @@ export default function WorkoutsPage() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setBodySide("front")}
-                  className={`px-2 py-0.5 text-xs rounded transition-colors ${bodySide === "front" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+                  className={`px-2 py-0.5 text-xs rounded transition-colors ${bodySide === "front" ? "bg-emerald-500 text-gray-900 font-bold" : "bg-gray-800 text-gray-400 hover:text-white"}`}
                 >
                   Front
                 </button>
                 <button
                   onClick={() => setBodySide("back")}
-                  className={`px-2 py-0.5 text-xs rounded transition-colors ${bodySide === "back" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+                  className={`px-2 py-0.5 text-xs rounded transition-colors ${bodySide === "back" ? "bg-emerald-500 text-gray-900 font-bold" : "bg-gray-800 text-gray-400 hover:text-white"}`}
                 >
                   Back
                 </button>

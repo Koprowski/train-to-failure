@@ -100,7 +100,7 @@ function ExerciseProgress({ exerciseId }: { exerciseId: string }) {
                   disabled={disabled}
                   className={`text-[10px] px-2 py-1 rounded transition-colors ${
                     chartMetric === metric
-                      ? "bg-emerald-500 text-white"
+                      ? "bg-emerald-500 text-gray-900 font-bold"
                       : disabled
                         ? "bg-gray-800 text-gray-600 cursor-not-allowed"
                         : "bg-gray-800 text-gray-400 hover:text-white"
@@ -1016,7 +1016,7 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
                         }}
                         className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
                           (setEdits[set.id]?.completed ?? set.completed)
-                            ? "bg-emerald-500 border-emerald-500 text-white"
+                            ? "bg-emerald-500 border-emerald-500 text-gray-900"
                             : "border-gray-600 text-transparent hover:border-gray-500"
                         }`}
                       >

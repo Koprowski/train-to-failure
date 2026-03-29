@@ -1584,7 +1584,7 @@ function WorkoutContent() {
                           }}
                           className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-colors ${
                             block.sets.every((s) => s.completed)
-                              ? "bg-emerald-500 border-emerald-500 text-white"
+                              ? "bg-emerald-500 border-emerald-500 text-gray-900"
                               : "border-gray-600 text-transparent hover:border-gray-500"
                           }`}
                           title={block.sets.every((s) => s.completed) ? "Uncheck all sets" : "Complete all sets"}
@@ -1726,7 +1726,7 @@ function WorkoutContent() {
                               onClick={() => completeSet(blockIndex, setIndex)}
                               className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-colors ${
                                 set.completed
-                                  ? "bg-emerald-500 border-emerald-500 text-white"
+                                  ? "bg-emerald-500 border-emerald-500 text-gray-900"
                                   : "border-gray-600 text-transparent hover:border-gray-500"
                               }`}
                             >
@@ -1832,7 +1832,7 @@ function WorkoutContent() {
                     onClick={() => setMuscleTab(tab)}
                     className={`px-2.5 py-1 rounded-lg text-xs whitespace-nowrap transition-colors ${
                       muscleTab === tab
-                        ? "bg-emerald-500 text-white"
+                        ? "bg-emerald-500 text-gray-900 font-bold"
                         : "bg-gray-800 text-gray-400 hover:text-white"
                     }`}
                   >

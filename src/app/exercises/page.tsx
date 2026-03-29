@@ -503,7 +503,7 @@ export default function ExercisesPage() {
                 <button
                   key={mode}
                   onClick={() => setViewMode(mode)}
-                  className={`px-3 py-1 text-xs rounded-lg transition-colors capitalize ${viewMode === mode ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+                  className={`px-3 py-1 text-xs rounded-lg transition-colors capitalize ${viewMode === mode ? "bg-emerald-500 text-gray-900 font-bold" : "bg-gray-800 text-gray-400 hover:text-white"}`}
                 >
                   {mode}
                 </button>
@@ -685,13 +685,13 @@ export default function ExercisesPage() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setBodySide("front")}
-                  className={`px-2 py-0.5 text-xs rounded transition-colors ${bodySide === "front" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+                  className={`px-2 py-0.5 text-xs rounded transition-colors ${bodySide === "front" ? "bg-emerald-500 text-gray-900 font-bold" : "bg-gray-800 text-gray-400 hover:text-white"}`}
                 >
                   Front
                 </button>
                 <button
                   onClick={() => setBodySide("back")}
-                  className={`px-2 py-0.5 text-xs rounded transition-colors ${bodySide === "back" ? "bg-emerald-500 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+                  className={`px-2 py-0.5 text-xs rounded transition-colors ${bodySide === "back" ? "bg-emerald-500 text-gray-900 font-bold" : "bg-gray-800 text-gray-400 hover:text-white"}`}
                 >
                   Back
                 </button>

@@ -196,7 +196,7 @@ export default function LoginPage() {
                 resetMessages();
               }}
               className={`rounded-lg px-3 py-2 font-medium transition-colors ${
-                mode === value ? "bg-emerald-500 text-white" : "text-gray-400 hover:text-white"
+                mode === value ? "bg-emerald-500 text-gray-900 font-bold" : "text-gray-400 hover:text-white"
               }`}
             >
               {value === "signin" ? "Sign In" : value === "signup" ? "Sign Up" : "Reset"}

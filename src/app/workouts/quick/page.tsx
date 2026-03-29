@@ -264,7 +264,7 @@ export default function QuickLogPage() {
                 onClick={() => setActiveTab(tab)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
                   activeTab === tab
-                    ? "bg-emerald-500 text-white"
+                    ? "bg-emerald-500 text-gray-900 font-bold"
                     : "bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700"
                 }`}
               >

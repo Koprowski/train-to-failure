@@ -149,7 +149,7 @@ export default function DateTimePicker({ value, onClose, onSave }: DateTimePicke
                 day === null
                   ? "invisible"
                   : day === selectedDay && viewMonth === selectedMonth && viewYear === selectedYear
-                    ? "bg-emerald-500 text-white"
+                    ? "bg-emerald-500 text-gray-900 font-bold"
                     : isToday(day)
                       ? "bg-gray-700 text-emerald-400"
                       : "text-gray-300 hover:bg-gray-800"
