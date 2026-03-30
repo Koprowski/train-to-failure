@@ -667,8 +667,8 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
     let totalVolume = 0;
     let estimated1RM = 0;
     let totalReps = 0;
-    let weightedSetTotal = 0;
-    let weightedSetCount = 0;
+    let weightedVolume = 0;
+    let weightedReps = 0;
 
     for (const set of normalizedSets) {
       const weight = set.weightLbs ?? 0;
@@ -677,8 +677,8 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
       totalReps += reps;
       if (weight > maxWeight) maxWeight = weight;
       if (weight > 0) {
-        weightedSetTotal += weight;
-        weightedSetCount += 1;
+        weightedVolume += weight * reps;
+        weightedReps += reps;
       }
       const e1rm = weight > 0 ? (reps === 1 ? weight : weight * (1 + reps / 30)) : 0;
       if (e1rm > estimated1RM) estimated1RM = e1rm;
@@ -691,7 +691,7 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
       date,
       workoutName: editName || workout.name,
       maxWeight,
-      averageWeight: weightedSetCount > 0 ? Math.round((weightedSetTotal / weightedSetCount) * 10) / 10 : 0,
+      averageWeight: weightedReps > 0 ? Math.round((weightedVolume / weightedReps) * 10) / 10 : 0,
       totalVolume,
       estimated1RM: Math.round(estimated1RM * 10) / 10,
       totalReps,

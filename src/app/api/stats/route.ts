@@ -67,8 +67,8 @@ export async function GET(request: NextRequest) {
           estimated1RM: e1rm,
           totalReps: 0,
           sets: [],
-          weightedSetCount: weight > 0 ? 1 : 0,
-          weightedSetTotal: weight > 0 ? weight : 0,
+          weightedVolume: weight > 0 ? weight * reps : 0,
+          weightedReps: weight > 0 ? reps : 0,
         });
       }
 
@@ -77,14 +77,9 @@ export async function GET(request: NextRequest) {
       entry.totalReps += reps;
       if (weight > entry.maxWeight) entry.maxWeight = weight;
       if (weight > 0) {
-        if (entry.weightedSetCount === 0) {
-          entry.weightedSetCount = 1;
-          entry.weightedSetTotal = weight;
-        } else {
-          entry.weightedSetCount += 1;
-          entry.weightedSetTotal += weight;
-        }
-        entry.averageWeight = entry.weightedSetTotal / entry.weightedSetCount;
+        entry.weightedVolume += weight * reps;
+        entry.weightedReps += reps;
+        entry.averageWeight = entry.weightedVolume / entry.weightedReps;
       }
       if (e1rm > entry.estimated1RM) entry.estimated1RM = e1rm;
       entry.sets.push({ setNumber: set.setNumber, weightLbs: set.weightLbs, reps: set.reps });
