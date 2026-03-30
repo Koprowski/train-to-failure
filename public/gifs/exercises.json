@@ -194,9 +194,9 @@
     "imageUrl": "/gifs/Kettlebell One Arm Clean and Jerk - Male.gif",
     "muscleGroups": "shoulders,glutes,quads,back"
   },
-  "Lat Pulldown": {
-    "gifFile": "Cable Lat Pulldown Full Range Of Motion - Male.gif",
-    "imageUrl": "/gifs/Cable Lat Pulldown Full Range Of Motion - Male.gif",
+  "Lateral Pulldown": {
+    "gifFile": "Lever Front Pulldown - Male.gif",
+    "imageUrl": "/gifs/Lever Front Pulldown - Male.gif",
     "muscleGroups": "back,biceps"
   },
   "Lateral Raise - Dumbbell": {
@@ -273,6 +273,11 @@
     "gifFile": "Dumbbell Bent Over Row - Male.gif",
     "imageUrl": "/gifs/Dumbbell Bent Over Row - Male.gif",
     "muscleGroups": "back,biceps"
+  },
+  "Row - EZ Bar Reverse": {
+    "gifFile": "EZ Bar Reverse Grip Bent Over Row - Male.gif",
+    "imageUrl": "/gifs/EZ Bar Reverse Grip Bent Over Row - Male.gif",
+    "muscleGroups": "back"
   },
   "Row - Seated Cable": {
     "gifFile": "Cable Seated Row - Male.gif",
