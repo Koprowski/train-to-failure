@@ -1615,7 +1615,7 @@ function WorkoutContent() {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const cur = parseFloat(set.weightLbs) || 0;
+                                  const cur = parseFloat(set.weightLbs) || parseFloat(set.previousWeight || "") || 0;
                                   updateSet(blockIndex, setIndex, "weightLbs", String(Math.max(0, cur - 5)));
                                 }}
                                 className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors"
@@ -1638,7 +1638,7 @@ function WorkoutContent() {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const cur = parseFloat(set.weightLbs) || 0;
+                                  const cur = parseFloat(set.weightLbs) || parseFloat(set.previousWeight || "") || 0;
                                   updateSet(blockIndex, setIndex, "weightLbs", String(cur + 5));
                                 }}
                                 className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors"
