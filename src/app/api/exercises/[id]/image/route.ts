@@ -1,16 +1,12 @@
-import { join } from "path";
 import { NextRequest, NextResponse } from "next/server";
-import { mkdir, unlink, writeFile } from "fs/promises";
+import { put, del } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/session";
 import { canUploadExerciseImageSessionUser, isAdminSessionUser } from "@/lib/access";
 import {
   buildExerciseImageFileName,
-  EXERCISE_IMAGE_UPLOAD_DIR,
-  EXERCISE_IMAGE_UPLOAD_URL_PREFIX,
   getExerciseImageExtension,
   MAX_EXERCISE_IMAGE_SIZE_BYTES,
-  uploadedExerciseImagePathFromUrl,
 } from "@/lib/exercise-images";
 import { slugify } from "@/lib/slugify";
 
@@ -68,22 +64,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Please select a GIF, PNG, JPG, WEBP, or AVIF image." }, { status: 400 });
     }
 
-    await mkdir(EXERCISE_IMAGE_UPLOAD_DIR, { recursive: true });
-    const fileName = buildExerciseImageFileName(existing.name, extension);
-    const filePath = join(EXERCISE_IMAGE_UPLOAD_DIR, fileName);
-    const publicUrl = `${EXERCISE_IMAGE_UPLOAD_URL_PREFIX}${fileName}`;
-    const oldUploadedPath = uploadedExerciseImagePathFromUrl(existing.imageUrl);
-
-    const bytes = Buffer.from(await file.arrayBuffer());
-    await writeFile(filePath, bytes);
+    const pathname = buildExerciseImageFileName(existing.name, extension);
+    const blob = await put(pathname, file, { access: "public", addRandomSuffix: false });
 
     const updated = await prisma.exercise.update({
       where: { id: existing.id },
-      data: { imageUrl: publicUrl },
+      data: { imageUrl: blob.url },
     });
 
-    if (oldUploadedPath && oldUploadedPath !== filePath) {
-      await unlink(oldUploadedPath).catch(() => undefined);
+    // Delete the old blob if it was a Vercel Blob URL
+    if (existing.imageUrl && existing.imageUrl.includes("blob.vercel-storage.com")) {
+      await del(existing.imageUrl).catch(() => undefined);
     }
 
     return NextResponse.json(updated);
@@ -95,4 +86,3 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     );
   }
 }
-

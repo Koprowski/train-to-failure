@@ -1,9 +1,13 @@
-import { join, extname } from "path";
+import { extname } from "path";
 import { slugify } from "@/lib/slugify";
 
-export const EXERCISE_IMAGE_UPLOAD_URL_PREFIX = "/exercise-images/";
-export const EXERCISE_IMAGE_UPLOAD_DIR = join(process.cwd(), "public", "exercise-images");
 export const MAX_EXERCISE_IMAGE_SIZE_BYTES = 25 * 1024 * 1024;
+
+// Returns true when the exercise has a user-uploaded image stored in Vercel Blob
+// (as opposed to a seed/library URL from the exercise catalogue)
+export function hasUploadedExerciseImage(url?: string | null) {
+  return Boolean(url?.includes("blob.vercel-storage.com"));
+}
 
 const MIME_TO_EXTENSION: Record<string, string> = {
   "image/gif": ".gif",
@@ -14,23 +18,6 @@ const MIME_TO_EXTENSION: Record<string, string> = {
 };
 
 const ALLOWED_EXTENSIONS = new Set([".gif", ".jpg", ".jpeg", ".png", ".webp", ".avif"]);
-
-export function hasUploadedExerciseImage(url?: string | null) {
-  return Boolean(url?.startsWith(EXERCISE_IMAGE_UPLOAD_URL_PREFIX));
-}
-
-export function uploadedExerciseImagePathFromUrl(url?: string | null) {
-  if (!url || !hasUploadedExerciseImage(url)) {
-    return null;
-  }
-
-  const fileName = url.slice(EXERCISE_IMAGE_UPLOAD_URL_PREFIX.length);
-  if (!fileName) {
-    return null;
-  }
-
-  return join(EXERCISE_IMAGE_UPLOAD_DIR, fileName);
-}
 
 export function getExerciseImageExtension(fileName?: string | null, mimeType?: string | null) {
   const fromMime = mimeType ? MIME_TO_EXTENSION[mimeType] : null;
@@ -48,5 +35,5 @@ export function getExerciseImageExtension(fileName?: string | null, mimeType?: s
 }
 
 export function buildExerciseImageFileName(exerciseName: string, extension: string) {
-  return `${slugify(exerciseName)}-${Date.now()}${extension}`;
+  return `exercise-images/${slugify(exerciseName)}-${Date.now()}${extension}`;
 }
