@@ -43,8 +43,8 @@ export async function GET(request: NextRequest) {
         estimated1RM: number;
         totalReps: number;
         sets: { setNumber: number; weightLbs: number | null; reps: number | null }[];
-        weightedSetCount: number;
-        weightedSetTotal: number;
+        weightedVolume: number;
+        weightedReps: number;
       }
     >();
 
