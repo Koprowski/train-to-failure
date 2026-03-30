@@ -1664,17 +1664,45 @@ function WorkoutContent() {
                               </button>
                             </div>
                           </td>
-                          <td className="py-1.5 px-2">
-                            <input
-                              type="number"
-                              inputMode="numeric"
-                              value={set.reps}
-                              onChange={(e) => updateSet(blockIndex, setIndex, "reps", e.target.value)}
-                              placeholder={set.previousReps || "reps"}
-                              className={`w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                                set.reps ? "text-white" : set.previousReps ? "placeholder-gray-500 italic" : "placeholder-gray-600"
-                              }`}
-                            />
+                          <td className="py-1.5 px-1">
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const cur = parseInt(set.reps) || parseInt(set.previousReps || "") || 0;
+                                  updateSet(blockIndex, setIndex, "reps", String(Math.max(0, cur - 1)));
+                                }}
+                                className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors"
+                                title="-1 rep"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </button>
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                value={set.reps}
+                                onChange={(e) => updateSet(blockIndex, setIndex, "reps", e.target.value)}
+                                placeholder={set.previousReps || "reps"}
+                                className={`w-10 bg-gray-800 border border-gray-700 rounded px-1 py-1 text-center text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                                  set.reps ? "text-white" : set.previousReps ? "placeholder-gray-500 italic" : "placeholder-gray-600"
+                                }`}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const cur = parseInt(set.reps) || parseInt(set.previousReps || "") || 0;
+                                  updateSet(blockIndex, setIndex, "reps", String(cur + 1));
+                                }}
+                                className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors"
+                                title="+1 rep"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
+                                </svg>
+                              </button>
+                            </div>
                           </td>
                           {(block.exercise.type === "time" || block.exercise.type === "cardio") && (
                             <td className="py-1.5 px-2">
@@ -1690,20 +1718,48 @@ function WorkoutContent() {
                               />
                             </td>
                           )}
-                          <td className="py-1.5 px-2">
-                            <input
-                              type="number"
-                              inputMode="decimal"
-                              step="0.5"
-                              min="0"
-                              max="10"
-                              value={set.rir}
-                              onChange={(e) => updateSet(blockIndex, setIndex, "rir", e.target.value)}
-                              placeholder={set.previousRir || "RIR"}
-                              className={`w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                                set.rir ? "text-white" : set.previousRir ? "placeholder-gray-500 italic" : "placeholder-gray-600"
-                              }`}
-                            />
+                          <td className="py-1.5 px-1">
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const cur = parseFloat(set.rir) || parseFloat(set.previousRir || "") || 0;
+                                  updateSet(blockIndex, setIndex, "rir", String(Math.max(0, cur - 1)));
+                                }}
+                                className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors"
+                                title="-1 RIR"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </button>
+                              <input
+                                type="number"
+                                inputMode="decimal"
+                                step="0.5"
+                                min="0"
+                                max="10"
+                                value={set.rir}
+                                onChange={(e) => updateSet(blockIndex, setIndex, "rir", e.target.value)}
+                                placeholder={set.previousRir || "RIR"}
+                                className={`w-10 bg-gray-800 border border-gray-700 rounded px-1 py-1 text-center text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                                  set.rir ? "text-white" : set.previousRir ? "placeholder-gray-500 italic" : "placeholder-gray-600"
+                                }`}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const cur = parseFloat(set.rir) || parseFloat(set.previousRir || "") || 0;
+                                  updateSet(blockIndex, setIndex, "rir", String(Math.min(10, cur + 1)));
+                                }}
+                                className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors"
+                                title="+1 RIR"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
+                                </svg>
+                              </button>
+                            </div>
                           </td>
                           <td className="py-1.5 px-2 align-middle">
                             <div className="flex flex-col items-start gap-1">
