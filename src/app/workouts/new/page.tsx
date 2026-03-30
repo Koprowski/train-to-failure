@@ -996,6 +996,8 @@ function WorkoutContent() {
 
     let effectiveWeight = set.weightLbs;
     let effectiveReps = set.reps;
+    let effectiveTimeSecs = set.timeSecs;
+    let effectiveRir = set.rir;
     if (newCompleted) {
       if (!effectiveWeight && set.previousWeight) {
         effectiveWeight = set.previousWeight;
@@ -1004,6 +1006,14 @@ function WorkoutContent() {
       if (!effectiveReps && set.previousReps) {
         effectiveReps = set.previousReps;
         updateSet(blockIndex, setIndex, "reps", effectiveReps);
+      }
+      if (!effectiveTimeSecs && set.previousTimeSecs) {
+        effectiveTimeSecs = set.previousTimeSecs;
+        updateSet(blockIndex, setIndex, "timeSecs", effectiveTimeSecs);
+      }
+      if (!effectiveRir && set.previousRir) {
+        effectiveRir = set.previousRir;
+        updateSet(blockIndex, setIndex, "rir", effectiveRir);
       }
     }
 
@@ -1015,8 +1025,8 @@ function WorkoutContent() {
       setType: set.setType,
       weightLbs: effectiveWeight ? parseFloat(effectiveWeight) : null,
       reps: effectiveReps ? parseInt(effectiveReps) : null,
-      timeSecs: set.timeSecs ? parseInt(set.timeSecs) : null,
-      rir: set.rir ? parseFloat(set.rir) : null,
+      timeSecs: effectiveTimeSecs ? parseInt(effectiveTimeSecs) : null,
+      rir: effectiveRir ? parseFloat(effectiveRir) : null,
       completed: newCompleted,
       notes: set.notes || null,
       workoutExerciseId: set.workoutExerciseId || block.workoutExerciseId || null,
@@ -1080,15 +1090,19 @@ function WorkoutContent() {
       // Save any unsaved sets
       for (const block of exerciseBlocks) {
         for (const set of block.sets) {
-          if (!set.dbId && (set.weightLbs || set.reps || set.timeSecs)) {
+          const w = set.weightLbs || (set.completed ? set.previousWeight : "") || "";
+          const r = set.reps || (set.completed ? set.previousReps : "") || "";
+          const t = set.timeSecs || (set.completed ? set.previousTimeSecs : "") || "";
+          const rir = set.rir || (set.completed ? set.previousRir : "") || "";
+          if (!set.dbId && (w || r || t)) {
             const payload: Record<string, unknown> = {
               exerciseId: set.exerciseId,
               setNumber: set.setNumber,
               setType: set.setType,
-              weightLbs: set.weightLbs ? parseFloat(set.weightLbs) : null,
-              reps: set.reps ? parseInt(set.reps) : null,
-              timeSecs: set.timeSecs ? parseInt(set.timeSecs) : null,
-              rir: set.rir ? parseFloat(set.rir) : null,
+              weightLbs: w ? parseFloat(w) : null,
+              reps: r ? parseInt(r) : null,
+              timeSecs: t ? parseInt(t) : null,
+              rir: rir ? parseFloat(rir) : null,
               completed: set.completed,
               notes: set.notes || null,
               workoutExerciseId: set.workoutExerciseId || block.workoutExerciseId || null,
