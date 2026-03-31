@@ -74,7 +74,19 @@ interface ExerciseBlock {
   elapsed: number;
   paused: boolean;
   finished: boolean;
+  defaultRestSecs: number;
 }
+
+interface RestTimer {
+  totalSeconds: number;
+  remainingSeconds: number;
+  exerciseBlockIndex: number;
+  setIndex: number;
+  startedAt: Date;
+  dbSetId?: string;
+}
+
+const DEFAULT_REST_SECS = 90;
 
 let tempIdCounter = 0;
 function nextTempId() {
@@ -117,6 +129,9 @@ function WorkoutContent() {
   const [started, setStarted] = useState(false);
   const [activeExerciseIndex, setActiveExerciseIndex] = useState<number | null>(null);
   const [workoutStartTime, setWorkoutStartTime] = useState<Date | null>(null);
+  const [workoutElapsed, setWorkoutElapsed] = useState(0);
+  const [workoutPausedAt, setWorkoutPausedAt] = useState<Date | null>(null);
+  const [workoutAccumulatedPause, setWorkoutAccumulatedPause] = useState(0);
   const [renderDateFallback] = useState(() => new Date());
   const exerciseTimerRefs = useRef<Map<number, { startedAt: Date; accumulated: number }>>(new Map());
   const quickExerciseLoaded = useRef(false);
@@ -126,6 +141,7 @@ function WorkoutContent() {
   const [jsonMuscleGroups, setJsonMuscleGroups] = useState<string[]>([]);
   const [previousSessionsByExercise, setPreviousSessionsByExercise] = useState<Record<string, PreviousSessionData>>({});
   const [expandedSetNotes, setExpandedSetNotes] = useState<Record<string, boolean>>({});
+  const [restTimer, setRestTimer] = useState<RestTimer | null>(null);
 
   // Drag-and-drop reordering state
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -260,6 +276,7 @@ function WorkoutContent() {
                   elapsed: 0,
                   paused: true,
                   finished: false,
+                  defaultRestSecs: parseInt(localStorage.getItem(`rest_${we.exerciseId}`) ?? "") || DEFAULT_REST_SECS,
                 });
               }
               setExerciseBlocks(blocks);
@@ -274,6 +291,7 @@ function WorkoutContent() {
                     elapsed: 0,
                     paused: true,
                     finished: false,
+                    defaultRestSecs: parseInt(localStorage.getItem(`rest_${s.exerciseId}`) ?? "") || DEFAULT_REST_SECS,
                   });
                 }
                 blockMap.get(s.exerciseId)!.sets.push({
@@ -433,6 +451,7 @@ function WorkoutContent() {
         elapsed: 0,
         paused: false,
         finished: false,
+        defaultRestSecs: parseInt(localStorage.getItem(`rest_${exercise.id}`) ?? "") || DEFAULT_REST_SECS,
       };
 
       setExerciseBlocks([block]);
@@ -500,7 +519,7 @@ function WorkoutContent() {
                     notes: "",
                   });
                 }
-                return { exercise: te.exercise, sets, elapsed: 0, paused: true, finished: false };
+                return { exercise: te.exercise, sets, elapsed: 0, paused: true, finished: false, defaultRestSecs: parseInt(localStorage.getItem(`rest_${te.exerciseId}`) ?? "") || DEFAULT_REST_SECS };
               }
             );
             setExerciseBlocks(blocks);
@@ -546,6 +565,7 @@ function WorkoutContent() {
                   elapsed: 0,
                   paused: true,
                   finished: false,
+                  defaultRestSecs: parseInt(localStorage.getItem(`rest_${we.exerciseId}`) ?? "") || DEFAULT_REST_SECS,
                 });
               }
             } else {
@@ -559,6 +579,7 @@ function WorkoutContent() {
                     elapsed: 0,
                     paused: true,
                     finished: false,
+                    defaultRestSecs: parseInt(localStorage.getItem(`rest_${s.exerciseId}`) ?? "") || DEFAULT_REST_SECS,
                   });
                 }
                 blockMap.get(s.exerciseId)!.sets.push({
@@ -626,8 +647,91 @@ function WorkoutContent() {
     return () => clearInterval(interval);
   }, [started, activeExerciseIndex]);
 
-  // Compute total workout elapsed from all exercise blocks
+  // Wall-clock workout timer — ticks every second, pauses when workout is paused
+  useEffect(() => {
+    if (!started || !workoutStartTime) return;
+    const id = setInterval(() => {
+      if (workoutPausedAt) return;
+      const wallClock = Math.floor((Date.now() - workoutStartTime.getTime()) / 1000);
+      setWorkoutElapsed(wallClock - workoutAccumulatedPause);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [started, workoutStartTime, workoutPausedAt, workoutAccumulatedPause]);
+
+  const pauseWorkout = () => {
+    setWorkoutPausedAt(new Date());
+    setRestTimer(null); // dismiss rest timer on pause
+    // Also pause the active exercise timer
+    if (activeExerciseIndex !== null) pauseExerciseTimer(activeExerciseIndex);
+  };
+
+  const resumeWorkout = () => {
+    if (!workoutPausedAt) return;
+    const pausedFor = Math.floor((Date.now() - workoutPausedAt.getTime()) / 1000);
+    setWorkoutAccumulatedPause((prev) => prev + pausedFor);
+    setWorkoutPausedAt(null);
+  };
+
+  // Rest timer countdown — re-creates interval only when a new timer starts
+  const restTimerStartKey = restTimer?.startedAt?.getTime();
+  useEffect(() => {
+    if (!restTimer || restTimer.remainingSeconds <= 0) return;
+    const id = setInterval(() => {
+      setRestTimer((prev) => {
+        if (!prev) return null;
+        const next = prev.remainingSeconds - 1;
+        if (next <= 0) {
+          navigator.vibrate?.([200, 100, 200]);
+          return { ...prev, remainingSeconds: 0 };
+        }
+        return { ...prev, remainingSeconds: next };
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restTimerStartKey]);
+
+  const dismissRestTimer = (saveRestSecs = true) => {
+    if (!restTimer) return;
+    if (saveRestSecs && restTimer.dbSetId && workoutId) {
+      const actualRest = Math.floor((Date.now() - restTimer.startedAt.getTime()) / 1000);
+      fetch(`/api/workouts/${workoutId}/sets/${restTimer.dbSetId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ restSecs: actualRest }),
+      }).catch(() => {});
+    }
+    setRestTimer(null);
+  };
+
+  const adjustRest = (deltaSecs: number) => {
+    setRestTimer((prev) => {
+      if (!prev) return null;
+      const newRemaining = Math.min(600, Math.max(5, prev.remainingSeconds + deltaSecs));
+      const newTotal = Math.min(600, Math.max(5, prev.totalSeconds + deltaSecs));
+      return { ...prev, remainingSeconds: newRemaining, totalSeconds: newTotal };
+    });
+  };
+
+  const setExerciseRestSecs = (blockIndex: number, secs: number) => {
+    const exerciseId = exerciseBlocks[blockIndex]?.exercise.id;
+    if (exerciseId) localStorage.setItem(`rest_${exerciseId}`, String(secs));
+    setExerciseBlocks((prev) => {
+      const updated = [...prev];
+      updated[blockIndex] = { ...updated[blockIndex], defaultRestSecs: secs };
+      return updated;
+    });
+  };
+
+  const formatRestSecs = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return s === 0 ? `${m}m` : `${m}:${String(s).padStart(2, "0")}`;
+  };
+
+  // Compute total workout elapsed from all exercise blocks (used for per-exercise display)
   const totalElapsed = exerciseBlocks.reduce((sum, b) => sum + b.elapsed, 0);
+  void totalElapsed; // kept for per-exercise timers; header uses workoutElapsed
 
   const formatTimer = (secs: number) => {
     const h = Math.floor(secs / 3600);
@@ -756,6 +860,7 @@ function WorkoutContent() {
         workoutExerciseId,
       },
     ];
+    const savedRest = localStorage.getItem(`rest_${exercise.id}`);
     const newBlock: ExerciseBlock = {
       exercise,
       sets: defaultSets,
@@ -763,6 +868,7 @@ function WorkoutContent() {
       elapsed: 0,
       paused: true,
       finished: false,
+      defaultRestSecs: savedRest ? parseInt(savedRest) : DEFAULT_REST_SECS,
     };
 
     setExerciseBlocks((prev) => [...prev, newBlock]);
@@ -1032,6 +1138,7 @@ function WorkoutContent() {
       workoutExerciseId: set.workoutExerciseId || block.workoutExerciseId || null,
     };
 
+    let resolvedDbId = set.dbId;
     try {
       if (set.dbId) {
         await fetch(`/api/workouts/${workoutId}/sets/${set.dbId}`, {
@@ -1047,6 +1154,7 @@ function WorkoutContent() {
         });
         const data = await res.json();
         if (data.id) {
+          resolvedDbId = data.id;
           setExerciseBlocks((prev) => {
             const u = [...prev];
             const b = { ...u[blockIndex], sets: [...u[blockIndex].sets] };
@@ -1058,6 +1166,24 @@ function WorkoutContent() {
       }
     } catch (err) {
       console.error("Failed to save set:", err);
+    }
+
+    // Start rest timer after completing a set
+    if (newCompleted) {
+      const restSecs = block.defaultRestSecs ?? DEFAULT_REST_SECS;
+      setRestTimer({
+        totalSeconds: restSecs,
+        remainingSeconds: restSecs,
+        exerciseBlockIndex: blockIndex,
+        setIndex,
+        startedAt: new Date(),
+        dbSetId: resolvedDbId,
+      });
+    } else {
+      // Un-completing a set cancels any active rest timer for it
+      setRestTimer((prev) =>
+        prev?.exerciseBlockIndex === blockIndex && prev?.setIndex === setIndex ? null : prev
+      );
     }
   }, [workoutId, exerciseBlocks]);
 
@@ -1078,6 +1204,7 @@ function WorkoutContent() {
   const finishWorkout = async () => {
     if (!workoutId) return;
     setSaving(true);
+    setRestTimer(null);
 
     try {
       // Finish any active exercise timers
@@ -1116,13 +1243,20 @@ function WorkoutContent() {
         }
       }
 
-      // Finish the workout with total duration
-      const totalDuration = exerciseBlocks.reduce((sum, b) => sum + b.elapsed, 0);
+      // Finish the workout — use wall-clock duration minus any paused time
+      const finishedAt = new Date();
+      const wallClock = workoutStartTime
+        ? Math.floor((finishedAt.getTime() - workoutStartTime.getTime()) / 1000)
+        : workoutElapsed;
+      const finalPause = workoutPausedAt
+        ? workoutAccumulatedPause + Math.floor((finishedAt.getTime() - workoutPausedAt.getTime()) / 1000)
+        : workoutAccumulatedPause;
+      const totalDuration = Math.max(0, wallClock - finalPause);
       await fetch(`/api/workouts/${workoutId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          finishedAt: new Date().toISOString(),
+          finishedAt: finishedAt.toISOString(),
           duration: totalDuration,
           name: workoutName,
           ...(customDate ? { startedAt: new Date(customDate).toISOString() } : {}),
@@ -1378,8 +1512,26 @@ function WorkoutContent() {
           />
         </div>
         <div className="flex items-center gap-3">
-          <div className="text-2xl font-mono text-emerald-500 tabular-nums">
-            {formatTimer(totalElapsed)}
+          <div className="flex items-center gap-1.5">
+            <div className={`text-2xl font-mono tabular-nums ${workoutPausedAt ? "text-yellow-400" : "text-emerald-500"}`}>
+              {formatTimer(workoutElapsed)}
+            </div>
+            <button
+              onClick={workoutPausedAt ? resumeWorkout : pauseWorkout}
+              disabled={saving}
+              title={workoutPausedAt ? "Resume workout" : "Pause workout"}
+              className="text-gray-500 hover:text-gray-300 transition-colors p-1"
+            >
+              {workoutPausedAt ? (
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                </svg>
+              )}
+            </button>
           </div>
           <button
             onClick={discardWorkout}
@@ -1499,6 +1651,23 @@ function WorkoutContent() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                {/* Rest duration config */}
+                <div className="flex items-center gap-0.5 text-xs text-gray-500">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <select
+                    value={block.defaultRestSecs}
+                    onChange={(e) => setExerciseRestSecs(blockIndex, parseInt(e.target.value))}
+                    className="bg-transparent text-gray-500 text-xs border-none outline-none cursor-pointer appearance-none"
+                    title="Rest duration between sets"
+                  >
+                    {[30, 45, 60, 90, 120, 150, 180, 240, 300].map((s) => (
+                      <option key={s} value={s} className="bg-gray-800 text-gray-200">{formatRestSecs(s)}</option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Exercise timer */}
                 <span className={`text-sm font-mono tabular-nums ${isActive ? "text-emerald-400" : "text-gray-500"}`}>
                   {formatTimer(block.elapsed)}
@@ -1942,6 +2111,51 @@ function WorkoutContent() {
         </div>
       )}
 
+      {/* Rest timer banner — sits above the fixed bottom bar */}
+      {restTimer && (
+        <div className="fixed bottom-[57px] left-0 right-0 lg:left-64 bg-gray-950 border-t border-gray-700 z-40">
+          <div className="px-4 pt-3 pb-2">
+            <div className="flex items-center justify-between max-w-lg mx-auto">
+              <span className="text-gray-400 text-sm font-medium">Rest</span>
+              <span
+                className={`font-mono text-3xl font-bold tabular-nums ${
+                  restTimer.remainingSeconds <= 10 ? "text-red-400 animate-pulse" : "text-emerald-400"
+                }`}
+              >
+                {formatTimer(restTimer.remainingSeconds)}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => adjustRest(-15)}
+                  className="text-xs text-gray-400 hover:text-gray-200 px-2 py-1 border border-gray-700 rounded transition-colors"
+                >
+                  −15s
+                </button>
+                <button
+                  onClick={() => adjustRest(15)}
+                  className="text-xs text-gray-400 hover:text-gray-200 px-2 py-1 border border-gray-700 rounded transition-colors"
+                >
+                  +15s
+                </button>
+                <button
+                  onClick={() => dismissRestTimer()}
+                  className="text-xs bg-emerald-600 hover:bg-emerald-500 text-gray-900 font-bold px-3 py-1 rounded transition-colors"
+                >
+                  Skip
+                </button>
+              </div>
+            </div>
+            {/* Progress bar */}
+            <div className="mt-2 h-1 bg-gray-800 rounded overflow-hidden max-w-lg mx-auto">
+              <div
+                className={`h-1 rounded transition-all duration-1000 ${restTimer.remainingSeconds <= 10 ? "bg-red-500" : "bg-emerald-500"}`}
+                style={{ width: `${Math.max(0, (restTimer.remainingSeconds / restTimer.totalSeconds) * 100)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Fixed bottom bar on mobile */}
       <div className="fixed bottom-0 left-0 right-0 lg:left-64 bg-gray-900 border-t border-gray-800 p-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -1952,6 +2166,29 @@ function WorkoutContent() {
           >
             Discard
           </button>
+          <span className="text-sm text-gray-600">|</span>
+          {workoutPausedAt ? (
+            <button
+              onClick={resumeWorkout}
+              className="text-yellow-400 hover:text-yellow-300 text-sm font-medium flex items-center gap-1"
+            >
+              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+              Resume
+            </button>
+          ) : (
+            <button
+              onClick={pauseWorkout}
+              disabled={saving}
+              className="text-gray-400 hover:text-gray-200 text-sm flex items-center gap-1"
+            >
+              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+              </svg>
+              Pause
+            </button>
+          )}
           <span className="text-sm text-gray-600">|</span>
           <span className="text-sm text-gray-400">
             {exerciseBlocks.length} exercise{exerciseBlocks.length !== 1 ? "s" : ""} &middot;{" "}
