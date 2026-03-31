@@ -45,10 +45,8 @@ export default function ExerciseProgressHistory({
 
   return (
     <div className="space-y-4">
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <h2 className="text-lg font-semibold">Progress History</h2>
-          <div className="flex gap-2 flex-wrap">
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <div className="flex justify-center gap-2 flex-wrap mb-3">
             {(["estimated1RM", hasWeightData ? "weightAndReps" : "totalReps", "totalVolume"] as const).map((metric) => {
               const isWeightMetric = metric !== "totalReps";
               const disabled = isWeightMetric && !hasWeightData;
@@ -69,7 +67,6 @@ export default function ExerciseProgressHistory({
                 </button>
               );
             })}
-          </div>
         </div>
         {history.length === 0 ? (
           <p className="text-gray-500 text-sm py-8 text-center">
@@ -174,7 +171,7 @@ export default function ExerciseProgressHistory({
       </div>
 
       {showSessionHistory && history.length > 0 && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
           <h2 className="text-lg font-semibold mb-4">Session History</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

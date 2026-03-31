@@ -1059,8 +1059,17 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
                 className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-gray-900/60"
               >
                 <div>
-                  <p className="text-sm font-medium text-white">Progress History</p>
-                  <p className="text-xs text-gray-500">Expanded by default for completed workouts.</p>
+                  <p className="text-base font-bold text-white">
+                    Progress History
+                    {" — "}
+                    <Link
+                      href={`/exercises/${exercise.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-emerald-400 hover:text-emerald-300 transition-colors"
+                    >
+                      {exercise.name}
+                    </Link>
+                  </p>
                 </div>
                 <svg
                   className={`h-4 w-4 text-gray-400 transition-transform ${expandedExerciseHistory[exercise.id] ? "rotate-180" : ""}`}
