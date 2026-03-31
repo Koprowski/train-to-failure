@@ -257,7 +257,13 @@ function SwipeableCard({
                 {formatDate(workout.startedAt)} at {formatTime(workout.startedAt)}
               </p>
             </div>
-            <div className="flex items-start gap-2 shrink-0 ml-4">
+            <div className="flex items-start gap-3 shrink-0 ml-4">
+              {totalVolume > 0 && (
+                <div className="text-right pt-0.5">
+                  <p className="text-sm font-semibold text-white">{totalVolume.toLocaleString()} lbs</p>
+                  <p className="text-xs text-gray-500">total lifted</p>
+                </div>
+              )}
               {/* Workout favorite heart */}
               <button
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleWorkoutFavorite(); }}
@@ -316,11 +322,6 @@ function SwipeableCard({
               </button>
             )}
           </div>
-          {totalVolume > 0 && (
-            <p className="text-gray-500 text-xs mt-2">
-              Total volume: {totalVolume.toLocaleString()} lbs
-            </p>
-          )}
         </Link>
       </div>
     </div>
