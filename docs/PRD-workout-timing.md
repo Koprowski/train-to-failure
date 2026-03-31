@@ -249,7 +249,7 @@ Load on exercise add: `localStorage.getItem(`rest_${exerciseId}`) ?? "90"`.
 
 ## Phase 3 — Post-Workout Summary
 
-**Status: `[~]` in progress**
+**Status: `[x]` complete**
 
 ### What to build
 

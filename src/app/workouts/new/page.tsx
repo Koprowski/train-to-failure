@@ -142,6 +142,13 @@ function WorkoutContent() {
   const [previousSessionsByExercise, setPreviousSessionsByExercise] = useState<Record<string, PreviousSessionData>>({});
   const [expandedSetNotes, setExpandedSetNotes] = useState<Record<string, boolean>>({});
   const [restTimer, setRestTimer] = useState<RestTimer | null>(null);
+  const [workoutSummary, setWorkoutSummary] = useState<{
+    workoutId: string;
+    duration: number;
+    totalVolume: number;
+    setsCompleted: number;
+    exerciseCount: number;
+  } | null>(null);
 
   // Drag-and-drop reordering state
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -741,6 +748,15 @@ function WorkoutContent() {
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
+  const formatDuration = (secs: number) => {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    if (h > 0 && m > 0) return `${h}h ${m}m`;
+    if (h > 0) return `${h}h`;
+    if (m > 0) return `${m}m`;
+    return `${secs}s`;
+  };
+
   const startWorkout = async () => {
     if (!workoutName.trim()) return;
     try {
@@ -1263,7 +1279,26 @@ function WorkoutContent() {
         }),
       });
 
-      router.push(`/workouts/${workoutId}`);
+      // Compute summary stats from local state
+      const totalVolume = exerciseBlocks.reduce((sum, block) =>
+        sum + block.sets.reduce((s, set) => {
+          if (!set.completed) return s;
+          const w = parseFloat(set.weightLbs || set.previousWeight || "0") || 0;
+          const r = parseInt(set.reps || set.previousReps || "0") || 0;
+          return s + w * r;
+        }, 0), 0);
+      const setsCompleted = exerciseBlocks.reduce(
+        (sum, block) => sum + block.sets.filter((s) => s.completed).length, 0
+      );
+
+      setWorkoutSummary({
+        workoutId: workoutId!,
+        duration: totalDuration,
+        totalVolume: Math.round(totalVolume),
+        setsCompleted,
+        exerciseCount: exerciseBlocks.length,
+      });
+      setSaving(false);
     } catch (err) {
       console.error("Failed to finish workout:", err);
       setSaving(false);
@@ -1495,6 +1530,59 @@ function WorkoutContent() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
+      </div>
+    );
+  }
+
+  // Post-workout summary screen
+  if (workoutSummary) {
+    return (
+      <div className="flex items-center justify-center min-h-[70vh] px-4">
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 w-full max-w-sm text-center space-y-6">
+          <div>
+            <div className="text-4xl mb-2">✓</div>
+            <h2 className="text-2xl font-bold text-white">Workout Complete</h2>
+            <p className="text-gray-400 text-sm mt-1">{workoutName}</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gray-800 rounded-xl p-4">
+              <div className="text-2xl font-bold text-emerald-400 font-mono tabular-nums">
+                {formatDuration(workoutSummary.duration)}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">Duration</div>
+            </div>
+            <div className="bg-gray-800 rounded-xl p-4">
+              <div className="text-2xl font-bold text-white">
+                {workoutSummary.totalVolume.toLocaleString()}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">Total lbs</div>
+            </div>
+            <div className="bg-gray-800 rounded-xl p-4">
+              <div className="text-2xl font-bold text-white">{workoutSummary.setsCompleted}</div>
+              <div className="text-xs text-gray-500 mt-1">Sets done</div>
+            </div>
+            <div className="bg-gray-800 rounded-xl p-4">
+              <div className="text-2xl font-bold text-white">{workoutSummary.exerciseCount}</div>
+              <div className="text-xs text-gray-500 mt-1">Exercises</div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Link
+              href={`/workouts/${workoutSummary.workoutId}`}
+              className="block w-full bg-emerald-600 hover:bg-emerald-500 text-gray-900 font-bold py-3 rounded-xl transition-colors"
+            >
+              View Workout
+            </Link>
+            <Link
+              href="/workouts"
+              className="block w-full text-gray-400 hover:text-white py-3 rounded-xl transition-colors text-sm"
+            >
+              Done
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
