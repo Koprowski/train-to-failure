@@ -618,9 +618,13 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
     setDeleting(true);
     try {
       const res = await fetch(`/api/workouts/${workout.id}`, { method: "DELETE" });
-      if (res.ok) router.push("/workouts");
+      if (res.ok) {
+        router.push("/workouts");
+        return;
+      }
     } catch (err) {
       console.error("Failed to delete workout:", err);
+    } finally {
       setDeleting(false);
     }
   };

@@ -46,7 +46,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [googleEnabled, setGoogleEnabled] = useState(false);
+  const [googleEnabled, setGoogleEnabled] = useState<boolean | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
 
   useEffect(() => {
@@ -293,7 +293,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        {googleEnabled && mode !== "forgot" && (
+        {googleEnabled === true && mode !== "forgot" && (
           <>
             <div className="my-6 flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-gray-500">
               <div className="h-px flex-1 bg-gray-800" />

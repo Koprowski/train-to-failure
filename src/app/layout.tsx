@@ -38,14 +38,22 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ updated: string[]; created: string[]; skipped: string[] } | null>(null);
+  const [autoCutoffMins, setAutoCutoffMins] = useState<number>(90);
   const { data: session, status } = useSession();
   const isPublicPath = publicPaths.has(pathname);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("workout_auto_cutoff_mins");
+    if (stored !== null) setAutoCutoffMins(parseInt(stored));
+  }, []);
 
   useEffect(() => {
     if (status === "unauthenticated" && !isPublicPath) {
       router.replace("/login");
     }
-  }, [status, isPublicPath, router]);
+    // router intentionally excluded — it's used as an imperative call, not a reactive value
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, isPublicPath]);
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
@@ -208,6 +216,27 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
             <div className="space-y-4">
               <div className="bg-gray-800 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-white mb-1">Auto-complete Workout</h3>
+                <p className="text-xs text-gray-400 mb-3">Automatically finish a workout after it has been running for this long. Useful if you forget to end a session.</p>
+                <select
+                  value={autoCutoffMins}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value);
+                    setAutoCutoffMins(v);
+                    localStorage.setItem("workout_auto_cutoff_mins", String(v));
+                  }}
+                  className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                >
+                  <option value={0}>Off</option>
+                  <option value={30}>30 minutes</option>
+                  <option value={45}>45 minutes</option>
+                  <option value={60}>1 hour</option>
+                  <option value={90}>1.5 hours (default)</option>
+                  <option value={120}>2 hours</option>
+                  <option value={180}>3 hours</option>
+                </select>
+              </div>
+              <div className="bg-gray-800 rounded-lg p-4">
                 <h3 className="text-sm font-medium text-white mb-1">Sync Exercise Library</h3>
                 <p className="text-xs text-gray-400 mb-3">Update exercise images and create new exercises from the GIF library.</p>
                 <button
@@ -251,7 +280,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <title>One Foot Fitness</title>
         <meta name="description" content="Workout tracking app" />

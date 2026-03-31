@@ -117,13 +117,22 @@ function WorkoutContent() {
 
   const [workoutId, setWorkoutId] = useState<string | null>(null);
   const [workoutName, setWorkoutName] = useState("");
-  const [customDate, setCustomDate] = useState("");
+  const [customDate, setCustomDate] = useState<string>(() => {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  });
   const [exerciseBlocks, setExerciseBlocks] = useState<ExerciseBlock[]>([]);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [allExercises, setAllExercises] = useState<Exercise[]>([]);
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [muscleTab, setMuscleTab] = useState("recent");
   const [saving, setSaving] = useState(false);
+  const [discarding, setDiscarding] = useState(false);
+  const [autoCutoffMins] = useState<number>(() => {
+    const stored = typeof window !== "undefined" ? localStorage.getItem("workout_auto_cutoff_mins") : null;
+    return stored !== null ? parseInt(stored) : 90;
+  });
   const [showDateModal, setShowDateModal] = useState(false);
   const [showLauncherDate, setShowLauncherDate] = useState(false);
   const [started, setStarted] = useState(false);
@@ -698,6 +707,16 @@ function WorkoutContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restTimerStartKey]);
 
+  // Auto-complete workout when elapsed time exceeds the configured cutoff
+  useEffect(() => {
+    if (!started || !autoCutoffMins || saving || workoutSummary || workoutPausedAt) return;
+    if (workoutElapsed >= autoCutoffMins * 60) {
+      finishWorkout();
+    }
+  // finishWorkout is stable within a render; workoutElapsed ticks every second
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workoutElapsed, started, autoCutoffMins, saving, workoutSummary, workoutPausedAt]);
+
   const dismissRestTimer = (saveRestSecs = true) => {
     if (!restTimer) return;
     if (saveRestSecs && restTimer.dbSetId && workoutId) {
@@ -1209,10 +1228,13 @@ function WorkoutContent() {
       return;
     }
     if (!confirm("Discard this workout? All logged sets will be deleted.")) return;
+    setDiscarding(true);
     try {
       await fetch(`/api/workouts/${workoutId}`, { method: "DELETE" });
     } catch {
       // Best effort
+    } finally {
+      setDiscarding(false);
     }
     router.push("/");
   };
@@ -1411,7 +1433,7 @@ function WorkoutContent() {
             className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-4"
             onKeyDown={(e) => { if (e.key === "Enter") startWorkout(); }}
           />
-          <label className="block text-sm font-medium text-gray-300 mb-2">Date & Time <span className="text-gray-500 font-normal">(optional, defaults to now)</span></label>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Date & Time</label>
           <button
             type="button"
             onClick={() => setShowLauncherDate(true)}
@@ -1604,6 +1626,17 @@ function WorkoutContent() {
             <div className={`text-2xl font-mono tabular-nums ${workoutPausedAt ? "text-yellow-400" : "text-emerald-500"}`}>
               {formatTimer(workoutElapsed)}
             </div>
+            {autoCutoffMins > 0 && !workoutPausedAt && (() => {
+              const remaining = autoCutoffMins * 60 - workoutElapsed;
+              if (remaining > 0 && remaining <= 300) {
+                return (
+                  <span className="text-xs text-amber-400 font-medium" title="Auto-completing soon">
+                    auto-ends {formatTimer(remaining)}
+                  </span>
+                );
+              }
+              return null;
+            })()}
             <button
               onClick={workoutPausedAt ? resumeWorkout : pauseWorkout}
               disabled={saving}
@@ -1623,13 +1656,20 @@ function WorkoutContent() {
           </div>
           <button
             onClick={discardWorkout}
-            disabled={saving}
-            className="text-gray-400 hover:text-red-400 transition-colors p-2"
+            disabled={saving || discarding}
+            className="text-gray-400 hover:text-red-400 transition-colors p-2 disabled:opacity-50"
             title="Discard workout"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            {discarding ? (
+              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            )}
           </button>
           <button
             onClick={finishWorkout}
@@ -1821,11 +1861,11 @@ function WorkoutContent() {
                   <tr className="text-gray-400 text-xs border-b border-gray-800">
                     <th className="py-2 px-3 text-left w-10">Set</th>
                     <th className="py-2 px-2 text-center w-36">Weight</th>
-                    <th className="py-2 px-2 text-right w-16">Reps</th>
+                    <th className="py-2 px-2 text-center w-16">Reps</th>
                     {(block.exercise.type === "time" || block.exercise.type === "cardio") && (
                       <th className="py-2 px-2 text-right w-16">Time</th>
                     )}
-                    <th className="py-2 px-2 text-right w-14">
+                    <th className="py-2 px-2 text-center w-14">
                       <span className="group relative inline-flex items-center gap-1 cursor-help">
                         RIR
                         <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1838,7 +1878,7 @@ function WorkoutContent() {
                       </span>
                     </th>
                     <th className="py-2 px-2 text-left w-28">Last</th>
-                    <th className="py-2 px-2 text-center w-20" colSpan={2}>
+                    <th className="py-2 px-0 text-center w-20" colSpan={2}>
                       <div className="grid grid-cols-[3rem_2rem] items-center">
                         <div className="flex justify-center">
                         <button
@@ -1882,7 +1922,7 @@ function WorkoutContent() {
                         >
                           <td className="py-1.5 px-3 text-gray-400 font-medium">{set.setNumber}</td>
                           <td className="py-1.5 px-1">
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 justify-center">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1922,7 +1962,7 @@ function WorkoutContent() {
                             </div>
                           </td>
                           <td className="py-1.5 px-1">
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 justify-center">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1976,7 +2016,7 @@ function WorkoutContent() {
                             </td>
                           )}
                           <td className="py-1.5 px-1">
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 justify-center">
                               <button
                                 type="button"
                                 onClick={() => {
