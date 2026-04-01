@@ -284,6 +284,11 @@
     "imageUrl": "/gifs/Cable Seated Row - Male.gif",
     "muscleGroups": "back,biceps"
   },
+  "Run": {
+    "gifFile": "Run - Male.gif",
+    "imageUrl": "/gifs/Run - Male.gif",
+    "muscleGroups": "cardio"
+  },
   "Russian Twist": {
     "gifFile": "Russian Twist - Male.gif",
     "imageUrl": "/gifs/Russian Twist - Male.gif",

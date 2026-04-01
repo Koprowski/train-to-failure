@@ -66,6 +66,7 @@ const exercises: Array<{
   { name: "Row - Dumbbell", muscleGroups: "back,biceps", equipment: "dumbbell", type: "weight_reps" },
   { name: "Row - EZ Bar Reverse", muscleGroups: "back", equipment: "barbell", type: "weight_reps" },
   { name: "Row - Seated Cable", muscleGroups: "back,biceps", equipment: "cable", type: "weight_reps" },
+  { name: "Run", muscleGroups: "cardio", equipment: "bodyweight", type: "cardio" },
   { name: "Russian Twist", muscleGroups: "abs,obliques", equipment: "bodyweight", type: "weight_reps" },
   { name: "Shoulder Press - Cable", muscleGroups: "shoulders", equipment: "machine", type: "weight_reps" },
   { name: "Side Plank", muscleGroups: "obliques", equipment: "bodyweight", type: "time" },
