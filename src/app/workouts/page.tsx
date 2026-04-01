@@ -15,6 +15,7 @@ interface WorkoutSet {
   exerciseId: string;
   weightLbs: number | null;
   reps: number | null;
+  timeSecs: number | null;
   completed: boolean;
   exercise: { name: string; muscleGroups?: string };
 }
@@ -124,7 +125,7 @@ function SwipeableCard({
   const [expanded, setExpanded] = useState(false);
 
   const isActive = !workout.finishedAt;
-  const hasIncompleteSets = !isActive && workout.sets.some((s) => !s.completed);
+  const hasIncompleteSets = !isActive && workout.sets.some((s) => !s.completed && !(s.timeSecs != null && s.timeSecs > 0));
   const uniqueExercises = (() => {
     const map = new Map<string, { id: string; name: string; sets: { weightLbs: number | null; reps: number | null }[] }>();
     for (const s of workout.sets) {

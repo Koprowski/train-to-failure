@@ -242,7 +242,7 @@ function WorkoutContent() {
           ...set,
           previousWeight: previousSet.weightLbs != null ? String(previousSet.weightLbs) : set.previousWeight,
           previousReps: previousSet.reps != null ? String(previousSet.reps) : set.previousReps,
-          previousTimeSecs: previousSet.timeSecs != null ? String(previousSet.timeSecs) : set.previousTimeSecs,
+          previousTimeSecs: previousSet.timeSecs != null ? secsToMmss(previousSet.timeSecs) : set.previousTimeSecs,
           previousRir: previousSet.rir != null ? String(previousSet.rir) : set.previousRir,
         };
       }),
@@ -282,7 +282,7 @@ function WorkoutContent() {
                     setType: s.setType as SetData["setType"],
                     weightLbs: s.weightLbs?.toString() ?? "",
                     reps: s.reps?.toString() ?? "",
-                    timeSecs: s.timeSecs?.toString() ?? "",
+                    timeSecs: s.timeSecs != null ? secsToMmss(s.timeSecs) : "",
                     rir: s.rir?.toString() ?? "",
                     completed: s.completed,
                     notes: s.notes ?? "",
@@ -486,7 +486,7 @@ function WorkoutContent() {
               setType: "working",
               weightLbs: quickWeight ? parseFloat(quickWeight) : null,
               reps: quickReps ? parseInt(quickReps) : null,
-              timeSecs: quickTime ? parseInt(quickTime) : null,
+              timeSecs: quickTime ? (parseMmssToSecs(quickTime) ?? null) : null,
               rir: quickRir ? parseFloat(quickRir) : null,
               completed: true,
               notes: quickNotes || null,
@@ -573,7 +573,7 @@ function WorkoutContent() {
                     setType: s.setType as SetData["setType"],
                     weightLbs: s.weightLbs?.toString() ?? "",
                     reps: s.reps?.toString() ?? "",
-                    timeSecs: s.timeSecs?.toString() ?? "",
+                    timeSecs: s.timeSecs != null ? secsToMmss(s.timeSecs) : "",
                     rir: "",
                     completed: false,
                     notes: "",
@@ -774,6 +774,22 @@ function WorkoutContent() {
     if (h > 0) return `${h}h`;
     if (m > 0) return `${m}m`;
     return `${secs}s`;
+  };
+
+  const secsToMmss = (secs: number): string => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${String(s).padStart(2, "0")}`;
+  };
+  const parseMmssToSecs = (value: string): number | null => {
+    if (!value.trim()) return null;
+    if (value.includes(":")) {
+      const [mPart, sPart] = value.split(":");
+      const total = (parseInt(mPart) || 0) * 60 + (parseInt(sPart) || 0);
+      return total > 0 ? total : null;
+    }
+    const n = parseInt(value);
+    return isNaN(n) || n <= 0 ? null : n;
   };
 
   const startWorkout = async () => {
@@ -1033,7 +1049,7 @@ function WorkoutContent() {
         notes: "",
         previousWeight: previousSet?.weightLbs != null ? String(previousSet.weightLbs) : undefined,
         previousReps: previousSet?.reps != null ? String(previousSet.reps) : undefined,
-        previousTimeSecs: previousSet?.timeSecs != null ? String(previousSet.timeSecs) : undefined,
+        previousTimeSecs: previousSet?.timeSecs != null ? secsToMmss(previousSet.timeSecs) : undefined,
         previousRir: previousSet?.rir != null ? String(previousSet.rir) : undefined,
         workoutExerciseId: block.workoutExerciseId,
       });
@@ -1099,13 +1115,13 @@ function WorkoutContent() {
           setType: (previousSet.setType as SetData["setType"]) || "working",
           weightLbs: previousSet.weightLbs != null ? String(previousSet.weightLbs) : "",
           reps: previousSet.reps != null ? String(previousSet.reps) : "",
-          timeSecs: previousSet.timeSecs != null ? String(previousSet.timeSecs) : "",
+          timeSecs: previousSet.timeSecs != null ? secsToMmss(previousSet.timeSecs) : "",
           rir: previousSet.rir != null ? String(previousSet.rir) : "",
           completed: false,
           notes: block.sets[index]?.notes ?? "",
           previousWeight: previousSet.weightLbs != null ? String(previousSet.weightLbs) : undefined,
           previousReps: previousSet.reps != null ? String(previousSet.reps) : undefined,
-          previousTimeSecs: previousSet.timeSecs != null ? String(previousSet.timeSecs) : undefined,
+          previousTimeSecs: previousSet.timeSecs != null ? secsToMmss(previousSet.timeSecs) : undefined,
           previousRir: previousSet.rir != null ? String(previousSet.rir) : undefined,
           workoutExerciseId: block.workoutExerciseId,
         })),
@@ -1166,7 +1182,7 @@ function WorkoutContent() {
       setType: set.setType,
       weightLbs: effectiveWeight ? parseFloat(effectiveWeight) : null,
       reps: effectiveReps ? parseInt(effectiveReps) : null,
-      timeSecs: effectiveTimeSecs ? parseInt(effectiveTimeSecs) : null,
+      timeSecs: effectiveTimeSecs ? (parseMmssToSecs(effectiveTimeSecs) ?? null) : null,
       rir: effectiveRir ? parseFloat(effectiveRir) : null,
       completed: newCompleted,
       notes: set.notes || null,
@@ -1266,7 +1282,7 @@ function WorkoutContent() {
               setType: set.setType,
               weightLbs: w ? parseFloat(w) : null,
               reps: r ? parseInt(r) : null,
-              timeSecs: t ? parseInt(t) : null,
+              timeSecs: t ? (parseMmssToSecs(t) ?? null) : null,
               rir: rir ? parseFloat(rir) : null,
               completed: set.completed,
               notes: set.notes || null,
@@ -1377,19 +1393,17 @@ function WorkoutContent() {
   const formatPreviousSetSummary = (set: SetData, exerciseType: string) => {
     const parts: string[] = [];
 
-    if (set.previousWeight && set.previousReps) {
-      parts.push(`${set.previousWeight} x ${set.previousReps}`);
+    if (exerciseType === "cardio") {
+      if (set.previousTimeSecs) parts.push(set.previousTimeSecs);
     } else {
-      if (set.previousWeight) parts.push(`${set.previousWeight} lb`);
-      if (set.previousReps) parts.push(`${set.previousReps} reps`);
-    }
-
-    if ((exerciseType === "time" || exerciseType === "cardio") && set.previousTimeSecs) {
-      parts.push(`${set.previousTimeSecs}s`);
-    }
-
-    if (set.previousRir) {
-      parts.push(`RIR ${set.previousRir}`);
+      if (set.previousWeight && set.previousReps) {
+        parts.push(`${set.previousWeight} x ${set.previousReps}`);
+      } else {
+        if (set.previousWeight) parts.push(`${set.previousWeight} lb`);
+        if (set.previousReps) parts.push(`${set.previousReps} reps`);
+      }
+      if (exerciseType === "time" && set.previousTimeSecs) parts.push(set.previousTimeSecs);
+      if (set.previousRir) parts.push(`RIR ${set.previousRir}`);
     }
 
     return parts.join(" • ");
@@ -1860,11 +1874,12 @@ function WorkoutContent() {
                 <thead>
                   <tr className="text-gray-400 text-xs border-b border-gray-800">
                     <th className="py-2 px-3 text-left w-10">Set</th>
-                    <th className="py-2 px-2 text-center w-36">Weight</th>
-                    <th className="py-2 px-2 text-center w-16">Reps</th>
+                    {block.exercise.type !== "cardio" && <th className="py-2 px-2 text-center w-36">Weight</th>}
+                    {block.exercise.type !== "cardio" && <th className="py-2 px-2 text-center w-16">Reps</th>}
                     {(block.exercise.type === "time" || block.exercise.type === "cardio") && (
-                      <th className="py-2 px-2 text-right w-16">Time</th>
+                      <th className="py-2 px-2 text-right w-24">Duration</th>
                     )}
+                    {block.exercise.type !== "cardio" && (
                     <th className="py-2 px-2 text-center w-14">
                       <span className="group relative inline-flex items-center gap-1 cursor-help">
                         RIR
@@ -1877,6 +1892,7 @@ function WorkoutContent() {
                         </span>
                       </span>
                     </th>
+                    )}
                     <th className="py-2 px-2 text-left w-28">Last</th>
                     <th className="py-2 px-0 text-center w-20" colSpan={2}>
                       <div className="grid grid-cols-[3rem_2rem] items-center">
@@ -1913,7 +1929,7 @@ function WorkoutContent() {
                 <tbody>
                   {block.sets.map((set, setIndex) => {
                     const notesVisible = expandedSetNotes[set.tempId] ?? Boolean(set.notes);
-                    const noteColSpan = (block.exercise.type === "time" || block.exercise.type === "cardio") ? 8 : 7;
+                    const noteColSpan = block.exercise.type === "cardio" ? 5 : block.exercise.type === "time" ? 8 : 7;
 
                     return (
                       <Fragment key={set.tempId}>
@@ -1921,6 +1937,7 @@ function WorkoutContent() {
                           className={`border-b border-gray-800/50 ${set.completed ? "bg-emerald-500/5" : ""}`}
                         >
                           <td className="py-1.5 px-3 text-gray-400 font-medium">{set.setNumber}</td>
+                          {block.exercise.type !== "cardio" && (
                           <td className="py-1.5 px-1">
                             <div className="flex items-center gap-1 justify-center">
                               <button
@@ -1961,6 +1978,8 @@ function WorkoutContent() {
                               </button>
                             </div>
                           </td>
+                          )}
+                          {block.exercise.type !== "cardio" && (
                           <td className="py-1.5 px-1">
                             <div className="flex items-center gap-1 justify-center">
                               <button
@@ -2001,20 +2020,22 @@ function WorkoutContent() {
                               </button>
                             </div>
                           </td>
+                          )}
                           {(block.exercise.type === "time" || block.exercise.type === "cardio") && (
                             <td className="py-1.5 px-2">
                               <input
-                                type="number"
+                                type="text"
                                 inputMode="numeric"
                                 value={set.timeSecs}
                                 onChange={(e) => updateSet(blockIndex, setIndex, "timeSecs", e.target.value)}
-                                placeholder={set.previousTimeSecs || "sec"}
+                                placeholder={set.previousTimeSecs || "0:00"}
                                 className={`w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-right text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
                                   set.timeSecs ? "text-white" : set.previousTimeSecs ? "placeholder-gray-500 italic" : "placeholder-gray-600"
                                 }`}
                               />
                             </td>
                           )}
+                          {block.exercise.type !== "cardio" && (
                           <td className="py-1.5 px-1">
                             <div className="flex items-center gap-1 justify-center">
                               <button
@@ -2058,6 +2079,7 @@ function WorkoutContent() {
                               </button>
                             </div>
                           </td>
+                          )}
                           <td className="py-1.5 px-2 align-middle">
                             <div className="flex flex-col items-start gap-1">
                               {formatPreviousSetSummary(set, block.exercise.type) ? (

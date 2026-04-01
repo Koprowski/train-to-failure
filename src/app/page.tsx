@@ -11,6 +11,7 @@ interface WorkoutSet {
   exerciseId: string;
   weightLbs: number | null;
   reps: number | null;
+  timeSecs: number | null;
   completed: boolean;
   exercise: { name: string };
 }
@@ -282,7 +283,7 @@ export default function DashboardPage() {
           <div className="space-y-3">
             {recentWorkouts.map((w) => {
               const isActive = !w.finishedAt;
-              const hasIncompleteSets = !isActive && w.sets.some((s) => !s.completed);
+              const hasIncompleteSets = !isActive && w.sets.some((s) => !s.completed && !(s.timeSecs != null && s.timeSecs > 0));
               const uniqueExercises = (() => {
                 const map = new Map<string, { id: string; name: string; sets: { weightLbs: number | null; reps: number | null }[] }>();
                 for (const s of w.sets) {
