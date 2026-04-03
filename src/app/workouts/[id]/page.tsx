@@ -12,6 +12,7 @@ interface Exercise {
   id: string;
   name: string;
   muscleGroups: string;
+  type: string;
 }
 
 interface WorkoutSet {
@@ -167,9 +168,27 @@ function ExerciseProgress({ exerciseId }: { exerciseId: string }) {
 interface SetEdits {
   weightLbs?: string;
   reps?: string;
+  timeSecs?: string;
   rir?: string;
   completed?: boolean;
 }
+
+const secsToMmss = (secs: number): string => {
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+};
+
+const parseMmssToSecs = (value: string): number | null => {
+  if (!value.trim()) return null;
+  if (value.includes(":")) {
+    const [mPart, sPart] = value.split(":");
+    const total = (parseInt(mPart) || 0) * 60 + (parseInt(sPart) || 0);
+    return total > 0 ? total : null;
+  }
+  const n = parseInt(value);
+  return isNaN(n) || n <= 0 ? null : n;
+};
 
 export default function WorkoutDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -379,9 +398,10 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
     });
   };
 
-  const getSetValue = (set: WorkoutSet, field: "weightLbs" | "reps" | "rir"): string => {
+  const getSetValue = (set: WorkoutSet, field: "weightLbs" | "reps" | "rir" | "timeSecs"): string => {
     const edits = setEdits[set.id];
     if (edits && edits[field] !== undefined) return edits[field]!;
+    if (field === "timeSecs") return set.timeSecs != null ? secsToMmss(set.timeSecs) : "";
     const val = set[field];
     return val != null ? String(val) : "";
   };
@@ -412,6 +432,7 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
         const data: Record<string, number | boolean | null> = {};
         if (edits.weightLbs !== undefined) data.weightLbs = edits.weightLbs ? Number(edits.weightLbs) : null;
         if (edits.reps !== undefined) data.reps = edits.reps ? Number(edits.reps) : null;
+        if (edits.timeSecs !== undefined) data.timeSecs = parseMmssToSecs(edits.timeSecs);
         if (edits.rir !== undefined) data.rir = edits.rir ? Number(edits.rir) : null;
         if (edits.completed !== undefined) data.completed = edits.completed;
         return fetch(`/api/workouts/${workout.id}/sets/${setId}`, {
@@ -871,20 +892,23 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
               <thead>
                 <tr className="text-gray-400 text-xs border-b border-gray-800">
                   <th className="py-2 px-4 text-left">Set</th>
-                  <th className="py-2 px-3 text-center">Weight</th>
-                  <th className="py-2 px-3 text-center">Reps</th>
-                  <th className="py-2 px-3 text-center">
-                    <span className="group relative inline-flex items-center gap-1 cursor-help">
-                      RIR
-                      <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                      <span className="invisible group-hover:visible absolute bottom-full right-0 mb-2 w-48 px-3 py-2 text-xs text-left font-normal text-gray-300 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10">
-                        Reps in Reserve (0-10). How many more reps you could do. 0 = failure.
+                  {exercise.type !== "cardio" && <th className="py-2 px-3 text-center">Weight</th>}
+                  {exercise.type !== "cardio" && <th className="py-2 px-3 text-center">Reps</th>}
+                  {(exercise.type === "time" || exercise.type === "cardio") && <th className="py-2 px-3 text-center">Time</th>}
+                  {exercise.type !== "cardio" && (
+                    <th className="py-2 px-3 text-center">
+                      <span className="group relative inline-flex items-center gap-1 cursor-help">
+                        RIR
+                        <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        <span className="invisible group-hover:visible absolute bottom-full right-0 mb-2 w-48 px-3 py-2 text-xs text-left font-normal text-gray-300 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10">
+                          Reps in Reserve (0-10). How many more reps you could do. 0 = failure.
+                        </span>
                       </span>
-                    </span>
-                  </th>
+                    </th>
+                  )}
                   <th className="py-2 px-3 text-center">Done</th>
                   <th className="py-2 px-1 w-8"></th>
                 </tr>
@@ -895,123 +919,141 @@ export default function WorkoutDetailPage({ params }: { params: Promise<{ id: st
                     <td className="py-2 px-4">
                       <span className="text-gray-300">{set.setNumber}</span>
                     </td>
-                    <td className="py-1 px-1">
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const cur = parseFloat(getSetValue(set, "weightLbs")) || 0;
-                            updateSetEdit(set.id, "weightLbs", String(Math.max(0, cur - 5)));
-                          }}
-                          className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors border border-gray-700"
-                          title="-5 lbs"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </button>
+                    {exercise.type !== "cardio" && (
+                      <td className="py-1 px-1">
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const cur = parseFloat(getSetValue(set, "weightLbs")) || 0;
+                              updateSetEdit(set.id, "weightLbs", String(Math.max(0, cur - 5)));
+                            }}
+                            className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors border border-gray-700"
+                            title="-5 lbs"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            ref={(el) => { weightInputRefs.current[set.id] = el; }}
+                            value={getSetValue(set, "weightLbs")}
+                            onChange={(e) => updateSetEdit(set.id, "weightLbs", e.target.value)}
+                            placeholder="--"
+                            className="w-14 bg-transparent border-b border-transparent focus:border-emerald-500 text-center text-white outline-none py-1 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const cur = parseFloat(getSetValue(set, "weightLbs")) || 0;
+                              updateSetEdit(set.id, "weightLbs", String(cur + 5));
+                            }}
+                            className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors border border-gray-700"
+                            title="+5 lbs"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    )}
+                    {exercise.type !== "cardio" && (
+                      <td className="py-1 px-1">
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const cur = parseInt(getSetValue(set, "reps")) || 0;
+                              updateSetEdit(set.id, "reps", String(Math.max(0, cur - 1)));
+                            }}
+                            className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors border border-gray-700"
+                            title="-1 rep"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            value={getSetValue(set, "reps")}
+                            onChange={(e) => updateSetEdit(set.id, "reps", e.target.value)}
+                            placeholder="--"
+                            className="w-10 bg-transparent border-b border-transparent focus:border-emerald-500 text-center text-white outline-none py-1 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const cur = parseInt(getSetValue(set, "reps")) || 0;
+                              updateSetEdit(set.id, "reps", String(cur + 1));
+                            }}
+                            className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors border border-gray-700"
+                            title="+1 rep"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    )}
+                    {(exercise.type === "time" || exercise.type === "cardio") && (
+                      <td className="py-1 px-1">
                         <input
-                          type="number"
-                          inputMode="decimal"
-                          ref={(el) => { weightInputRefs.current[set.id] = el; }}
-                          value={getSetValue(set, "weightLbs")}
-                          onChange={(e) => updateSetEdit(set.id, "weightLbs", e.target.value)}
-                          placeholder="--"
-                          className="w-14 bg-transparent border-b border-transparent focus:border-emerald-500 text-center text-white outline-none py-1 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const cur = parseFloat(getSetValue(set, "weightLbs")) || 0;
-                            updateSetEdit(set.id, "weightLbs", String(cur + 5));
-                          }}
-                          className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors border border-gray-700"
-                          title="+5 lbs"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                    <td className="py-1 px-1">
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const cur = parseInt(getSetValue(set, "reps")) || 0;
-                            updateSetEdit(set.id, "reps", String(Math.max(0, cur - 1)));
-                          }}
-                          className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors border border-gray-700"
-                          title="-1 rep"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </button>
-                        <input
-                          type="number"
+                          type="text"
                           inputMode="numeric"
-                          value={getSetValue(set, "reps")}
-                          onChange={(e) => updateSetEdit(set.id, "reps", e.target.value)}
-                          placeholder="--"
-                          className="w-10 bg-transparent border-b border-transparent focus:border-emerald-500 text-center text-white outline-none py-1 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          value={getSetValue(set, "timeSecs")}
+                          onChange={(e) => updateSetEdit(set.id, "timeSecs", e.target.value)}
+                          placeholder="0:00"
+                          className="w-16 bg-transparent border-b border-transparent focus:border-emerald-500 text-center text-white outline-none py-1 text-sm"
                         />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const cur = parseInt(getSetValue(set, "reps")) || 0;
-                            updateSetEdit(set.id, "reps", String(cur + 1));
-                          }}
-                          className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors border border-gray-700"
-                          title="+1 rep"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                    <td className="py-1 px-1">
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const cur = parseFloat(getSetValue(set, "rir")) || 0;
-                            updateSetEdit(set.id, "rir", String(Math.max(0, cur - 1)));
-                          }}
-                          className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors border border-gray-700"
-                          title="-1 RIR"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </button>
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          min="0"
-                          max="10"
-                          value={getSetValue(set, "rir")}
-                          onChange={(e) => updateSetEdit(set.id, "rir", e.target.value)}
-                          placeholder="--"
-                          className="w-10 bg-transparent border-b border-transparent focus:border-emerald-500 text-center text-gray-400 outline-none py-1 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const cur = parseFloat(getSetValue(set, "rir")) || 0;
-                            updateSetEdit(set.id, "rir", String(Math.min(10, cur + 1)));
-                          }}
-                          className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors border border-gray-700"
-                          title="+1 RIR"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
+                      </td>
+                    )}
+                    {exercise.type !== "cardio" && (
+                      <td className="py-1 px-1">
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const cur = parseFloat(getSetValue(set, "rir")) || 0;
+                              updateSetEdit(set.id, "rir", String(Math.max(0, cur - 1)));
+                            }}
+                            className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors border border-gray-700"
+                            title="-1 RIR"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            min="0"
+                            max="10"
+                            value={getSetValue(set, "rir")}
+                            onChange={(e) => updateSetEdit(set.id, "rir", e.target.value)}
+                            placeholder="--"
+                            className="w-10 bg-transparent border-b border-transparent focus:border-emerald-500 text-center text-gray-400 outline-none py-1 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const cur = parseFloat(getSetValue(set, "rir")) || 0;
+                              updateSetEdit(set.id, "rir", String(Math.min(10, cur + 1)));
+                            }}
+                            className="w-7 h-7 shrink-0 flex items-center justify-center rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors border border-gray-700"
+                            title="+1 RIR"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    )}
                     <td className="py-2 px-3 text-center">
                       <button
                         onClick={() => {
